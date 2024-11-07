@@ -11,6 +11,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 const AUTOMATION_REGISTRAR_ADDRESS = process.env.AUTOMATION_REGISTRAR_ADDRESS;
+const KEEPER_REGISTRY_ADDRESS = process.env.KEEPER_REGISTRY_ADDRESS;
 const LINK_TOKEN_ADDRESS = process.env.LINK_TOKEN_ADDRESS;
 const CRON_DELEGATE_ADDRESS = process.env.CRON_DELEGATE_ADDRESS;
 const CRON_LIBRARY_ADDRESS = process.env.CRON_LIBRARY_ADDRESS;
@@ -19,6 +20,7 @@ const UPKEEP_FUND_AMOUNT = process.env.UPKEEP_FUND_AMOUNT;
 const UPKEEP_GAS_LIMIT = process.env.UPKEEP_GAS_LIMIT;
 
 assert.ok(AUTOMATION_REGISTRAR_ADDRESS, "AUTOMATION_REGISTRAR_ADDRESS is required");
+assert.ok(KEEPER_REGISTRY_ADDRESS, "KEEPER_REGISTRY_ADDRESS is required");
 assert.ok(LINK_TOKEN_ADDRESS, "LINK_TOKEN_ADDRESS is required");
 assert.ok(CRON_DELEGATE_ADDRESS, "CRON_DELEGATE_ADDRESS is required");
 assert.ok(CRON_LIBRARY_ADDRESS, "CRON_LIBRARY_ADDRESS is required");
@@ -45,6 +47,7 @@ async function main() {
   );
   const cronUpkeepManager = await cronUpkeepManagerFactory.deploy(
     LINK_TOKEN_ADDRESS!,
+    KEEPER_REGISTRY_ADDRESS!,
     AUTOMATION_REGISTRAR_ADDRESS!,
     CRON_DELEGATE_ADDRESS!,
     VELO_VOTER_ADDRESS!,

@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { time } from "@nomicfoundation/hardhat-network-helpers";
+import { time, mine } from "@nomicfoundation/hardhat-network-helpers";
 import {
   CronUpkeep,
   CronUpkeepManager,
@@ -13,13 +13,23 @@ import { abi as AutomationRegistrarMockAbi } from "../artifacts/contracts/test/A
 
 const { AddressZero, HashZero } = ethers.constants;
 
+enum PerformAction {
+  RegisterUpkeep = 0,
+  CancelUpkeep = 1,
+  WithdrawUpkeep = 2,
+}
+
+const UPKEEP_CANCELLATION_DELAY = 100;
+
 describe("CronUpkeepManager", function () {
   let cronUpkeepManager: CronUpkeepManager;
   let cronUpkeep: CronUpkeep;
   let automationRegistrarMock: AutomationRegistrarMock;
   let veloVoterMock: VoterMock;
   let fakeGaugeAddress: string;
-  let encodedGaugeAddress: string;
+  let registerPerformData: string;
+  let cancelPerformData: string;
+  let withdrawPerformData: string;
   let accounts: SignerWithAddress[];
 
   const upkeepFundAmount = ethers.utils.parseEther("0.1");
@@ -56,6 +66,12 @@ describe("CronUpkeepManager", function () {
     );
     automationRegistrarMock = await automationRegistrarMockFactory.deploy();
 
+    // deploy keeper registry mock
+    const keeperRegistryMockFactory = await ethers.getContractFactory(
+      "KeeperRegistryMock"
+    );
+    const keeperRegistryMock = await keeperRegistryMockFactory.deploy();
+
     // deploy cron upkeep manager
     const cronUpkeepManagerFactory = await ethers.getContractFactory(
       "CronUpkeepManager",
@@ -67,6 +83,7 @@ describe("CronUpkeepManager", function () {
     );
     cronUpkeepManager = await cronUpkeepManagerFactory.deploy(
       linkToken.address,
+      keeperRegistryMock.address,
       automationRegistrarMock.address,
       cronUpkeepDelegate.address,
       veloVoterMock.address,
@@ -80,74 +97,225 @@ describe("CronUpkeepManager", function () {
       ethers.utils.parseEther("1")
     );
 
+    // generate perform data
     const abiCoder = new ethers.utils.AbiCoder();
     fakeGaugeAddress = accounts[1].address;
-    encodedGaugeAddress = abiCoder.encode(["address"], [fakeGaugeAddress]);
-  });
-
-  it("should trigger a new upkeep registration", async () => {
-    const createGaugeTx = await veloVoterMock.createGauge(fakeGaugeAddress);
-    const createGaugeReceipt = await createGaugeTx.wait();
-    const createGaugeLog = createGaugeReceipt.logs[0];
-    const log = {
-      index: createGaugeLog.transactionIndex,
-      txHash: createGaugeLog.transactionHash,
-      blockNumber: createGaugeLog.blockNumber,
-      blockHash: createGaugeLog.blockHash,
-      timestamp: 0,
-      source: veloVoterMock.address,
-      topics: createGaugeLog.topics,
-      data: createGaugeLog.data,
-    };
-
-    const [upkeepNeeded, performData] =
-      await cronUpkeepManager.callStatic.checkLog(log, HashZero);
-
-    expect(upkeepNeeded).to.be.true;
-    expect(performData).to.equal(encodedGaugeAddress);
-  });
-
-  it("should register a new cron upkeep", async () => {
-    const tx = await cronUpkeepManager.performUpkeep(encodedGaugeAddress);
-
-    expect(tx)
-      .to.emit(cronUpkeepManager, "GaugeUpkeepRegistered")
-      .withArgs(fakeGaugeAddress, 1);
-
-    const receipt = await tx.wait();
-    const upkeepRegisteredLog = receipt.logs.find(
-      (log) => log.address === automationRegistrarMock.address
+    registerPerformData = abiCoder.encode(
+      ["uint8", "address"],
+      [PerformAction.RegisterUpkeep, fakeGaugeAddress]
     );
-
-    expect(upkeepRegisteredLog).to.exist;
-
-    const iface = new ethers.utils.Interface(AutomationRegistrarMockAbi);
-    const decodedLog = iface.parseLog(upkeepRegisteredLog!);
-    const cronUpkeepAddress = decodedLog?.args[0][2];
-    cronUpkeep = await ethers.getContractAt("CronUpkeep", cronUpkeepAddress);
-
-    expect(cronUpkeep.address).to.be.properAddress;
+    cancelPerformData = abiCoder.encode(
+      ["uint8", "address"],
+      [PerformAction.CancelUpkeep, fakeGaugeAddress]
+    );
+    withdrawPerformData = abiCoder.encode(
+      ["uint8", "address"],
+      [PerformAction.WithdrawUpkeep, fakeGaugeAddress]
+    );
   });
 
-  it("should not trigger a cron upkeep when not scheduled", async () => {
-    const [upkeepNeeded, performData] = await cronUpkeep
-      .connect(AddressZero)
-      .callStatic.checkUpkeep(HashZero);
+  describe("Register gauge upkeep", function () {
+    it("should trigger a new upkeep registration", async () => {
+      const createGaugeTx = await veloVoterMock.createGauge(fakeGaugeAddress);
+      const createGaugeReceipt = await createGaugeTx.wait();
+      const createGaugeLog = createGaugeReceipt.logs[0];
+      const log = {
+        index: createGaugeLog.transactionIndex,
+        txHash: createGaugeLog.transactionHash,
+        blockNumber: createGaugeLog.blockNumber,
+        blockHash: createGaugeLog.blockHash,
+        timestamp: 0,
+        source: veloVoterMock.address,
+        topics: createGaugeLog.topics,
+        data: createGaugeLog.data,
+      };
 
-    expect(upkeepNeeded).to.be.false;
-    expect(performData).to.equal("0x");
+      const [upkeepNeeded, performData] =
+        await cronUpkeepManager.callStatic.checkLog(log, HashZero);
+
+      expect(upkeepNeeded).to.be.true;
+      expect(performData).to.equal(registerPerformData);
+    });
+
+    it("should register a new cron upkeep", async () => {
+      const tx = await cronUpkeepManager.performUpkeep(registerPerformData);
+
+      expect(tx)
+        .to.emit(cronUpkeepManager, "GaugeUpkeepRegistered")
+        .withArgs(fakeGaugeAddress, 1);
+
+      const receipt = await tx.wait();
+      const upkeepRegisteredLog = receipt.logs.find(
+        (log) => log.address === automationRegistrarMock.address
+      );
+
+      expect(upkeepRegisteredLog).to.exist;
+
+      const iface = new ethers.utils.Interface(AutomationRegistrarMockAbi);
+      const decodedLog = iface.parseLog(upkeepRegisteredLog!);
+      const cronUpkeepAddress = decodedLog?.args[0][2];
+      cronUpkeep = await ethers.getContractAt("CronUpkeep", cronUpkeepAddress);
+
+      expect(cronUpkeep.address).to.be.properAddress;
+    });
   });
 
-  it("should trigger a cron upkeep when scheduled", async () => {
-    const timestamp = getNextWednesdayMidnightUTC().getTime() / 1000;
-    await time.increaseTo(timestamp);
+  describe("Perform gauge upkeep", function () {
+    it("should not trigger a cron upkeep when not scheduled", async () => {
+      const [upkeepNeeded, performData] = await cronUpkeep
+        .connect(AddressZero)
+        .callStatic.checkUpkeep(HashZero);
 
-    const [upkeepNeeded, performData] = await cronUpkeep
-      .connect(AddressZero)
-      .callStatic.checkUpkeep(HashZero);
+      expect(upkeepNeeded).to.be.false;
+      expect(performData).to.equal("0x");
+    });
 
-    expect(upkeepNeeded).to.be.true;
-    expect(performData).to.not.equal("0x");
+    it("should trigger a cron upkeep when scheduled", async () => {
+      const timestamp = getNextWednesdayMidnightUTC().getTime() / 1000;
+      await time.increaseTo(timestamp);
+
+      const [upkeepNeeded, performData] = await cronUpkeep
+        .connect(AddressZero)
+        .callStatic.checkUpkeep(HashZero);
+
+      expect(upkeepNeeded).to.be.true;
+      expect(performData).to.not.equal("0x");
+    });
+  });
+
+  describe("Cancel gauge upkeep", function () {
+    it("should trigger upkeep cancellation", async () => {
+      await cronUpkeepManager.performUpkeep(registerPerformData);
+      const killGaugeTx = await veloVoterMock.killGauge(fakeGaugeAddress);
+      const killGaugeReceipt = await killGaugeTx.wait();
+      const killGaugeLog = killGaugeReceipt.logs[0];
+      const log = {
+        index: killGaugeLog.transactionIndex,
+        txHash: killGaugeLog.transactionHash,
+        blockNumber: killGaugeLog.blockNumber,
+        blockHash: killGaugeLog.blockHash,
+        timestamp: 0,
+        source: veloVoterMock.address,
+        topics: killGaugeLog.topics,
+        data: killGaugeLog.data,
+      };
+
+      const [upkeepNeeded, performData] =
+        await cronUpkeepManager.callStatic.checkLog(log, HashZero);
+
+      expect(upkeepNeeded).to.be.true;
+      expect(performData).to.equal(cancelPerformData);
+    });
+
+    it("should cancel a cron upkeep", async () => {
+      await cronUpkeepManager.performUpkeep(registerPerformData);
+      const tx = await cronUpkeepManager.performUpkeep(cancelPerformData);
+      await expect(tx)
+        .to.emit(cronUpkeepManager, "GaugeUpkeepCancelled")
+        .withArgs(fakeGaugeAddress, 1);
+    });
+  });
+
+  describe("Withdraw gauge upkeep", function () {
+    it("should not trigger upkeep withdrawal before cancellation delay", async () => {
+      await cronUpkeepManager.performUpkeep(registerPerformData);
+      await cronUpkeepManager.performUpkeep(cancelPerformData);
+
+      const [upkeepNeeded, performData] =
+        await cronUpkeepManager.callStatic.checkUpkeep(HashZero);
+
+      expect(upkeepNeeded).to.be.false;
+      expect(performData).to.equal("0x");
+    });
+
+    it("should trigger upkeep withdrawal after cancellation delay", async () => {
+      await cronUpkeepManager.performUpkeep(registerPerformData);
+      await cronUpkeepManager.performUpkeep(cancelPerformData);
+
+      await mine(UPKEEP_CANCELLATION_DELAY);
+
+      const [upkeepNeeded, performData] =
+        await cronUpkeepManager.callStatic.checkUpkeep(HashZero);
+
+      expect(upkeepNeeded).to.be.true;
+      expect(performData).to.equal(withdrawPerformData);
+    });
+
+    it("should withdraw a cron upkeep", async () => {
+      await cronUpkeepManager.performUpkeep(registerPerformData);
+      await cronUpkeepManager.performUpkeep(cancelPerformData);
+
+      await mine(UPKEEP_CANCELLATION_DELAY);
+
+      const tx = await cronUpkeepManager.performUpkeep(withdrawPerformData);
+
+      await expect(tx)
+        .to.emit(cronUpkeepManager, "GaugeUpkeepWithdrawn")
+        .withArgs(fakeGaugeAddress, 1);
+    });
+
+    it("should remove a cron upkeep after withdrawal", async () => {
+      await cronUpkeepManager.performUpkeep(registerPerformData);
+      await cronUpkeepManager.performUpkeep(cancelPerformData);
+
+      await mine(UPKEEP_CANCELLATION_DELAY);
+
+      await cronUpkeepManager.performUpkeep(withdrawPerformData);
+
+      // should not trigger upkeep withdrawal after removal
+      const [logicUpkeepNeeded, logicPerformData] =
+        await cronUpkeepManager.callStatic.checkUpkeep(HashZero);
+      expect(logicUpkeepNeeded).to.be.false;
+      expect(logicPerformData).to.equal("0x");
+
+      // should be able to register a new upkeep with the same gauge address
+      const createGaugeTx = await veloVoterMock.createGauge(fakeGaugeAddress);
+      const createGaugeReceipt = await createGaugeTx.wait();
+      const createGaugeLog = createGaugeReceipt.logs[0];
+      const log = {
+        index: createGaugeLog.transactionIndex,
+        txHash: createGaugeLog.transactionHash,
+        blockNumber: createGaugeLog.blockNumber,
+        blockHash: createGaugeLog.blockHash,
+        timestamp: 0,
+        source: veloVoterMock.address,
+        topics: createGaugeLog.topics,
+        data: createGaugeLog.data,
+      };
+      const [upkeepNeeded, performData] =
+        await cronUpkeepManager.callStatic.checkLog(log, HashZero);
+      expect(upkeepNeeded).to.be.true;
+      expect(performData).to.equal(registerPerformData);
+    });
+  });
+
+  describe("Revive gauge upkeep", function () {
+    it("should trigger upkeep revival", async () => {
+      await cronUpkeepManager.performUpkeep(registerPerformData);
+      await cronUpkeepManager.performUpkeep(cancelPerformData);
+      await mine(UPKEEP_CANCELLATION_DELAY);
+      await cronUpkeepManager.performUpkeep(withdrawPerformData);
+
+      const reviveGaugeTx = await veloVoterMock.reviveGauge(fakeGaugeAddress);
+      const reviveGaugeReceipt = await reviveGaugeTx.wait();
+      const reviveGaugeLog = reviveGaugeReceipt.logs[0];
+      const log = {
+        index: reviveGaugeLog.transactionIndex,
+        txHash: reviveGaugeLog.transactionHash,
+        blockNumber: reviveGaugeLog.blockNumber,
+        blockHash: reviveGaugeLog.blockHash,
+        timestamp: 0,
+        source: veloVoterMock.address,
+        topics: reviveGaugeLog.topics,
+        data: reviveGaugeLog.data,
+      };
+
+      const [upkeepNeeded, performData] =
+        await cronUpkeepManager.callStatic.checkLog(log, HashZero);
+
+      expect(upkeepNeeded).to.be.true;
+      expect(performData).to.equal(registerPerformData);
+    });
   });
 });
 
