@@ -4,7 +4,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { time, mine } from "@nomicfoundation/hardhat-network-helpers";
 import {
   CronUpkeep,
-  CronUpkeepManager,
+  GaugeUpkeepManager,
   AutomationRegistrarMock,
   VoterMock,
 } from "../typechain-types";
@@ -21,8 +21,8 @@ enum PerformAction {
 
 const UPKEEP_CANCELLATION_DELAY = 100;
 
-describe("CronUpkeepManager", function () {
-  let cronUpkeepManager: CronUpkeepManager;
+describe("GaugeUpkeepManager", function () {
+  let gaugeUpkeepManager: GaugeUpkeepManager;
   let cronUpkeep: CronUpkeep;
   let automationRegistrarMock: AutomationRegistrarMock;
   let veloVoterMock: VoterMock;
@@ -72,16 +72,16 @@ describe("CronUpkeepManager", function () {
     );
     const keeperRegistryMock = await keeperRegistryMockFactory.deploy();
 
-    // deploy cron upkeep manager
-    const cronUpkeepManagerFactory = await ethers.getContractFactory(
-      "CronUpkeepManager",
+    // deploy gauge upkeep manager
+    const gaugeUpkeepManagerFactory = await ethers.getContractFactory(
+      "GaugeUpkeepManager",
       {
         libraries: {
           Cron: cronLibrary.address,
         },
       }
     );
-    cronUpkeepManager = await cronUpkeepManagerFactory.deploy(
+    gaugeUpkeepManager = await gaugeUpkeepManagerFactory.deploy(
       linkToken.address,
       keeperRegistryMock.address,
       automationRegistrarMock.address,
@@ -93,7 +93,7 @@ describe("CronUpkeepManager", function () {
 
     // fund cron upkeep manager with link token
     await linkToken.transfer(
-      cronUpkeepManager.address,
+      gaugeUpkeepManager.address,
       ethers.utils.parseEther("1")
     );
 
@@ -131,17 +131,17 @@ describe("CronUpkeepManager", function () {
       };
 
       const [upkeepNeeded, performData] =
-        await cronUpkeepManager.callStatic.checkLog(log, HashZero);
+        await gaugeUpkeepManager.callStatic.checkLog(log, HashZero);
 
       expect(upkeepNeeded).to.be.true;
       expect(performData).to.equal(registerPerformData);
     });
 
     it("should register a new cron upkeep", async () => {
-      const tx = await cronUpkeepManager.performUpkeep(registerPerformData);
+      const tx = await gaugeUpkeepManager.performUpkeep(registerPerformData);
 
       expect(tx)
-        .to.emit(cronUpkeepManager, "GaugeUpkeepRegistered")
+        .to.emit(gaugeUpkeepManager, "GaugeUpkeepRegistered")
         .withArgs(fakeGaugeAddress, 1);
 
       const receipt = await tx.wait();
@@ -185,7 +185,7 @@ describe("CronUpkeepManager", function () {
 
   describe("Cancel gauge upkeep", function () {
     it("should trigger upkeep cancellation", async () => {
-      await cronUpkeepManager.performUpkeep(registerPerformData);
+      await gaugeUpkeepManager.performUpkeep(registerPerformData);
       const killGaugeTx = await veloVoterMock.killGauge(fakeGaugeAddress);
       const killGaugeReceipt = await killGaugeTx.wait();
       const killGaugeLog = killGaugeReceipt.logs[0];
@@ -201,70 +201,70 @@ describe("CronUpkeepManager", function () {
       };
 
       const [upkeepNeeded, performData] =
-        await cronUpkeepManager.callStatic.checkLog(log, HashZero);
+        await gaugeUpkeepManager.callStatic.checkLog(log, HashZero);
 
       expect(upkeepNeeded).to.be.true;
       expect(performData).to.equal(cancelPerformData);
     });
 
     it("should cancel a cron upkeep", async () => {
-      await cronUpkeepManager.performUpkeep(registerPerformData);
-      const tx = await cronUpkeepManager.performUpkeep(cancelPerformData);
+      await gaugeUpkeepManager.performUpkeep(registerPerformData);
+      const tx = await gaugeUpkeepManager.performUpkeep(cancelPerformData);
       await expect(tx)
-        .to.emit(cronUpkeepManager, "GaugeUpkeepCancelled")
+        .to.emit(gaugeUpkeepManager, "GaugeUpkeepCancelled")
         .withArgs(fakeGaugeAddress, 1);
     });
   });
 
   describe("Withdraw gauge upkeep", function () {
     it("should not trigger upkeep withdrawal before cancellation delay", async () => {
-      await cronUpkeepManager.performUpkeep(registerPerformData);
-      await cronUpkeepManager.performUpkeep(cancelPerformData);
+      await gaugeUpkeepManager.performUpkeep(registerPerformData);
+      await gaugeUpkeepManager.performUpkeep(cancelPerformData);
 
       const [upkeepNeeded, performData] =
-        await cronUpkeepManager.callStatic.checkUpkeep(HashZero);
+        await gaugeUpkeepManager.callStatic.checkUpkeep(HashZero);
 
       expect(upkeepNeeded).to.be.false;
       expect(performData).to.equal("0x");
     });
 
     it("should trigger upkeep withdrawal after cancellation delay", async () => {
-      await cronUpkeepManager.performUpkeep(registerPerformData);
-      await cronUpkeepManager.performUpkeep(cancelPerformData);
+      await gaugeUpkeepManager.performUpkeep(registerPerformData);
+      await gaugeUpkeepManager.performUpkeep(cancelPerformData);
 
       await mine(UPKEEP_CANCELLATION_DELAY);
 
       const [upkeepNeeded, performData] =
-        await cronUpkeepManager.callStatic.checkUpkeep(HashZero);
+        await gaugeUpkeepManager.callStatic.checkUpkeep(HashZero);
 
       expect(upkeepNeeded).to.be.true;
       expect(performData).to.equal(withdrawPerformData);
     });
 
     it("should withdraw a cron upkeep", async () => {
-      await cronUpkeepManager.performUpkeep(registerPerformData);
-      await cronUpkeepManager.performUpkeep(cancelPerformData);
+      await gaugeUpkeepManager.performUpkeep(registerPerformData);
+      await gaugeUpkeepManager.performUpkeep(cancelPerformData);
 
       await mine(UPKEEP_CANCELLATION_DELAY);
 
-      const tx = await cronUpkeepManager.performUpkeep(withdrawPerformData);
+      const tx = await gaugeUpkeepManager.performUpkeep(withdrawPerformData);
 
       await expect(tx)
-        .to.emit(cronUpkeepManager, "GaugeUpkeepWithdrawn")
+        .to.emit(gaugeUpkeepManager, "GaugeUpkeepWithdrawn")
         .withArgs(fakeGaugeAddress, 1);
     });
 
     it("should remove a cron upkeep after withdrawal", async () => {
-      await cronUpkeepManager.performUpkeep(registerPerformData);
-      await cronUpkeepManager.performUpkeep(cancelPerformData);
+      await gaugeUpkeepManager.performUpkeep(registerPerformData);
+      await gaugeUpkeepManager.performUpkeep(cancelPerformData);
 
       await mine(UPKEEP_CANCELLATION_DELAY);
 
-      await cronUpkeepManager.performUpkeep(withdrawPerformData);
+      await gaugeUpkeepManager.performUpkeep(withdrawPerformData);
 
       // should not trigger upkeep withdrawal after removal
       const [logicUpkeepNeeded, logicPerformData] =
-        await cronUpkeepManager.callStatic.checkUpkeep(HashZero);
+        await gaugeUpkeepManager.callStatic.checkUpkeep(HashZero);
       expect(logicUpkeepNeeded).to.be.false;
       expect(logicPerformData).to.equal("0x");
 
@@ -283,7 +283,7 @@ describe("CronUpkeepManager", function () {
         data: createGaugeLog.data,
       };
       const [upkeepNeeded, performData] =
-        await cronUpkeepManager.callStatic.checkLog(log, HashZero);
+        await gaugeUpkeepManager.callStatic.checkLog(log, HashZero);
       expect(upkeepNeeded).to.be.true;
       expect(performData).to.equal(registerPerformData);
     });
@@ -291,10 +291,10 @@ describe("CronUpkeepManager", function () {
 
   describe("Revive gauge upkeep", function () {
     it("should trigger upkeep revival", async () => {
-      await cronUpkeepManager.performUpkeep(registerPerformData);
-      await cronUpkeepManager.performUpkeep(cancelPerformData);
+      await gaugeUpkeepManager.performUpkeep(registerPerformData);
+      await gaugeUpkeepManager.performUpkeep(cancelPerformData);
       await mine(UPKEEP_CANCELLATION_DELAY);
-      await cronUpkeepManager.performUpkeep(withdrawPerformData);
+      await gaugeUpkeepManager.performUpkeep(withdrawPerformData);
 
       const reviveGaugeTx = await veloVoterMock.reviveGauge(fakeGaugeAddress);
       const reviveGaugeReceipt = await reviveGaugeTx.wait();
@@ -311,7 +311,7 @@ describe("CronUpkeepManager", function () {
       };
 
       const [upkeepNeeded, performData] =
-        await cronUpkeepManager.callStatic.checkLog(log, HashZero);
+        await gaugeUpkeepManager.callStatic.checkLog(log, HashZero);
 
       expect(upkeepNeeded).to.be.true;
       expect(performData).to.equal(registerPerformData);

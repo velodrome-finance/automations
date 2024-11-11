@@ -15,7 +15,7 @@ const KEEPER_REGISTRY_ADDRESS = process.env.KEEPER_REGISTRY_ADDRESS;
 const LINK_TOKEN_ADDRESS = process.env.LINK_TOKEN_ADDRESS;
 const CRON_DELEGATE_ADDRESS = process.env.CRON_DELEGATE_ADDRESS;
 const CRON_LIBRARY_ADDRESS = process.env.CRON_LIBRARY_ADDRESS;
-const VELO_VOTER_ADDRESS = process.env.VELO_VOTER_ADDRESS;
+const VOTER_ADDRESS = process.env.VOTER_ADDRESS;
 const UPKEEP_FUND_AMOUNT = process.env.UPKEEP_FUND_AMOUNT;
 const UPKEEP_GAS_LIMIT = process.env.UPKEEP_GAS_LIMIT;
 
@@ -24,7 +24,7 @@ assert.ok(KEEPER_REGISTRY_ADDRESS, "KEEPER_REGISTRY_ADDRESS is required");
 assert.ok(LINK_TOKEN_ADDRESS, "LINK_TOKEN_ADDRESS is required");
 assert.ok(CRON_DELEGATE_ADDRESS, "CRON_DELEGATE_ADDRESS is required");
 assert.ok(CRON_LIBRARY_ADDRESS, "CRON_LIBRARY_ADDRESS is required");
-assert.ok(VELO_VOTER_ADDRESS, "VELO_VOTER_ADDRESS is required");
+assert.ok(VOTER_ADDRESS, "VOTER_ADDRESS is required");
 assert.ok(UPKEEP_FUND_AMOUNT, "UPKEEP_FUND_AMOUNT is required");
 assert.ok(UPKEEP_GAS_LIMIT, "UPKEEP_GAS_LIMIT is required");
 
@@ -36,27 +36,27 @@ async function main() {
   // manually to make sure everything is compiled
   // await hre.run('compile');
 
-  // Deploy CronUpkeepManager contract
-  const cronUpkeepManagerFactory = await ethers.getContractFactory(
-    "CronUpkeepManager",
+  // Deploy GaugeUpkeepManager contract
+  const gaugeUpkeepManagerFactory = await ethers.getContractFactory(
+    "GaugeUpkeepManager",
     {
       libraries: {
         Cron: CRON_LIBRARY_ADDRESS!,
       },
     }
   );
-  const cronUpkeepManager = await cronUpkeepManagerFactory.deploy(
+  const gaugeUpkeepManager = await gaugeUpkeepManagerFactory.deploy(
     LINK_TOKEN_ADDRESS!,
     KEEPER_REGISTRY_ADDRESS!,
     AUTOMATION_REGISTRAR_ADDRESS!,
     CRON_DELEGATE_ADDRESS!,
-    VELO_VOTER_ADDRESS!,
+    VOTER_ADDRESS!,
     UPKEEP_FUND_AMOUNT!,
     UPKEEP_GAS_LIMIT!
   );
-  await cronUpkeepManager.deployed();
+  await gaugeUpkeepManager.deployed();
 
-  console.log("CronUpkeepManager deployed to:", cronUpkeepManager.address);
+  console.log("GaugeUpkeepManager deployed to:", gaugeUpkeepManager.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

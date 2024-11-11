@@ -3,46 +3,36 @@ pragma solidity 0.8.6;
 
 import {ILogAutomation, Log} from "@chainlink/contracts/src/v0.8/automation/interfaces/ILogAutomation.sol";
 import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/interfaces/AutomationCompatibleInterface.sol";
+import {IKeeperRegistryMaster} from "@chainlink/contracts/src/v0.8/automation/interfaces/v2_1/IKeeperRegistryMaster.sol";
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
 import {CronUpkeep} from "@chainlink/contracts/src/v0.8/automation/upkeeps/CronUpkeep.sol";
 import {Spec, Cron} from "@chainlink/contracts/src/v0.8/automation/libraries/external/Cron.sol";
+import {IAutomationRegistrar, RegistrationParams} from "./interfaces/IAutomationRegistrar.sol";
+import {IGaugeUpkeepManager} from "./interfaces/IGaugeUpkeepManager.sol";
 
-struct RegistrationParams {
-    string name;
-    bytes encryptedEmail;
-    address upkeepContract;
-    uint32 gasLimit;
-    address adminAddress;
-    uint8 triggerType;
-    bytes checkData;
-    bytes triggerConfig;
-    bytes offchainConfig;
-    uint96 amount;
-}
+contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCompatibleInterface {
+    // @inheritdoc IGaugeUpkeepManager
+    address public override immutable linkToken;
+    // @inheritdoc IGaugeUpkeepManager 
+    address public override immutable keeperRegistry;
+    // @inheritdoc IGaugeUpkeepManager
+    address public override immutable automationRegistrar;
+    // @inheritdoc IGaugeUpkeepManager
+    address public override immutable automationCronDelegate;
+    // @inheritdoc IGaugeUpkeepManager
+    address public override immutable voter;
+    
+    // @inheritdoc IGaugeUpkeepManager
+    uint96 public override upkeepFundAmount;
+    // @inheritdoc IGaugeUpkeepManager
+    uint32 public override upkeepGasLimit;
 
-interface AutomationRegistrarInterface {
-    function registerUpkeep(RegistrationParams calldata requestParams) external returns (uint256);
-}
-
-interface KeeperRegistryInterface {
-    function cancelUpkeep(uint256 id) external;
-    function withdrawFunds(uint256 id, address to) external;
-}
-
-contract CronUpkeepManager is ILogAutomation, AutomationCompatibleInterface {
-    address private immutable linkToken;
-    address private immutable keeperRegistry;
-    address private immutable automationRegistrar;
-    address private immutable automationCronDelegate;
-    address private immutable veloVoter;
-
-    mapping(address => uint256) private gaugeUpkeepIds;
-
-    address[] private cancelledGaugeUpkeeps;
-    mapping(address => uint256) private cancelledUpkeepBlockNumbers;
-
-    uint96 private upkeepFundAmount;
-    uint32 private upkeepGasLimit;
+    // @inheritdoc IGaugeUpkeepManager
+    mapping(address => uint256) public override gaugeUpkeepId;
+    // @inheritdoc IGaugeUpkeepManager
+    address[] public override cancelledGaugeUpkeeps;
+    // @inheritdoc IGaugeUpkeepManager
+    mapping(address => uint256) public override cancelledUpkeepBlockNumber;
 
     uint8 private constant CONDITIONAL_TRIGGER_TYPE = 0;
     uint256 private constant CRON_UPKEEP_MAX_JOBS = 1;
@@ -60,16 +50,12 @@ contract CronUpkeepManager is ILogAutomation, AutomationCompatibleInterface {
     error InvalidPerformAction();
     error AutoApproveDisabled();
 
-    event GaugeUpkeepRegistered(address gauge, uint256 upkeepId);
-    event GaugeUpkeepCancelled(address gauge, uint256 upkeepId);
-    event GaugeUpkeepWithdrawn(address gauge, uint256 upkeepId);
-
     constructor(
         address _linkToken,
         address _keeperRegistry,
         address _automationRegistrar,
         address _automationCronDelegate,
-        address _veloVoter,
+        address _voter,
         uint96 _upkeepFundAmount,
         uint32 _upkeepGasLimit
     ) {
@@ -77,13 +63,12 @@ contract CronUpkeepManager is ILogAutomation, AutomationCompatibleInterface {
         keeperRegistry = _keeperRegistry;
         automationRegistrar = _automationRegistrar;
         automationCronDelegate = _automationCronDelegate;
-        veloVoter = _veloVoter;
+        voter = _voter;
         upkeepFundAmount = _upkeepFundAmount;
         upkeepGasLimit = _upkeepGasLimit;
     }
 
-    // AUTOMATION INTERFACE
-
+    // @inheritdoc ILogAutomation
     function checkLog(
         Log calldata log,
         bytes memory
@@ -92,31 +77,33 @@ contract CronUpkeepManager is ILogAutomation, AutomationCompatibleInterface {
         bytes32 eventSignature = log.topics[0];
         if (eventSignature == GAUGE_CREATED_SIGNATURE) {
             gauge = _extractGaugeFromCreatedLog(log);
-            if (gaugeUpkeepIds[gauge] == 0) {
+            if (gaugeUpkeepId[gauge] == 0) {
                 return (true, abi.encode(PerformAction.REGISTER_UPKEEP, gauge));
             }
         } else if (eventSignature == GAUGE_KILLED_SIGNATURE) {
             gauge = _bytes32ToAddress(log.topics[1]);
-            if (gaugeUpkeepIds[gauge] != 0) {
+            if (gaugeUpkeepId[gauge] != 0) {
                 return (true, abi.encode(PerformAction.CANCEL_UPKEEP, gauge));
             }
         } else if (eventSignature == GAUGE_REVIVED_SIGNATURE) {
             gauge = _bytes32ToAddress(log.topics[1]);
-            if (gaugeUpkeepIds[gauge] == 0) {
+            if (gaugeUpkeepId[gauge] == 0) {
                 return (true, abi.encode(PerformAction.REGISTER_UPKEEP, gauge));
             }
         }
     }
 
+    // @inheritdoc AutomationCompatibleInterface
     function checkUpkeep(bytes calldata) external view override returns (bool upkeepNeeded, bytes memory performData) {
         for (uint256 i = 0; i < cancelledGaugeUpkeeps.length; i++) {
             address gauge = cancelledGaugeUpkeeps[i];
-            if (block.number - cancelledUpkeepBlockNumbers[gauge] >= CANCELLATION_DELAY_BLOCKS) {
+            if (block.number - cancelledUpkeepBlockNumber[gauge] >= CANCELLATION_DELAY_BLOCKS) {
                 return (true, abi.encode(PerformAction.WITHDRAW_UPKEEP_BALANCE, gauge));
             }
         }
     }
 
+    // @inheritdoc ILogAutomation
     function performUpkeep(bytes calldata performData) external override(ILogAutomation, AutomationCompatibleInterface) {
         // todo: check if the sender is trusted forwarder
         (PerformAction action, address gauge) = abi.decode(performData, (PerformAction, address));
@@ -132,11 +119,9 @@ contract CronUpkeepManager is ILogAutomation, AutomationCompatibleInterface {
         }
     }
 
-    // UPKEEP MANAGEMENT
-
     function _registerGaugeUpkeep(address gauge) internal returns (uint256 upkeepId) {
         bytes memory job = _encodeCronJob(
-            veloVoter,
+            voter,
             abi.encodeWithSignature(DISTRIBUTE_FUNCTION, gauge),
             CRON_EXPRESSION
         );
@@ -159,13 +144,13 @@ contract CronUpkeepManager is ILogAutomation, AutomationCompatibleInterface {
             amount: upkeepFundAmount
         });
         upkeepId = _registerUpkeep(params);
-        gaugeUpkeepIds[gauge] = upkeepId;
+        gaugeUpkeepId[gauge] = upkeepId;
         emit GaugeUpkeepRegistered(gauge, upkeepId);
     }
 
     function _registerUpkeep(RegistrationParams memory params) internal returns (uint256) {
         LinkTokenInterface(linkToken).approve(automationRegistrar, params.amount);
-        uint256 upkeepID = AutomationRegistrarInterface(automationRegistrar).registerUpkeep(params);
+        uint256 upkeepID = IAutomationRegistrar(automationRegistrar).registerUpkeep(params);
         if (upkeepID != 0) {
             return upkeepID;
         } else {
@@ -174,16 +159,16 @@ contract CronUpkeepManager is ILogAutomation, AutomationCompatibleInterface {
     }
 
     function _cancelGaugeUpkeep(address gauge) internal {
-        uint256 upkeepId = gaugeUpkeepIds[gauge];
-        KeeperRegistryInterface(keeperRegistry).cancelUpkeep(upkeepId);
+        uint256 upkeepId = gaugeUpkeepId[gauge];
+        IKeeperRegistryMaster(keeperRegistry).cancelUpkeep(upkeepId);
         cancelledGaugeUpkeeps.push(gauge);
-        cancelledUpkeepBlockNumbers[gauge] = block.number;
+        cancelledUpkeepBlockNumber[gauge] = block.number;
         emit GaugeUpkeepCancelled(gauge, upkeepId);
     }
 
     function _withdrawGaugeUpkeep(address gauge) internal {
-        uint256 upkeepId = gaugeUpkeepIds[gauge];
-        KeeperRegistryInterface(keeperRegistry).withdrawFunds(upkeepId, address(this));
+        uint256 upkeepId = gaugeUpkeepId[gauge];
+        IKeeperRegistryMaster(keeperRegistry).withdrawFunds(upkeepId, address(this));
         emit GaugeUpkeepWithdrawn(gauge, upkeepId);
     }
 
@@ -197,11 +182,9 @@ contract CronUpkeepManager is ILogAutomation, AutomationCompatibleInterface {
         }
         cancelledGaugeUpkeeps[index] = cancelledGaugeUpkeeps[cancelledGaugeUpkeeps.length - 1];
         cancelledGaugeUpkeeps.pop();
-        delete cancelledUpkeepBlockNumbers[gauge];
-        delete gaugeUpkeepIds[gauge];
+        delete cancelledUpkeepBlockNumber[gauge];
+        delete gaugeUpkeepId[gauge];
     }
-
-    // UTILS
 
     function _encodeCronJob(
         address target,
