@@ -16,8 +16,8 @@ const LINK_TOKEN_ADDRESS = process.env.LINK_TOKEN_ADDRESS;
 const CRON_DELEGATE_ADDRESS = process.env.CRON_DELEGATE_ADDRESS;
 const CRON_LIBRARY_ADDRESS = process.env.CRON_LIBRARY_ADDRESS;
 const VOTER_ADDRESS = process.env.VOTER_ADDRESS;
-const UPKEEP_FUND_AMOUNT = process.env.UPKEEP_FUND_AMOUNT;
-const UPKEEP_GAS_LIMIT = process.env.UPKEEP_GAS_LIMIT;
+const NEW_UPKEEP_FUND_AMOUNT = process.env.NEW_UPKEEP_FUND_AMOUNT;
+const NEW_UPKEEP_GAS_LIMIT = process.env.NEW_UPKEEP_GAS_LIMIT;
 
 assert.ok(AUTOMATION_REGISTRAR_ADDRESS, "AUTOMATION_REGISTRAR_ADDRESS is required");
 assert.ok(KEEPER_REGISTRY_ADDRESS, "KEEPER_REGISTRY_ADDRESS is required");
@@ -25,8 +25,8 @@ assert.ok(LINK_TOKEN_ADDRESS, "LINK_TOKEN_ADDRESS is required");
 assert.ok(CRON_DELEGATE_ADDRESS, "CRON_DELEGATE_ADDRESS is required");
 assert.ok(CRON_LIBRARY_ADDRESS, "CRON_LIBRARY_ADDRESS is required");
 assert.ok(VOTER_ADDRESS, "VOTER_ADDRESS is required");
-assert.ok(UPKEEP_FUND_AMOUNT, "UPKEEP_FUND_AMOUNT is required");
-assert.ok(UPKEEP_GAS_LIMIT, "UPKEEP_GAS_LIMIT is required");
+assert.ok(NEW_UPKEEP_FUND_AMOUNT, "NEW_UPKEEP_FUND_AMOUNT is required");
+assert.ok(NEW_UPKEEP_GAS_LIMIT, "NEW_UPKEEP_GAS_LIMIT is required");
 
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
@@ -51,8 +51,8 @@ async function main() {
     AUTOMATION_REGISTRAR_ADDRESS!,
     CRON_DELEGATE_ADDRESS!,
     VOTER_ADDRESS!,
-    UPKEEP_FUND_AMOUNT!,
-    UPKEEP_GAS_LIMIT!
+    NEW_UPKEEP_FUND_AMOUNT!,
+    NEW_UPKEEP_GAS_LIMIT!
   );
   await gaugeUpkeepManager.deployed();
 

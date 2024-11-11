@@ -7,10 +7,11 @@ import {IKeeperRegistryMaster} from "@chainlink/contracts/src/v0.8/automation/in
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
 import {CronUpkeep} from "@chainlink/contracts/src/v0.8/automation/upkeeps/CronUpkeep.sol";
 import {Spec, Cron} from "@chainlink/contracts/src/v0.8/automation/libraries/external/Cron.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IAutomationRegistrar, RegistrationParams} from "./interfaces/IAutomationRegistrar.sol";
 import {IGaugeUpkeepManager} from "./interfaces/IGaugeUpkeepManager.sol";
 
-contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCompatibleInterface {
+contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCompatibleInterface, Ownable {
     // @inheritdoc IGaugeUpkeepManager
     address public override immutable linkToken;
     // @inheritdoc IGaugeUpkeepManager 
@@ -23,9 +24,9 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
     address public override immutable voter;
     
     // @inheritdoc IGaugeUpkeepManager
-    uint96 public override upkeepFundAmount;
+    uint96 public override newUpkeepFundAmount;
     // @inheritdoc IGaugeUpkeepManager
-    uint32 public override upkeepGasLimit;
+    uint32 public override newUpkeepGasLimit;
 
     // @inheritdoc IGaugeUpkeepManager
     mapping(address => uint256) public override gaugeUpkeepId;
@@ -56,16 +57,16 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
         address _automationRegistrar,
         address _automationCronDelegate,
         address _voter,
-        uint96 _upkeepFundAmount,
-        uint32 _upkeepGasLimit
+        uint96 _newUpkeepFundAmount,
+        uint32 _newUpkeepGasLimit
     ) {
         linkToken = _linkToken;
         keeperRegistry = _keeperRegistry;
         automationRegistrar = _automationRegistrar;
         automationCronDelegate = _automationCronDelegate;
         voter = _voter;
-        upkeepFundAmount = _upkeepFundAmount;
-        upkeepGasLimit = _upkeepGasLimit;
+        newUpkeepFundAmount = _newUpkeepFundAmount;
+        newUpkeepGasLimit = _newUpkeepGasLimit;
     }
 
     // @inheritdoc ILogAutomation
@@ -135,13 +136,13 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
             name: UPKEEP_NAME,
             encryptedEmail: "",
             upkeepContract: address(cronUpkeep),
-            gasLimit: upkeepGasLimit,
+            gasLimit: newUpkeepGasLimit,
             adminAddress: address(this),
             triggerType: CONDITIONAL_TRIGGER_TYPE,
             checkData: "",
             triggerConfig: "",
             offchainConfig: "",
-            amount: upkeepFundAmount
+            amount: newUpkeepFundAmount
         });
         upkeepId = _registerUpkeep(params);
         gaugeUpkeepId[gauge] = upkeepId;
@@ -203,8 +204,23 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
         return address(uint160(uint256(_address)));
     }
 
-    // todo: withdraw link function
-    // todo: transfer upkeep function
-    // todo: set gas limit function
-    // todo: set fund amount function
+    // @inheritdoc IGaugeUpkeepManager
+    function withdrawLinkBalance() external override onlyOwner {
+        LinkTokenInterface(linkToken).transfer(owner(), LinkTokenInterface(linkToken).balanceOf(address(this)));
+    }
+
+    // @inheritdoc IGaugeUpkeepManager
+    function transferUpkeepAdmin(uint256 upkeepId, address newAdmin) external override onlyOwner {
+        IKeeperRegistryMaster(keeperRegistry).transferUpkeepAdmin(upkeepId, newAdmin);
+    }
+
+    // @inheritdoc IGaugeUpkeepManager
+    function setNewUpkeepGasLimit(uint32 _newUpkeepGasLimit) external override onlyOwner {
+        newUpkeepGasLimit = _newUpkeepGasLimit;
+    }
+
+    // @inheritdoc IGaugeUpkeepManager
+    function setNewUpkeepFundAmount(uint96 _newUpkeepFundAmount) external override onlyOwner {
+        newUpkeepFundAmount = _newUpkeepFundAmount;
+    }
 }

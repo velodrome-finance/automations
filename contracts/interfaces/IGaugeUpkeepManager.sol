@@ -22,10 +22,10 @@ interface IGaugeUpkeepManager {
     function voter() external view returns (address);
 
     // @notice Amount of LINK to transfer to upkeep on registration
-    function upkeepFundAmount() external view returns (uint96);
+    function newUpkeepFundAmount() external view returns (uint96);
 
     // @notice Gas limit for new upkeeps
-    function upkeepGasLimit() external view returns (uint32);
+    function newUpkeepGasLimit() external view returns (uint32);
 
     // @notice Upkeep ID for a gauge
     function gaugeUpkeepId(address gauge) external view returns (uint256);
@@ -35,4 +35,20 @@ interface IGaugeUpkeepManager {
 
     // @notice Block number when the upkeep was cancelled
     function cancelledUpkeepBlockNumber(address gauge) external view returns (uint256);
+
+    // @notice Transfer contract LINK balance to owner
+    function withdrawLinkBalance() external;
+
+    // @notice Transfer gauge upkeep admin rights to a new address
+    // @param upkeepId Upkeep ID
+    // @param newAdmin New admin address
+    function transferUpkeepAdmin(uint256 upkeepId, address newAdmin) external;
+
+    // @notice Update the gas limit for new gauge upkeeps
+    // @param upkeepGasLimit New upkeep gas limit
+    function setNewUpkeepGasLimit(uint32 newUpkeepGasLimit) external;
+
+    // @notice Update the LINK amount to transfer to new gauge upkeeps
+    // @param upkeepFundAmount New upkeep fund amount
+    function setNewUpkeepFundAmount(uint96 newUpkeepFundAmount) external;
 }
