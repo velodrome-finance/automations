@@ -12,27 +12,27 @@ import {IAutomationRegistrar, RegistrationParams} from "./interfaces/IAutomation
 import {IGaugeUpkeepManager} from "./interfaces/IGaugeUpkeepManager.sol";
 
 contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCompatibleInterface, Ownable {
-    // @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManager
     address public override immutable linkToken;
-    // @inheritdoc IGaugeUpkeepManager 
+    /// @inheritdoc IGaugeUpkeepManager 
     address public override immutable keeperRegistry;
-    // @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManager
     address public override immutable automationRegistrar;
-    // @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManager
     address public override immutable automationCronDelegate;
-    // @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManager
     address public override immutable voter;
     
-    // @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManager
     uint96 public override newUpkeepFundAmount;
-    // @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManager
     uint32 public override newUpkeepGasLimit;
 
-    // @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManager
     mapping(address => uint256) public override gaugeUpkeepId;
-    // @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManager
     address[] public override cancelledGaugeUpkeeps;
-    // @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManager
     mapping(address => uint256) public override cancelledUpkeepBlockNumber;
 
     uint8 private constant CONDITIONAL_TRIGGER_TYPE = 0;
@@ -69,7 +69,11 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
         newUpkeepGasLimit = _newUpkeepGasLimit;
     }
 
-    // @inheritdoc ILogAutomation
+    /// @inheritdoc ILogAutomation
+    /// @notice Called by the automation DON when a new log is emitted by the target contract
+    /// @dev This function is called by the automation DON to check if any action is needed
+    /// @return upkeepNeeded True if any action is needed according to the log
+    /// @return performData Encoded action and data passed to performUpkeep if upkeepNeeded is true
     function checkLog(
         Log calldata log,
         bytes memory
@@ -94,7 +98,12 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
         }
     }
 
-    // @inheritdoc AutomationCompatibleInterface
+    /// @inheritdoc AutomationCompatibleInterface
+    /// @notice Check if any cancelled gauge upkeeps are ready to be withdrawn
+    /// @dev This function is called by the automation DON to check if any upkeeps are needed
+    /// @dev Upkeep balance can be withdrawn after a delay of certain blocks
+    /// @return upkeepNeeded True if any cancelled gauge upkeeps are ready to be withdrawn
+    /// @return performData Encoded action and data passed to performUpkeep if upkeepNeeded is true
     function checkUpkeep(bytes calldata) external view override returns (bool upkeepNeeded, bytes memory performData) {
         for (uint256 i = 0; i < cancelledGaugeUpkeeps.length; i++) {
             address gauge = cancelledGaugeUpkeeps[i];
@@ -104,7 +113,9 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
         }
     }
 
-    // @inheritdoc ILogAutomation
+    /// @inheritdoc AutomationCompatibleInterface
+    /// @notice Perform the upkeep action according to the performData passed from checkUpkeep/checkLog
+    /// @dev This function is called by the automation network to perform the upkeep action
     function performUpkeep(bytes calldata performData) external override(ILogAutomation, AutomationCompatibleInterface) {
         // todo: check if the sender is trusted forwarder
         (PerformAction action, address gauge) = abi.decode(performData, (PerformAction, address));
@@ -204,22 +215,22 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
         return address(uint160(uint256(_address)));
     }
 
-    // @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManager
     function withdrawLinkBalance() external override onlyOwner {
         LinkTokenInterface(linkToken).transfer(owner(), LinkTokenInterface(linkToken).balanceOf(address(this)));
     }
 
-    // @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManager
     function transferUpkeepAdmin(uint256 upkeepId, address newAdmin) external override onlyOwner {
         IKeeperRegistryMaster(keeperRegistry).transferUpkeepAdmin(upkeepId, newAdmin);
     }
 
-    // @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManager
     function setNewUpkeepGasLimit(uint32 _newUpkeepGasLimit) external override onlyOwner {
         newUpkeepGasLimit = _newUpkeepGasLimit;
     }
 
-    // @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManager
     function setNewUpkeepFundAmount(uint96 _newUpkeepFundAmount) external override onlyOwner {
         newUpkeepFundAmount = _newUpkeepFundAmount;
     }
