@@ -14,7 +14,7 @@ import {IGaugeUpkeepManager} from "./interfaces/IGaugeUpkeepManager.sol";
 contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCompatibleInterface, Ownable {
     /// @inheritdoc IGaugeUpkeepManager
     address public override immutable linkToken;
-    /// @inheritdoc IGaugeUpkeepManager 
+    /// @inheritdoc IGaugeUpkeepManager
     address public override immutable keeperRegistry;
     /// @inheritdoc IGaugeUpkeepManager
     address public override immutable automationRegistrar;
@@ -23,6 +23,8 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
     /// @inheritdoc IGaugeUpkeepManager
     address public override immutable voter;
     
+    /// @inheritdoc IGaugeUpkeepManager
+    address public override trustedForwarder;
     /// @inheritdoc IGaugeUpkeepManager
     uint96 public override newUpkeepFundAmount;
     /// @inheritdoc IGaugeUpkeepManager
@@ -50,6 +52,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
 
     error InvalidPerformAction();
     error AutoApproveDisabled();
+    error UnauthorizedSender();
 
     constructor(
         address _linkToken,
@@ -117,7 +120,9 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
     /// @notice Perform the upkeep action according to the performData passed from checkUpkeep/checkLog
     /// @dev This function is called by the automation network to perform the upkeep action
     function performUpkeep(bytes calldata performData) external override(ILogAutomation, AutomationCompatibleInterface) {
-        // todo: check if the sender is trusted forwarder
+        if (msg.sender != trustedForwarder) {
+            revert UnauthorizedSender();
+        }
         (PerformAction action, address gauge) = abi.decode(performData, (PerformAction, address));
         if (action == PerformAction.REGISTER_UPKEEP) {
             _registerGaugeUpkeep(gauge);
@@ -233,5 +238,10 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
     /// @inheritdoc IGaugeUpkeepManager
     function setNewUpkeepFundAmount(uint96 _newUpkeepFundAmount) external override onlyOwner {
         newUpkeepFundAmount = _newUpkeepFundAmount;
+    }
+
+    /// @inheritdoc IGaugeUpkeepManager
+    function setTrustedForwarder(address _trustedForwarder) external override onlyOwner {
+        trustedForwarder = _trustedForwarder;
     }
 }
