@@ -16,7 +16,7 @@ interface IGaugeUpkeepManager {
     function automationRegistrar() external view returns (address);
 
     /// @notice Automation cron delegate address
-    function automationCronDelegate() external view returns (address);
+    function cronUpkeepFactory() external view returns (address);
 
     /// @notice Voter address
     function voter() external view returns (address);

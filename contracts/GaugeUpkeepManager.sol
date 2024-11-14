@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ILogAutomation, Log} from "@chainlink/contracts/src/v0.8/automation/interfaces/ILogAutomation.sol";
 import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/interfaces/AutomationCompatibleInterface.sol";
 import {IKeeperRegistryMaster} from "@chainlink/contracts/src/v0.8/automation/interfaces/v2_1/IKeeperRegistryMaster.sol";
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
-import {CronUpkeep} from "@chainlink/contracts/src/v0.8/automation/upkeeps/CronUpkeep.sol";
-import {Spec, Cron} from "@chainlink/contracts/src/v0.8/automation/libraries/external/Cron.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IAutomationRegistrar, RegistrationParams} from "./interfaces/IAutomationRegistrar.sol";
 import {IGaugeUpkeepManager} from "./interfaces/IGaugeUpkeepManager.sol";
+import {ICronUpkeepFactory} from "./interfaces/ICronUpkeepFactory.sol";
 
 contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCompatibleInterface, Ownable {
     /// @inheritdoc IGaugeUpkeepManager
@@ -19,7 +18,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
     /// @inheritdoc IGaugeUpkeepManager
     address public override immutable automationRegistrar;
     /// @inheritdoc IGaugeUpkeepManager
-    address public override immutable automationCronDelegate;
+    address public override immutable cronUpkeepFactory;
     /// @inheritdoc IGaugeUpkeepManager
     address public override immutable voter;
     
@@ -38,7 +37,6 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
     mapping(address => uint256) public override cancelledUpkeepBlockNumber;
 
     uint8 private constant CONDITIONAL_TRIGGER_TYPE = 0;
-    uint256 private constant CRON_UPKEEP_MAX_JOBS = 1;
     uint256 private constant CANCELLATION_DELAY_BLOCKS = 100;
     string private constant UPKEEP_NAME = "cron upkeep";
     string private constant CRON_EXPRESSION = "0 0 * * 3";
@@ -58,7 +56,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
         address _linkToken,
         address _keeperRegistry,
         address _automationRegistrar,
-        address _automationCronDelegate,
+        address _cronUpkeepFactory,
         address _voter,
         uint96 _newUpkeepFundAmount,
         uint32 _newUpkeepGasLimit
@@ -66,7 +64,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
         linkToken = _linkToken;
         keeperRegistry = _keeperRegistry;
         automationRegistrar = _automationRegistrar;
-        automationCronDelegate = _automationCronDelegate;
+        cronUpkeepFactory = _cronUpkeepFactory;
         voter = _voter;
         newUpkeepFundAmount = _newUpkeepFundAmount;
         newUpkeepGasLimit = _newUpkeepGasLimit;
@@ -137,17 +135,12 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
     }
 
     function _registerGaugeUpkeep(address gauge) internal returns (uint256 upkeepId) {
-        bytes memory job = _encodeCronJob(
+        bytes memory job = ICronUpkeepFactory(cronUpkeepFactory).encodeCronJob(
             voter,
             abi.encodeWithSignature(DISTRIBUTE_FUNCTION, gauge),
             CRON_EXPRESSION
         );
-        CronUpkeep cronUpkeep = new CronUpkeep(
-            address(this),
-            automationCronDelegate,
-            CRON_UPKEEP_MAX_JOBS,
-            job
-        );
+        address cronUpkeep = ICronUpkeepFactory(cronUpkeepFactory).newCronUpkeepWithJob(job);
         RegistrationParams memory params = RegistrationParams({
             name: UPKEEP_NAME,
             encryptedEmail: "",
@@ -201,15 +194,6 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
         cancelledGaugeUpkeeps.pop();
         delete cancelledUpkeepBlockNumber[gauge];
         delete gaugeUpkeepId[gauge];
-    }
-
-    function _encodeCronJob(
-        address target,
-        bytes memory handler,
-        string memory cronString
-    ) internal pure returns (bytes memory) {
-        Spec memory spec = Cron.toSpec(cronString);
-        return abi.encode(target, handler, spec);
     }
 
     function _extractGaugeFromCreatedLog(Log memory log) internal pure returns (address gauge) {

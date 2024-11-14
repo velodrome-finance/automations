@@ -44,18 +44,6 @@ describe("GaugeUpkeepManager", function () {
     );
     const linkToken = await erc20MintableFactory.deploy();
 
-    // deploy cron delegate
-    const cronUpkeepDelegateFactory = await ethers.getContractFactory(
-      "CronUpkeepDelegate"
-    );
-    const cronUpkeepDelegate = await cronUpkeepDelegateFactory.deploy();
-
-    // deploy cron library
-    const cronLibraryFactory = await ethers.getContractFactory(
-      "@chainlink/contracts/src/v0.8/automation/libraries/external/Cron.sol:Cron"
-    );
-    const cronLibrary = await cronLibraryFactory.deploy();
-
     // deploy velo voter mock
     const veloVoterMockFactory = await ethers.getContractFactory("VoterMock");
     veloVoterMock = await veloVoterMockFactory.deploy();
@@ -72,20 +60,32 @@ describe("GaugeUpkeepManager", function () {
     );
     const keeperRegistryMock = await keeperRegistryMockFactory.deploy();
 
-    // deploy gauge upkeep manager
-    const gaugeUpkeepManagerFactory = await ethers.getContractFactory(
-      "GaugeUpkeepManager",
+    // deploy cron library
+    const cronLibraryFactory = await ethers.getContractFactory(
+      "@chainlink/contracts/src/v0.8/automation/libraries/external/Cron.sol:Cron"
+    );
+    const cronLibrary = await cronLibraryFactory.deploy();
+
+    // deploy cron upkeep factory
+    const CronUpkeepFactory = await ethers.getContractFactory(
+      "CronUpkeepFactory",
       {
         libraries: {
           Cron: cronLibrary.address,
         },
       }
     );
+    const cronUpkeepFactory = await CronUpkeepFactory.deploy();
+
+    // deploy gauge upkeep manager
+    const gaugeUpkeepManagerFactory = await ethers.getContractFactory(
+      "GaugeUpkeepManager"
+    );
     gaugeUpkeepManager = await gaugeUpkeepManagerFactory.deploy(
       linkToken.address,
       keeperRegistryMock.address,
       automationRegistrarMock.address,
-      cronUpkeepDelegate.address,
+      cronUpkeepFactory.address,
       veloVoterMock.address,
       upkeepFundAmount,
       upkeepGasLimit
