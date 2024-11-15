@@ -29,8 +29,8 @@ const config: HardhatUserConfig = {
     ],
   },
   networks: {
-    optimismSepolia: {
-      url: process.env.OP_SEPOLIA_URL,
+    optimism: {
+      url: process.env.OP_MAINNET_URL,
       accounts: [process.env.PRIVATE_KEY!],
     },
   },
