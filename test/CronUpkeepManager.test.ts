@@ -87,6 +87,7 @@ describe('GaugeUpkeepManager', function () {
       upkeepFundAmount,
       upkeepGasLimit,
     )
+    gaugeUpkeepManager.setTrustedForwarder(accounts[0].address)
 
     // fund cron upkeep manager with link token
     await linkToken.transfer(
