@@ -2,7 +2,9 @@
   "name": "@velodrome-finance/automations",
   "scripts": {
     "compile": "npx hardhat compile",
-    "test": "npx hardhat test"
+    "test": "npx hardhat test",
+    "prettier:check": "prettier '**/*' --check",
+    "prettier:write": "prettier '**/*' --write"
   },
   "devDependencies": {
     "@chainlink/contracts": "^1.3.0",
@@ -25,6 +27,8 @@
     "ethers": "^5.7.1",
     "hardhat": "^2.12.0",
     "hardhat-gas-reporter": "^1.0.9",
+    "prettier": "^3.3.3",
+    "prettier-plugin-solidity": "^1.4.1",
     "solidity-coverage": "^0.8.2",
     "ts-node": "^10.9.1",
     "typechain": "^8.1.0",
