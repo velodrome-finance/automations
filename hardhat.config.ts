@@ -30,8 +30,8 @@ const config: HardhatUserConfig = {
   },
   networks: {
     optimism: {
-      url: process.env.OP_MAINNET_URL,
-      accounts: [process.env.PRIVATE_KEY!],
+      url: process.env.OP_MAINNET_URL || "",
+      accounts: process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
   },
 };
