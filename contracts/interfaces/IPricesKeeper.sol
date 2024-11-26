@@ -26,6 +26,15 @@ interface IPricesKeeper {
     /// @notice Last fetch timestamp round to the last hour
     function lastFetchTimestamp() external view returns (uint256);
 
+    /// @notice Trusted forwarders allowed to call performUpkeep
+    function trustedForwarders(address) external view returns (bool);
+
     /// @notice Set the batch size of tokens to fetch per upkeep perform
-    function setBatchSize(uint32 _batchSize) external;
+    function setBatchSize(uint32) external;
+
+    /// @notice Add a new address to the allowed forwarders list
+    function addTrustedForwarder(address) external;
+
+    /// @notice Remove an address from the allowed forwarders list
+    function removeTrustedForwarder(address) external;
 }

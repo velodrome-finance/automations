@@ -1,6 +1,7 @@
 import { expect } from 'chai'
 import { ethers } from 'hardhat'
 import { time } from '@nomicfoundation/hardhat-network-helpers'
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { PricesKeeper, PricesMock, VoterMock } from '../typechain-types'
 
 const { AddressZero, HashZero } = ethers.constants
@@ -26,11 +27,14 @@ describe('PricesKeeper', function () {
   let pricesMock: PricesMock
   let voterMock: VoterMock
   let whitelistedTokens: string[]
+  let accounts: SignerWithAddress[]
 
   const batchSize = 2
   const fetchInterval = 3600
 
   beforeEach(async function () {
+    accounts = await ethers.getSigners()
+
     const pricesMockFactory = await ethers.getContractFactory('PricesMock')
     pricesMock = await pricesMockFactory.deploy()
 
@@ -45,6 +49,7 @@ describe('PricesKeeper', function () {
       batchSize,
       whitelistedTokens,
     )
+    await pricesKeeper.addTrustedForwarder(accounts[0].address)
   })
 
   describe('Fetch prices', function () {
@@ -163,6 +168,12 @@ describe('PricesKeeper', function () {
           .withArgs(whitelistedTokens[i], 1000)
       }
     })
+
+    it('should allow only trusted forwarder to fetch prices', async function () {
+      await expect(
+        pricesKeeper.connect(accounts[1]).performUpkeep(fetchPricesPerformData),
+      ).to.be.revertedWithCustomError(pricesKeeper, 'UnauthorizedSender')
+    })
   })
 
   describe('Add whitelisted token', function () {
@@ -193,6 +204,12 @@ describe('PricesKeeper', function () {
 
       const whitelistedToken = await pricesKeeper.whitelistedTokens(batchSize)
       expect(whitelistedToken).to.equal(AddressZero)
+    })
+
+    it('should allow only trusted forwarder to whitelist token', async function () {
+      await expect(
+        pricesKeeper.connect(accounts[1]).performUpkeep(whitelistPerformData),
+      ).to.be.revertedWithCustomError(pricesKeeper, 'UnauthorizedSender')
     })
   })
 

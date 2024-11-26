@@ -21,6 +21,8 @@ contract PricesKeeper is IPricesKeeper, ILogAutomation, AutomationCompatibleInte
     mapping(uint256 => uint32) public batchIndex;
     /// @inheritdoc IPricesKeeper
     uint256 public override lastFetchTimestamp;
+    /// @inheritdoc IPricesKeeper
+    mapping(address => bool) public trustedForwarders;
 
     uint256 private constant FETCH_INTERVAL = 1 hours;
 
@@ -33,6 +35,7 @@ contract PricesKeeper is IPricesKeeper, ILogAutomation, AutomationCompatibleInte
 
     error InvalidAction();
     error AlreadyFetched();
+    error UnauthorizedSender();
 
     constructor(address _voter, address _prices, uint32 _batchSize, address[] memory _initialWhitelistedTokens) {
         voter = _voter;
@@ -78,6 +81,9 @@ contract PricesKeeper is IPricesKeeper, ILogAutomation, AutomationCompatibleInte
     function performUpkeep(
         bytes calldata performData
     ) external override(ILogAutomation, AutomationCompatibleInterface) {
+        if (!trustedForwarders[msg.sender]) {
+            revert UnauthorizedSender();
+        }
         (PerformAction action, bytes memory data) = abi.decode(performData, (PerformAction, bytes));
         if (action == PerformAction.FetchPrices) {
             _performFetchPrices();
@@ -135,5 +141,15 @@ contract PricesKeeper is IPricesKeeper, ILogAutomation, AutomationCompatibleInte
     function setBatchSize(uint32 _batchSize) external override onlyOwner {
         batchSize = _batchSize;
         emit BatchSizeSet(_batchSize);
+    }
+
+    /// @inheritdoc IPricesKeeper
+    function addTrustedForwarder(address _forwarder) external onlyOwner {
+        trustedForwarders[_forwarder] = true;
+    }
+
+    /// @inheritdoc IPricesKeeper
+    function removeTrustedForwarder(address _forwarder) external onlyOwner {
+        trustedForwarders[_forwarder] = false;
     }
 }
