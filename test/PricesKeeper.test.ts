@@ -195,4 +195,14 @@ describe('PricesKeeper', function () {
       expect(whitelistedToken).to.equal(AddressZero)
     })
   })
+
+  describe('Owner', function () {
+    it('should update batch size', async function () {
+      const newBatchSize = 4
+      await pricesKeeper.setBatchSize(newBatchSize)
+
+      const batchSize = await pricesKeeper.batchSize()
+      expect(batchSize).to.equal(newBatchSize)
+    })
+  })
 })

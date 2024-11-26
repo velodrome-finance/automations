@@ -2,12 +2,13 @@
 pragma solidity 0.8.20;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ILogAutomation, Log} from "@chainlink/contracts/src/v0.8/automation/interfaces/ILogAutomation.sol";
 import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/interfaces/AutomationCompatibleInterface.sol";
 import {IPricesKeeper} from "./interfaces/IPricesKeeper.sol";
 import {IPrices} from "./interfaces/IPrices.sol";
 
-contract PricesKeeper is IPricesKeeper, ILogAutomation, AutomationCompatibleInterface {
+contract PricesKeeper is IPricesKeeper, ILogAutomation, AutomationCompatibleInterface, Ownable {
     /// @inheritdoc IPricesKeeper
     address public immutable override voter;
     /// @inheritdoc IPricesKeeper
@@ -128,5 +129,11 @@ contract PricesKeeper is IPricesKeeper, ILogAutomation, AutomationCompatibleInte
 
     function _bytes32ToAddress(bytes32 _address) internal pure returns (address) {
         return address(uint160(uint256(_address)));
+    }
+
+    /// @inheritdoc IPricesKeeper
+    function setBatchSize(uint32 _batchSize) external override onlyOwner {
+        batchSize = _batchSize;
+        emit BatchSizeSet(_batchSize);
     }
 }

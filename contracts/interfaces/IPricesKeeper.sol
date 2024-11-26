@@ -6,6 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 interface IPricesKeeper {
     event WhitelistedTokenAdded(address token);
     event FetchedPrices(IERC20[] tokens);
+    event BatchSizeSet(uint32 batchSize);
 
     /// @notice Voter contract address
     function voter() external view returns (address);
@@ -24,4 +25,7 @@ interface IPricesKeeper {
 
     /// @notice Last fetch timestamp round to the last hour
     function lastFetchTimestamp() external view returns (uint256);
+
+    /// @notice Set the batch size of tokens to fetch per upkeep perform
+    function setBatchSize(uint32 _batchSize) external;
 }
