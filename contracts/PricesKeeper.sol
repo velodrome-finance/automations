@@ -23,7 +23,7 @@ contract PricesKeeper is IPricesKeeper, ILogAutomation, AutomationCompatibleInte
 
     uint256 private constant FETCH_INTERVAL = 1 hours;
 
-    bytes32 private constant WHITELIST_TOKEN_SIGNATURE = keccak256("WhitelistToken(address,address,bool)");
+    bytes32 private constant WHITELIST_TOKEN_EVENT = 0x44948130cf88523dbc150908a47dd6332c33a01a3869d7f2fa78e51d5a5f9c57;
 
     enum PerformAction {
         FetchPrices,
@@ -50,7 +50,7 @@ contract PricesKeeper is IPricesKeeper, ILogAutomation, AutomationCompatibleInte
         bytes memory
     ) external view override returns (bool upkeepNeeded, bytes memory performData) {
         bytes32 eventSignature = log.topics[0];
-        if (eventSignature == WHITELIST_TOKEN_SIGNATURE) {
+        if (eventSignature == WHITELIST_TOKEN_EVENT) {
             address token = _bytes32ToAddress(log.topics[2]);
             return (true, abi.encode(PerformAction.WhitelistToken, abi.encode(token)));
         }
