@@ -16,10 +16,7 @@ const { AddressZero, HashZero } = ethers.constants
 enum PerformAction {
   RegisterUpkeep = 0,
   CancelUpkeep = 1,
-  WithdrawUpkeep = 2,
 }
-
-const UPKEEP_CANCELLATION_DELAY = 100
 
 describe('GaugeUpkeepManager', function () {
   let gaugeUpkeepManager: GaugeUpkeepManager
@@ -29,11 +26,11 @@ describe('GaugeUpkeepManager', function () {
   let fakeGaugeAddress: string
   let registerPerformData: string
   let cancelPerformData: string
-  let withdrawPerformData: string
   let accounts: SignerWithAddress[]
 
   const upkeepFundAmount = ethers.utils.parseEther('0.1')
   const upkeepGasLimit = 500000
+  const upkeepId = 1
 
   beforeEach(async function () {
     accounts = await ethers.getSigners()
@@ -105,10 +102,6 @@ describe('GaugeUpkeepManager', function () {
     cancelPerformData = abiCoder.encode(
       ['uint8', 'address'],
       [PerformAction.CancelUpkeep, fakeGaugeAddress],
-    )
-    withdrawPerformData = abiCoder.encode(
-      ['uint8', 'address'],
-      [PerformAction.WithdrawUpkeep, fakeGaugeAddress],
     )
   })
 
@@ -212,78 +205,27 @@ describe('GaugeUpkeepManager', function () {
         .to.emit(gaugeUpkeepManager, 'GaugeUpkeepCancelled')
         .withArgs(fakeGaugeAddress, 1)
     })
+
+    it('should remove a cron upkeep after cancellation', async () => {
+      await gaugeUpkeepManager.performUpkeep(registerPerformData)
+      await gaugeUpkeepManager.performUpkeep(cancelPerformData)
+
+      const upkeepId = await gaugeUpkeepManager.gaugeUpkeepId(fakeGaugeAddress)
+
+      expect(upkeepId).to.equal(0)
+    })
   })
 
   describe('Withdraw gauge upkeep', function () {
-    it('should not trigger upkeep withdrawal before cancellation delay', async () => {
-      await gaugeUpkeepManager.performUpkeep(registerPerformData)
-      await gaugeUpkeepManager.performUpkeep(cancelPerformData)
-
-      const [upkeepNeeded, performData] =
-        await gaugeUpkeepManager.callStatic.checkUpkeep(HashZero)
-
-      expect(upkeepNeeded).to.be.false
-      expect(performData).to.equal('0x')
-    })
-
-    it('should trigger upkeep withdrawal after cancellation delay', async () => {
-      await gaugeUpkeepManager.performUpkeep(registerPerformData)
-      await gaugeUpkeepManager.performUpkeep(cancelPerformData)
-
-      await mine(UPKEEP_CANCELLATION_DELAY)
-
-      const [upkeepNeeded, performData] =
-        await gaugeUpkeepManager.callStatic.checkUpkeep(HashZero)
-
-      expect(upkeepNeeded).to.be.true
-      expect(performData).to.equal(withdrawPerformData)
-    })
-
     it('should withdraw a cron upkeep', async () => {
       await gaugeUpkeepManager.performUpkeep(registerPerformData)
       await gaugeUpkeepManager.performUpkeep(cancelPerformData)
 
-      await mine(UPKEEP_CANCELLATION_DELAY)
-
-      const tx = await gaugeUpkeepManager.performUpkeep(withdrawPerformData)
+      const tx = await gaugeUpkeepManager.withdrawUpkeep(upkeepId)
 
       await expect(tx)
         .to.emit(gaugeUpkeepManager, 'GaugeUpkeepWithdrawn')
-        .withArgs(fakeGaugeAddress, 1)
-    })
-
-    it('should remove a cron upkeep after withdrawal', async () => {
-      await gaugeUpkeepManager.performUpkeep(registerPerformData)
-      await gaugeUpkeepManager.performUpkeep(cancelPerformData)
-
-      await mine(UPKEEP_CANCELLATION_DELAY)
-
-      await gaugeUpkeepManager.performUpkeep(withdrawPerformData)
-
-      // should not trigger upkeep withdrawal after removal
-      const [logicUpkeepNeeded, logicPerformData] =
-        await gaugeUpkeepManager.callStatic.checkUpkeep(HashZero)
-      expect(logicUpkeepNeeded).to.be.false
-      expect(logicPerformData).to.equal('0x')
-
-      // should be able to register a new upkeep with the same gauge address
-      const createGaugeTx = await veloVoterMock.createGauge(fakeGaugeAddress)
-      const createGaugeReceipt = await createGaugeTx.wait()
-      const createGaugeLog = createGaugeReceipt.logs[0]
-      const log = {
-        index: createGaugeLog.transactionIndex,
-        txHash: createGaugeLog.transactionHash,
-        blockNumber: createGaugeLog.blockNumber,
-        blockHash: createGaugeLog.blockHash,
-        timestamp: 0,
-        source: veloVoterMock.address,
-        topics: createGaugeLog.topics,
-        data: createGaugeLog.data,
-      }
-      const [upkeepNeeded, performData] =
-        await gaugeUpkeepManager.callStatic.checkLog(log, HashZero)
-      expect(upkeepNeeded).to.be.true
-      expect(performData).to.equal(registerPerformData)
+        .withArgs(upkeepId)
     })
   })
 
@@ -291,8 +233,6 @@ describe('GaugeUpkeepManager', function () {
     it('should trigger upkeep revival', async () => {
       await gaugeUpkeepManager.performUpkeep(registerPerformData)
       await gaugeUpkeepManager.performUpkeep(cancelPerformData)
-      await mine(UPKEEP_CANCELLATION_DELAY)
-      await gaugeUpkeepManager.performUpkeep(withdrawPerformData)
 
       const reviveGaugeTx = await veloVoterMock.reviveGauge(fakeGaugeAddress)
       const reviveGaugeReceipt = await reviveGaugeTx.wait()

@@ -4,7 +4,7 @@ pragma solidity 0.8.6;
 interface IGaugeUpkeepManager {
     event GaugeUpkeepRegistered(address gauge, uint256 upkeepId);
     event GaugeUpkeepCancelled(address gauge, uint256 upkeepId);
-    event GaugeUpkeepWithdrawn(address gauge, uint256 upkeepId);
+    event GaugeUpkeepWithdrawn(uint256 upkeepId);
 
     /// @notice LINK token address
     function linkToken() external view returns (address);
@@ -33,11 +33,10 @@ interface IGaugeUpkeepManager {
     /// @notice Upkeep ID for a gauge
     function gaugeUpkeepId(address gauge) external view returns (uint256);
 
-    /// @notice Gauge addresses of cancelled upkeeps
-    function cancelledGaugeUpkeeps(uint256 index) external view returns (address);
-
-    /// @notice Block number when the upkeep was cancelled
-    function cancelledUpkeepBlockNumber(address gauge) external view returns (uint256);
+    /// @notice Withdraw remaining upkeep LINK balance to contract balance
+    /// @param upkeepId Gauge upkeep ID owned by the contract
+    /// @dev Upkeep must be cancelled before withdrawing
+    function withdrawUpkeep(uint256 upkeepId) external;
 
     /// @notice Transfer contract LINK balance to owner
     function withdrawLinkBalance() external;
