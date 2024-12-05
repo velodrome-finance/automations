@@ -22,11 +22,11 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     address public immutable override voter;
 
     /// @inheritdoc IGaugeUpkeepManager
-    address public override trustedForwarder;
-    /// @inheritdoc IGaugeUpkeepManager
     uint96 public override newUpkeepFundAmount;
     /// @inheritdoc IGaugeUpkeepManager
     uint32 public override newUpkeepGasLimit;
+    /// @inheritdoc IGaugeUpkeepManager
+    mapping(address => bool) public override trustedForwarder;
 
     /// @inheritdoc IGaugeUpkeepManager
     mapping(address => uint256) public override gaugeUpkeepId;
@@ -103,7 +103,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     /// @notice Perform the upkeep action according to the performData passed from checkUpkeep/checkLog
     /// @dev This function is called by the automation network to perform the upkeep action
     function performUpkeep(bytes calldata performData) external override(ILogAutomation) {
-        if (msg.sender != trustedForwarder) {
+        if (!trustedForwarder[msg.sender]) {
             revert UnauthorizedSender();
         }
         (PerformAction action, address gauge) = abi.decode(performData, (PerformAction, address));
@@ -192,7 +192,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     }
 
     /// @inheritdoc IGaugeUpkeepManager
-    function setTrustedForwarder(address _trustedForwarder) external override onlyOwner {
-        trustedForwarder = _trustedForwarder;
+    function setTrustedForwarder(address _trustedForwarder, bool _isTrusted) external override onlyOwner {
+        trustedForwarder[_trustedForwarder] = _isTrusted;
     }
 }
