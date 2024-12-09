@@ -1,24 +1,20 @@
 import { expect } from 'chai'
 import { ethers } from 'hardhat'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { time, mine } from '@nomicfoundation/hardhat-network-helpers'
+import { time } from '@nomicfoundation/hardhat-network-helpers'
 import {
   CronUpkeep,
   GaugeUpkeepManager,
   AutomationRegistrarMock,
   VoterMock,
-} from '../typechain-types'
-
-import { abi as AutomationRegistrarMockAbi } from '../artifacts/contracts/test/AutomationRegistrarMock.sol/AutomationRegistrarMock.json'
+} from '../../typechain-types'
+import { getNextWednesdayMidnightUTC } from '../utils'
+import { AutomationRegistrarMockAbi } from '../abi'
+import { PerformAction } from '../constants'
 
 const { AddressZero, HashZero } = ethers.constants
 
-enum PerformAction {
-  RegisterUpkeep = 0,
-  CancelUpkeep = 1,
-}
-
-describe('GaugeUpkeepManager', function () {
+describe('GaugeUpkeepManager Unit Tests', function () {
   let gaugeUpkeepManager: GaugeUpkeepManager
   let cronUpkeep: CronUpkeep
   let automationRegistrarMock: AutomationRegistrarMock
@@ -298,20 +294,3 @@ describe('GaugeUpkeepManager', function () {
     })
   })
 })
-
-function getNextWednesdayMidnightUTC(): Date {
-  const now = new Date()
-  const currentDay = now.getUTCDay()
-  const daysUntilWednesday = (3 - currentDay + 7) % 7 || 7
-  return new Date(
-    Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate() + daysUntilWednesday,
-      0,
-      0,
-      0,
-      0,
-    ),
-  )
-}

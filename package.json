@@ -2,7 +2,8 @@
   "name": "@velodrome-finance/automations",
   "scripts": {
     "compile": "npx hardhat compile",
-    "test": "npx hardhat test",
+    "test:unit": "npx hardhat test test/unit/*.test.ts",
+    "test:fork": "FORK_ENABLED=true BLOCK_NUMBER=128856225 npx hardhat test test/fork/*.test.ts",
     "prettier:check": "prettier '**/*' --check",
     "prettier:write": "prettier '**/*' --write"
   },

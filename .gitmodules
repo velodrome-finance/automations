@@ -1,0 +1,4 @@
+[submodule "vendor/velodrome-contracts"]
+	path = vendor/velodrome-contracts
+	url = https://github.com/velodrome-finance/contracts.git
+	branch = v2-optimism
