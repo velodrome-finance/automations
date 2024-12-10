@@ -46,31 +46,33 @@ interface IGaugeUpkeepManager {
     function trustedForwarder(address) external view returns (bool);
 
     /// @notice Upkeep ID for a gauge
-    function gaugeUpkeepId(address gauge) external view returns (uint256);
+    /// @param _gauge Gauge address
+    /// @return Upkeep ID
+    function gaugeUpkeepId(address _gauge) external view returns (uint256);
 
     /// @notice Withdraw remaining upkeep LINK balance to contract balance
-    /// @param upkeepId Gauge upkeep ID owned by the contract
+    /// @param _upkeepId Gauge upkeep ID owned by the contract
     /// @dev Upkeep must be cancelled before withdrawing
-    function withdrawUpkeep(uint256 upkeepId) external;
+    function withdrawUpkeep(uint256 _upkeepId) external;
 
     /// @notice Transfer contract LINK balance to owner
     function withdrawLinkBalance() external;
 
     /// @notice Transfer gauge upkeep admin rights to a new address
-    /// @param upkeepId Upkeep ID
-    /// @param newAdmin New admin address
-    function transferUpkeepAdmin(uint256 upkeepId, address newAdmin) external;
+    /// @param _upkeepId Upkeep ID
+    /// @param _newAdmin New admin address
+    function transferUpkeepAdmin(uint256 _upkeepId, address _newAdmin) external;
 
     /// @notice Update the gas limit for new gauge upkeeps
-    /// @param newUpkeepGasLimit New upkeep gas limit
-    function setNewUpkeepGasLimit(uint32 newUpkeepGasLimit) external;
+    /// @param _newUpkeepGasLimit New upkeep gas limit
+    function setNewUpkeepGasLimit(uint32 _newUpkeepGasLimit) external;
 
     /// @notice Update the LINK amount to transfer to new gauge upkeeps
-    /// @param newUpkeepFundAmount New upkeep fund amount
-    function setNewUpkeepFundAmount(uint96 newUpkeepFundAmount) external;
+    /// @param _newUpkeepFundAmount New upkeep fund amount
+    function setNewUpkeepFundAmount(uint96 _newUpkeepFundAmount) external;
 
     /// @notice Set the automation trusted forwarder address
-    /// @param trustedForwarder Upkeep trusted forwarder address
-    /// @param isTrusted True to enable trusted forwarder, false to disable
-    function setTrustedForwarder(address trustedForwarder, bool isTrusted) external;
+    /// @param _trustedForwarder Upkeep trusted forwarder address
+    /// @param _isTrusted True to enable trusted forwarder, false to disable
+    function setTrustedForwarder(address _trustedForwarder, bool _isTrusted) external;
 }

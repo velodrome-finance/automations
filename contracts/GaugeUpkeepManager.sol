@@ -69,23 +69,23 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     /// @return upkeepNeeded True if any action is needed according to the log
     /// @return performData Encoded action and data passed to performUpkeep if upkeepNeeded is true
     function checkLog(
-        Log calldata log,
+        Log calldata _log,
         bytes memory
     ) external view override returns (bool upkeepNeeded, bytes memory performData) {
         address gauge;
-        bytes32 eventSignature = log.topics[0];
+        bytes32 eventSignature = _log.topics[0];
         if (eventSignature == GAUGE_CREATED_SIGNATURE) {
-            gauge = _extractGaugeFromCreatedLog(log);
+            gauge = _extractGaugeFromCreatedLog(_log);
             if (gaugeUpkeepId[gauge] == 0) {
                 return (true, abi.encode(PerformAction.REGISTER_UPKEEP, gauge));
             }
         } else if (eventSignature == GAUGE_KILLED_SIGNATURE) {
-            gauge = _bytes32ToAddress(log.topics[1]);
+            gauge = _bytes32ToAddress(_log.topics[1]);
             if (gaugeUpkeepId[gauge] != 0) {
                 return (true, abi.encode(PerformAction.CANCEL_UPKEEP, gauge));
             }
         } else if (eventSignature == GAUGE_REVIVED_SIGNATURE) {
-            gauge = _bytes32ToAddress(log.topics[1]);
+            gauge = _bytes32ToAddress(_log.topics[1]);
             if (gaugeUpkeepId[gauge] == 0) {
                 return (true, abi.encode(PerformAction.REGISTER_UPKEEP, gauge));
             }
@@ -94,11 +94,11 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
 
     /// @notice Perform the upkeep action according to the performData passed from checkUpkeep/checkLog
     /// @dev This function is called by the automation network to perform the upkeep action
-    function performUpkeep(bytes calldata performData) external override {
+    function performUpkeep(bytes calldata _performData) external override {
         if (!trustedForwarder[msg.sender]) {
             revert UnauthorizedSender();
         }
-        (PerformAction action, address gauge) = abi.decode(performData, (PerformAction, address));
+        (PerformAction action, address gauge) = abi.decode(_performData, (PerformAction, address));
         if (action == PerformAction.REGISTER_UPKEEP) {
             _registerGaugeUpkeep(gauge);
         } else if (action == PerformAction.CANCEL_UPKEEP) {
@@ -108,9 +108,9 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         }
     }
 
-    function _registerGaugeUpkeep(address gauge) internal returns (uint256 upkeepId) {
+    function _registerGaugeUpkeep(address _gauge) internal returns (uint256 upkeepId) {
         address[] memory gauges = new address[](1);
-        gauges[0] = gauge;
+        gauges[0] = _gauge;
         bytes memory job = ICronUpkeepFactory(cronUpkeepFactory).encodeCronJob(
             voter,
             abi.encodeWithSignature(DISTRIBUTE_FUNCTION, gauges),
@@ -130,13 +130,13 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
             amount: newUpkeepFundAmount
         });
         upkeepId = _registerUpkeep(params);
-        gaugeUpkeepId[gauge] = upkeepId;
-        emit GaugeUpkeepRegistered(gauge, upkeepId);
+        gaugeUpkeepId[_gauge] = upkeepId;
+        emit GaugeUpkeepRegistered(_gauge, upkeepId);
     }
 
-    function _registerUpkeep(IAutomationRegistrar.RegistrationParams memory params) internal returns (uint256) {
-        IERC20(linkToken).approve(automationRegistrar, params.amount);
-        uint256 upkeepID = IAutomationRegistrar(automationRegistrar).registerUpkeep(params);
+    function _registerUpkeep(IAutomationRegistrar.RegistrationParams memory _params) internal returns (uint256) {
+        IERC20(linkToken).approve(automationRegistrar, _params.amount);
+        uint256 upkeepID = IAutomationRegistrar(automationRegistrar).registerUpkeep(_params);
         if (upkeepID != 0) {
             return upkeepID;
         } else {
@@ -144,15 +144,15 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         }
     }
 
-    function _cancelGaugeUpkeep(address gauge) internal {
-        uint256 upkeepId = gaugeUpkeepId[gauge];
+    function _cancelGaugeUpkeep(address _gauge) internal {
+        uint256 upkeepId = gaugeUpkeepId[_gauge];
         IKeeperRegistryMaster(keeperRegistry).cancelUpkeep(upkeepId);
-        delete gaugeUpkeepId[gauge];
-        emit GaugeUpkeepCancelled(gauge, upkeepId);
+        delete gaugeUpkeepId[_gauge];
+        emit GaugeUpkeepCancelled(_gauge, upkeepId);
     }
 
-    function _extractGaugeFromCreatedLog(Log memory log) internal pure returns (address gauge) {
-        (, , , gauge, ) = abi.decode(log.data, (address, address, address, address, address));
+    function _extractGaugeFromCreatedLog(Log memory _log) internal pure returns (address gauge) {
+        (, , , gauge, ) = abi.decode(_log.data, (address, address, address, address, address));
     }
 
     function _bytes32ToAddress(bytes32 _address) internal pure returns (address) {
@@ -160,9 +160,9 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     }
 
     /// @inheritdoc IGaugeUpkeepManager
-    function withdrawUpkeep(uint256 upkeepId) external override onlyOwner {
-        IKeeperRegistryMaster(keeperRegistry).withdrawFunds(upkeepId, address(this));
-        emit GaugeUpkeepWithdrawn(upkeepId);
+    function withdrawUpkeep(uint256 _upkeepId) external override onlyOwner {
+        IKeeperRegistryMaster(keeperRegistry).withdrawFunds(_upkeepId, address(this));
+        emit GaugeUpkeepWithdrawn(_upkeepId);
     }
 
     /// @inheritdoc IGaugeUpkeepManager
@@ -174,12 +174,12 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     }
 
     /// @inheritdoc IGaugeUpkeepManager
-    function transferUpkeepAdmin(uint256 upkeepId, address newAdmin) external override onlyOwner {
-        if (newAdmin == address(0)) {
+    function transferUpkeepAdmin(uint256 _upkeepId, address _newAdmin) external override onlyOwner {
+        if (_newAdmin == address(0)) {
             revert AddressZeroNotAllowed();
         }
-        IKeeperRegistryMaster(keeperRegistry).transferUpkeepAdmin(upkeepId, newAdmin);
-        emit GaugeUpkeepAdminTransferred(upkeepId, newAdmin);
+        IKeeperRegistryMaster(keeperRegistry).transferUpkeepAdmin(_upkeepId, _newAdmin);
+        emit GaugeUpkeepAdminTransferred(_upkeepId, _newAdmin);
     }
 
     /// @inheritdoc IGaugeUpkeepManager

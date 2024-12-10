@@ -15,5 +15,8 @@ interface IAutomationRegistrar {
         uint96 amount;
     }
 
-    function registerUpkeep(RegistrationParams calldata requestParams) external returns (uint256);
+    /// @notice Register an upkeep
+    /// @param _requestParams The parameters for the upkeep registration
+    /// @return The ID of the upkeep
+    function registerUpkeep(RegistrationParams calldata _requestParams) external returns (uint256);
 }
