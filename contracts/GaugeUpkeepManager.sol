@@ -12,16 +12,16 @@ import {ICronUpkeepFactory} from "./interfaces/ICronUpkeepFactory.sol";
 
 contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCompatibleInterface, Ownable {
     /// @inheritdoc IGaugeUpkeepManager
-    address public override immutable linkToken;
+    address public immutable override linkToken;
     /// @inheritdoc IGaugeUpkeepManager
-    address public override immutable keeperRegistry;
+    address public immutable override keeperRegistry;
     /// @inheritdoc IGaugeUpkeepManager
-    address public override immutable automationRegistrar;
+    address public immutable override automationRegistrar;
     /// @inheritdoc IGaugeUpkeepManager
-    address public override immutable cronUpkeepFactory;
+    address public immutable override cronUpkeepFactory;
     /// @inheritdoc IGaugeUpkeepManager
-    address public override immutable voter;
-    
+    address public immutable override voter;
+
     /// @inheritdoc IGaugeUpkeepManager
     address public override trustedForwarder;
     /// @inheritdoc IGaugeUpkeepManager
@@ -41,12 +41,19 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
     string private constant UPKEEP_NAME = "cron upkeep";
     string private constant CRON_EXPRESSION = "0 0 * * 3";
     string private constant DISTRIBUTE_FUNCTION = "distribute(address)";
-    
-    bytes32 private constant GAUGE_CREATED_SIGNATURE = 0xef9f7d1ffff3b249c6b9bf2528499e935f7d96bb6d6ec4e7da504d1d3c6279e1;
-    bytes32 private constant GAUGE_KILLED_SIGNATURE = 0x04a5d3f5d80d22d9345acc80618f4a4e7e663cf9e1aed23b57d975acec002ba7;
-    bytes32 private constant GAUGE_REVIVED_SIGNATURE = 0xed18e9faa3dccfd8aa45f69c4de40546b2ca9cccc4538a2323531656516db1aa;
 
-    enum PerformAction { REGISTER_UPKEEP, CANCEL_UPKEEP, WITHDRAW_UPKEEP_BALANCE }
+    bytes32 private constant GAUGE_CREATED_SIGNATURE =
+        0xef9f7d1ffff3b249c6b9bf2528499e935f7d96bb6d6ec4e7da504d1d3c6279e1;
+    bytes32 private constant GAUGE_KILLED_SIGNATURE =
+        0x04a5d3f5d80d22d9345acc80618f4a4e7e663cf9e1aed23b57d975acec002ba7;
+    bytes32 private constant GAUGE_REVIVED_SIGNATURE =
+        0xed18e9faa3dccfd8aa45f69c4de40546b2ca9cccc4538a2323531656516db1aa;
+
+    enum PerformAction {
+        REGISTER_UPKEEP,
+        CANCEL_UPKEEP,
+        WITHDRAW_UPKEEP_BALANCE
+    }
 
     error InvalidPerformAction();
     error AutoApproveDisabled();
@@ -117,7 +124,9 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
     /// @inheritdoc AutomationCompatibleInterface
     /// @notice Perform the upkeep action according to the performData passed from checkUpkeep/checkLog
     /// @dev This function is called by the automation network to perform the upkeep action
-    function performUpkeep(bytes calldata performData) external override(ILogAutomation, AutomationCompatibleInterface) {
+    function performUpkeep(
+        bytes calldata performData
+    ) external override(ILogAutomation, AutomationCompatibleInterface) {
         if (msg.sender != trustedForwarder) {
             revert UnauthorizedSender();
         }
@@ -197,7 +206,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
     }
 
     function _extractGaugeFromCreatedLog(Log memory log) internal pure returns (address gauge) {
-        (,,,gauge,) = abi.decode(log.data, (address, address, address, address, address));
+        (, , , gauge, ) = abi.decode(log.data, (address, address, address, address, address));
     }
 
     function _bytes32ToAddress(bytes32 _address) internal pure returns (address) {

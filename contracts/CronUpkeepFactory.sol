@@ -8,7 +8,7 @@ import {ICronUpkeepFactory} from "./interfaces/ICronUpkeepFactory.sol";
 
 contract CronUpkeepFactory is ICronUpkeepFactory {
     /// @inheritdoc ICronUpkeepFactory
-    address public override immutable cronDelegate;
+    address public immutable override cronDelegate;
 
     uint256 private constant MAX_JOBS = 1;
 
