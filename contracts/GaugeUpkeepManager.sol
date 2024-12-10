@@ -33,7 +33,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
 
     uint8 private constant CONDITIONAL_TRIGGER_TYPE = 0;
     string private constant UPKEEP_NAME = "cron upkeep";
-    string private constant CRON_EXPRESSION = "0 0 * * 3";
+    string private constant CRON_EXPRESSION = "0 0 * * 4";
     string private constant DISTRIBUTE_FUNCTION = "distribute(address[])";
 
     bytes32 private constant GAUGE_CREATED_SIGNATURE =

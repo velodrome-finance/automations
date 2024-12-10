@@ -6,7 +6,7 @@ import {
   stopImpersonatingAccount,
   mine,
 } from '@nomicfoundation/hardhat-network-helpers'
-import { findLog, getNextWednesdayMidnightUTC } from '../utils'
+import { findLog, getNextEpochUTC } from '../utils'
 import { BigNumber } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import {
@@ -319,8 +319,8 @@ describe('GaugeUpkeepManager Script Tests', function () {
     expect(gaugeUpkeepPerformData).to.equal('0x')
 
     // gauge upkeep should be needed after epoch time
-    const timestamp = getNextWednesdayMidnightUTC().getTime() / 1000
-    await time.increaseTo(timestamp + 1000)
+    const timestamp = getNextEpochUTC().getTime() / 1000
+    await time.increaseTo(timestamp)
 
     const [gaugeUpkeepNeededAfter, gaugeUpkeepPerformDataAfter] =
       await gaugeUpkeep.connect(AddressZero).callStatic.checkUpkeep(HashZero)
