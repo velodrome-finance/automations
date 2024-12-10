@@ -178,26 +178,33 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
 
     /// @inheritdoc IGaugeUpkeepManager
     function withdrawLinkBalance() external override onlyOwner {
-        IERC20(linkToken).safeTransfer(owner(), IERC20(linkToken).balanceOf(address(this)));
+        address receiver = owner();
+        uint256 balance = IERC20(linkToken).balanceOf(address(this));
+        IERC20(linkToken).safeTransfer(receiver, balance);
+        emit LinkBalanceWithdrawn(receiver, balance);
     }
 
     /// @inheritdoc IGaugeUpkeepManager
     function transferUpkeepAdmin(uint256 upkeepId, address newAdmin) external override onlyOwner {
         IKeeperRegistryMaster(keeperRegistry).transferUpkeepAdmin(upkeepId, newAdmin);
+        emit GaugeUpkeepAdminTransferred(upkeepId, newAdmin);
     }
 
     /// @inheritdoc IGaugeUpkeepManager
     function setNewUpkeepGasLimit(uint32 _newUpkeepGasLimit) external override onlyOwner {
         newUpkeepGasLimit = _newUpkeepGasLimit;
+        emit NewUpkeepGasLimitSet(_newUpkeepGasLimit);
     }
 
     /// @inheritdoc IGaugeUpkeepManager
     function setNewUpkeepFundAmount(uint96 _newUpkeepFundAmount) external override onlyOwner {
         newUpkeepFundAmount = _newUpkeepFundAmount;
+        emit NewUpkeepFundAmountSet(_newUpkeepFundAmount);
     }
 
     /// @inheritdoc IGaugeUpkeepManager
     function setTrustedForwarder(address _trustedForwarder, bool _isTrusted) external override onlyOwner {
         trustedForwarder[_trustedForwarder] = _isTrusted;
+        emit TrustedForwarderSet(_trustedForwarder, _isTrusted);
     }
 }

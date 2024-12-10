@@ -5,6 +5,11 @@ interface IGaugeUpkeepManager {
     event GaugeUpkeepRegistered(address indexed gauge, uint256 indexed upkeepId);
     event GaugeUpkeepCancelled(address indexed gauge, uint256 indexed upkeepId);
     event GaugeUpkeepWithdrawn(uint256 indexed upkeepId);
+    event GaugeUpkeepAdminTransferred(uint256 indexed upkeepId, address indexed newAdmin);
+    event NewUpkeepGasLimitSet(uint32 newUpkeepGasLimit);
+    event NewUpkeepFundAmountSet(uint96 newUpkeepFundAmount);
+    event TrustedForwarderSet(address indexed trustedForwarder, bool isTrusted);
+    event LinkBalanceWithdrawn(address indexed receiver, uint256 amount);
 
     /// @notice LINK token address
     function linkToken() external view returns (address);
