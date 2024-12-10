@@ -21,14 +21,14 @@ interface IGaugeUpkeepManager {
     /// @notice Voter address
     function voter() external view returns (address);
 
-    /// @notice Automation trusted forwarder address
-    function trustedForwarder() external view returns (address);
-
     /// @notice Amount of LINK to transfer to upkeep on registration
     function newUpkeepFundAmount() external view returns (uint96);
 
     /// @notice Gas limit for new upkeeps
     function newUpkeepGasLimit() external view returns (uint32);
+
+    /// @notice Weather an address is a trusted forwarder
+    function trustedForwarder(address) external view returns (bool);
 
     /// @notice Upkeep ID for a gauge
     function gaugeUpkeepId(address gauge) external view returns (uint256);
@@ -56,5 +56,6 @@ interface IGaugeUpkeepManager {
 
     /// @notice Set the automation trusted forwarder address
     /// @param trustedForwarder Upkeep trusted forwarder address
-    function setTrustedForwarder(address trustedForwarder) external;
+    /// @param isTrusted True to enable trusted forwarder, false to disable
+    function setTrustedForwarder(address trustedForwarder, bool isTrusted) external;
 }

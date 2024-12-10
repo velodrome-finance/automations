@@ -84,7 +84,7 @@ describe('GaugeUpkeepManager', function () {
       upkeepFundAmount,
       upkeepGasLimit,
     )
-    gaugeUpkeepManager.setTrustedForwarder(accounts[0].address)
+    gaugeUpkeepManager.setTrustedForwarder(accounts[0].address, true)
 
     // fund cron upkeep manager with link token
     await linkToken.transfer(
@@ -148,6 +148,14 @@ describe('GaugeUpkeepManager', function () {
       cronUpkeep = await ethers.getContractAt('CronUpkeep', cronUpkeepAddress)
 
       expect(cronUpkeep.address).to.be.properAddress
+    })
+
+    it('should not allow non-trusted forwarder to register upkeep', async () => {
+      await expect(
+        gaugeUpkeepManager
+          .connect(accounts[1])
+          .performUpkeep(registerPerformData),
+      ).to.be.revertedWithCustomError(gaugeUpkeepManager, 'UnauthorizedSender')
     })
   })
 
@@ -214,6 +222,15 @@ describe('GaugeUpkeepManager', function () {
 
       expect(upkeepId).to.equal(0)
     })
+
+    it('should not allow non-trusted forwarder to cancel upkeep', async () => {
+      await gaugeUpkeepManager.performUpkeep(registerPerformData)
+      await expect(
+        gaugeUpkeepManager
+          .connect(accounts[1])
+          .performUpkeep(cancelPerformData),
+      ).to.be.revertedWithCustomError(gaugeUpkeepManager, 'UnauthorizedSender')
+    })
   })
 
   describe('Withdraw gauge upkeep', function () {
@@ -253,6 +270,31 @@ describe('GaugeUpkeepManager', function () {
 
       expect(upkeepNeeded).to.be.true
       expect(performData).to.equal(registerPerformData)
+    })
+
+    it('should revive a cron upkeep', async () => {
+      await gaugeUpkeepManager.performUpkeep(registerPerformData)
+      await gaugeUpkeepManager.performUpkeep(cancelPerformData)
+
+      const reviveGaugeTx = await veloVoterMock.reviveGauge(fakeGaugeAddress)
+      await reviveGaugeTx.wait()
+
+      const tx = await gaugeUpkeepManager.performUpkeep(registerPerformData)
+
+      expect(tx)
+        .to.emit(gaugeUpkeepManager, 'GaugeUpkeepRegistered')
+        .withArgs(fakeGaugeAddress, 1)
+    })
+
+    it('should not allow non-trusted forwarder to revive upkeep', async () => {
+      await gaugeUpkeepManager.performUpkeep(registerPerformData)
+      await gaugeUpkeepManager.performUpkeep(cancelPerformData)
+
+      await expect(
+        gaugeUpkeepManager
+          .connect(accounts[1])
+          .performUpkeep(registerPerformData),
+      ).to.be.revertedWithCustomError(gaugeUpkeepManager, 'UnauthorizedSender')
     })
   })
 })
