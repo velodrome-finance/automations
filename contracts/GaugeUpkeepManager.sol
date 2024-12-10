@@ -64,7 +64,6 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         newUpkeepGasLimit = _newUpkeepGasLimit;
     }
 
-    /// @inheritdoc ILogAutomation
     /// @notice Called by the automation DON when a new log is emitted by the target contract
     /// @dev This function is called by the automation DON to check if any action is needed
     /// @return upkeepNeeded True if any action is needed according to the log
@@ -93,10 +92,9 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         }
     }
 
-    /// @inheritdoc ILogAutomation
     /// @notice Perform the upkeep action according to the performData passed from checkUpkeep/checkLog
     /// @dev This function is called by the automation network to perform the upkeep action
-    function performUpkeep(bytes calldata performData) external override(ILogAutomation) {
+    function performUpkeep(bytes calldata performData) external override {
         if (!trustedForwarder[msg.sender]) {
             revert UnauthorizedSender();
         }

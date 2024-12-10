@@ -82,7 +82,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
     )
     gaugeUpkeepManager.setTrustedForwarder(accounts[0].address, true)
 
-    // fund cron upkeep manager with link token
+    // fund gauge upkeep manager with link token
     await linkToken.transfer(
       gaugeUpkeepManager.address,
       ethers.utils.parseEther('1'),

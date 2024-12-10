@@ -41,7 +41,7 @@ interface IGaugeUpkeepManager {
     /// @notice Gas limit for new upkeeps
     function newUpkeepGasLimit() external view returns (uint32);
 
-    /// @notice Weather an address is a trusted forwarder
+    /// @notice Whether an address is a trusted forwarder
     function trustedForwarder(address) external view returns (bool);
 
     /// @notice Upkeep ID for a gauge
