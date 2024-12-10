@@ -2,14 +2,17 @@
 pragma solidity 0.8.6;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ILogAutomation, Log} from "@chainlink/contracts/src/v0.8/automation/interfaces/ILogAutomation.sol";
 import {IKeeperRegistryMaster} from "@chainlink/contracts/src/v0.8/automation/interfaces/v2_1/IKeeperRegistryMaster.sol";
-import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
 import {IAutomationRegistrar, RegistrationParams} from "./interfaces/IAutomationRegistrar.sol";
 import {IGaugeUpkeepManager} from "./interfaces/IGaugeUpkeepManager.sol";
 import {ICronUpkeepFactory} from "./interfaces/ICronUpkeepFactory.sol";
 
 contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
+    using SafeERC20 for IERC20;
+
     /// @inheritdoc IGaugeUpkeepManager
     address public immutable override linkToken;
     /// @inheritdoc IGaugeUpkeepManager
@@ -143,7 +146,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     }
 
     function _registerUpkeep(RegistrationParams memory params) internal returns (uint256) {
-        LinkTokenInterface(linkToken).approve(automationRegistrar, params.amount);
+        IERC20(linkToken).approve(automationRegistrar, params.amount);
         uint256 upkeepID = IAutomationRegistrar(automationRegistrar).registerUpkeep(params);
         if (upkeepID != 0) {
             return upkeepID;
@@ -175,7 +178,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
 
     /// @inheritdoc IGaugeUpkeepManager
     function withdrawLinkBalance() external override onlyOwner {
-        LinkTokenInterface(linkToken).transfer(owner(), LinkTokenInterface(linkToken).balanceOf(address(this)));
+        IERC20(linkToken).safeTransfer(owner(), IERC20(linkToken).balanceOf(address(this)));
     }
 
     /// @inheritdoc IGaugeUpkeepManager
