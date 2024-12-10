@@ -2,9 +2,9 @@
 pragma solidity 0.8.6;
 
 interface IGaugeUpkeepManager {
-    event GaugeUpkeepRegistered(address gauge, uint256 upkeepId);
-    event GaugeUpkeepCancelled(address gauge, uint256 upkeepId);
-    event GaugeUpkeepWithdrawn(uint256 upkeepId);
+    event GaugeUpkeepRegistered(address indexed gauge, uint256 indexed upkeepId);
+    event GaugeUpkeepCancelled(address indexed gauge, uint256 indexed upkeepId);
+    event GaugeUpkeepWithdrawn(uint256 indexed upkeepId);
 
     /// @notice LINK token address
     function linkToken() external view returns (address);

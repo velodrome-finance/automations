@@ -34,7 +34,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     uint8 private constant CONDITIONAL_TRIGGER_TYPE = 0;
     string private constant UPKEEP_NAME = "cron upkeep";
     string private constant CRON_EXPRESSION = "0 0 * * 3";
-    string private constant DISTRIBUTE_FUNCTION = "distribute(address)";
+    string private constant DISTRIBUTE_FUNCTION = "distribute(address[])";
 
     bytes32 private constant GAUGE_CREATED_SIGNATURE =
         0xef9f7d1ffff3b249c6b9bf2528499e935f7d96bb6d6ec4e7da504d1d3c6279e1;
@@ -117,9 +117,11 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     }
 
     function _registerGaugeUpkeep(address gauge) internal returns (uint256 upkeepId) {
+        address[] memory gauges = new address[](1);
+        gauges[0] = gauge;
         bytes memory job = ICronUpkeepFactory(cronUpkeepFactory).encodeCronJob(
             voter,
-            abi.encodeWithSignature(DISTRIBUTE_FUNCTION, gauge),
+            abi.encodeWithSignature(DISTRIBUTE_FUNCTION, gauges),
             CRON_EXPRESSION
         );
         address cronUpkeep = ICronUpkeepFactory(cronUpkeepFactory).newCronUpkeepWithJob(job);

@@ -5,25 +5,36 @@ import * as dotenv from 'dotenv'
 // Load environment variables
 dotenv.config()
 
+const OPTIMIZER_SETTINGS = {
+  enabled: true,
+  runs: 200,
+}
+
 const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
         version: '0.8.6',
         settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200,
-          },
+          optimizer: OPTIMIZER_SETTINGS,
+        },
+      },
+      {
+        version: '0.8.16',
+        settings: {
+          optimizer: OPTIMIZER_SETTINGS,
+        },
+      },
+      {
+        version: '0.8.19',
+        settings: {
+          optimizer: OPTIMIZER_SETTINGS,
         },
       },
       {
         version: '0.8.20',
         settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200,
-          },
+          optimizer: OPTIMIZER_SETTINGS,
         },
       },
     ],
@@ -35,6 +46,15 @@ const config: HardhatUserConfig = {
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
   },
+}
+
+if (process.env.FORK_ENABLED === 'true') {
+  config.networks!.hardhat = {
+    forking: {
+      url: process.env.OP_MAINNET_URL || '',
+      blockNumber: parseInt(process.env.BLOCK_NUMBER || ''),
+    },
+  }
 }
 
 export default config
