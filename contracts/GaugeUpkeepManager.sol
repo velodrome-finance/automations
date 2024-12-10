@@ -6,7 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ILogAutomation, Log} from "@chainlink/contracts/src/v0.8/automation/interfaces/ILogAutomation.sol";
 import {IKeeperRegistryMaster} from "@chainlink/contracts/src/v0.8/automation/interfaces/v2_1/IKeeperRegistryMaster.sol";
-import {IAutomationRegistrar, RegistrationParams} from "./interfaces/IAutomationRegistrar.sol";
+import {IAutomationRegistrar} from "./interfaces/IAutomationRegistrar.sol";
 import {IGaugeUpkeepManager} from "./interfaces/IGaugeUpkeepManager.sol";
 import {ICronUpkeepFactory} from "./interfaces/ICronUpkeepFactory.sol";
 
@@ -128,7 +128,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
             CRON_EXPRESSION
         );
         address cronUpkeep = ICronUpkeepFactory(cronUpkeepFactory).newCronUpkeepWithJob(job);
-        RegistrationParams memory params = RegistrationParams({
+        IAutomationRegistrar.RegistrationParams memory params = IAutomationRegistrar.RegistrationParams({
             name: UPKEEP_NAME,
             encryptedEmail: "",
             upkeepContract: address(cronUpkeep),
@@ -145,7 +145,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         emit GaugeUpkeepRegistered(gauge, upkeepId);
     }
 
-    function _registerUpkeep(RegistrationParams memory params) internal returns (uint256) {
+    function _registerUpkeep(IAutomationRegistrar.RegistrationParams memory params) internal returns (uint256) {
         IERC20(linkToken).approve(automationRegistrar, params.amount);
         uint256 upkeepID = IAutomationRegistrar(automationRegistrar).registerUpkeep(params);
         if (upkeepID != 0) {
