@@ -11,6 +11,15 @@ interface IGaugeUpkeepManager {
     event TrustedForwarderSet(address indexed trustedForwarder, bool isTrusted);
     event LinkBalanceWithdrawn(address indexed receiver, uint256 amount);
 
+    error InvalidPerformAction();
+    error AutoApproveDisabled();
+    error UnauthorizedSender();
+
+    enum PerformAction {
+        REGISTER_UPKEEP,
+        CANCEL_UPKEEP
+    }
+
     /// @notice LINK token address
     function linkToken() external view returns (address);
 

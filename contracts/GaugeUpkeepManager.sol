@@ -46,15 +46,6 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     bytes32 private constant GAUGE_REVIVED_SIGNATURE =
         0xed18e9faa3dccfd8aa45f69c4de40546b2ca9cccc4538a2323531656516db1aa;
 
-    enum PerformAction {
-        REGISTER_UPKEEP,
-        CANCEL_UPKEEP
-    }
-
-    error InvalidPerformAction();
-    error AutoApproveDisabled();
-    error UnauthorizedSender();
-
     constructor(
         address _linkToken,
         address _keeperRegistry,
