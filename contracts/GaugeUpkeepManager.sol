@@ -175,6 +175,9 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
 
     /// @inheritdoc IGaugeUpkeepManager
     function transferUpkeepAdmin(uint256 upkeepId, address newAdmin) external override onlyOwner {
+        if (newAdmin == address(0)) {
+            revert AddressZeroNotAllowed();
+        }
         IKeeperRegistryMaster(keeperRegistry).transferUpkeepAdmin(upkeepId, newAdmin);
         emit GaugeUpkeepAdminTransferred(upkeepId, newAdmin);
     }

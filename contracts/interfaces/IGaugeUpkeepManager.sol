@@ -14,6 +14,7 @@ interface IGaugeUpkeepManager {
     error InvalidPerformAction();
     error AutoApproveDisabled();
     error UnauthorizedSender();
+    error AddressZeroNotAllowed();
 
     enum PerformAction {
         REGISTER_UPKEEP,
