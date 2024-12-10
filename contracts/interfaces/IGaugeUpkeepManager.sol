@@ -16,10 +16,13 @@ interface IGaugeUpkeepManager {
     function automationRegistrar() external view returns (address);
 
     /// @notice Automation cron delegate address
-    function automationCronDelegate() external view returns (address);
+    function cronUpkeepFactory() external view returns (address);
 
     /// @notice Voter address
     function voter() external view returns (address);
+
+    /// @notice Automation trusted forwarder address
+    function trustedForwarder() external view returns (address);
 
     /// @notice Amount of LINK to transfer to upkeep on registration
     function newUpkeepFundAmount() external view returns (uint96);
@@ -51,4 +54,8 @@ interface IGaugeUpkeepManager {
     /// @notice Update the LINK amount to transfer to new gauge upkeeps
     /// @param newUpkeepFundAmount New upkeep fund amount
     function setNewUpkeepFundAmount(uint96 newUpkeepFundAmount) external;
+
+    /// @notice Set the automation trusted forwarder address
+    /// @param trustedForwarder Upkeep trusted forwarder address
+    function setTrustedForwarder(address trustedForwarder) external;
 }
