@@ -3,14 +3,13 @@ pragma solidity 0.8.6;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ILogAutomation, Log} from "@chainlink/contracts/src/v0.8/automation/interfaces/ILogAutomation.sol";
-import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/automation/interfaces/AutomationCompatibleInterface.sol";
 import {IKeeperRegistryMaster} from "@chainlink/contracts/src/v0.8/automation/interfaces/v2_1/IKeeperRegistryMaster.sol";
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
 import {IAutomationRegistrar, RegistrationParams} from "./interfaces/IAutomationRegistrar.sol";
 import {IGaugeUpkeepManager} from "./interfaces/IGaugeUpkeepManager.sol";
 import {ICronUpkeepFactory} from "./interfaces/ICronUpkeepFactory.sol";
 
-contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCompatibleInterface, Ownable {
+contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     /// @inheritdoc IGaugeUpkeepManager
     address public immutable override linkToken;
     /// @inheritdoc IGaugeUpkeepManager
@@ -31,13 +30,8 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
 
     /// @inheritdoc IGaugeUpkeepManager
     mapping(address => uint256) public override gaugeUpkeepId;
-    /// @inheritdoc IGaugeUpkeepManager
-    address[] public override cancelledGaugeUpkeeps;
-    /// @inheritdoc IGaugeUpkeepManager
-    mapping(address => uint256) public override cancelledUpkeepBlockNumber;
 
     uint8 private constant CONDITIONAL_TRIGGER_TYPE = 0;
-    uint256 private constant CANCELLATION_DELAY_BLOCKS = 100;
     string private constant UPKEEP_NAME = "cron upkeep";
     string private constant CRON_EXPRESSION = "0 0 * * 3";
     string private constant DISTRIBUTE_FUNCTION = "distribute(address)";
@@ -51,8 +45,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
 
     enum PerformAction {
         REGISTER_UPKEEP,
-        CANCEL_UPKEEP,
-        WITHDRAW_UPKEEP_BALANCE
+        CANCEL_UPKEEP
     }
 
     error InvalidPerformAction();
@@ -106,27 +99,10 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
         }
     }
 
-    /// @inheritdoc AutomationCompatibleInterface
-    /// @notice Check if any cancelled gauge upkeeps are ready to be withdrawn
-    /// @dev This function is called by the automation DON to check if any upkeeps are needed
-    /// @dev Upkeep balance can be withdrawn after a delay of certain blocks
-    /// @return upkeepNeeded True if any cancelled gauge upkeeps are ready to be withdrawn
-    /// @return performData Encoded action and data passed to performUpkeep if upkeepNeeded is true
-    function checkUpkeep(bytes calldata) external view override returns (bool upkeepNeeded, bytes memory performData) {
-        for (uint256 i = 0; i < cancelledGaugeUpkeeps.length; i++) {
-            address gauge = cancelledGaugeUpkeeps[i];
-            if (block.number - cancelledUpkeepBlockNumber[gauge] >= CANCELLATION_DELAY_BLOCKS) {
-                return (true, abi.encode(PerformAction.WITHDRAW_UPKEEP_BALANCE, gauge));
-            }
-        }
-    }
-
-    /// @inheritdoc AutomationCompatibleInterface
+    /// @inheritdoc ILogAutomation
     /// @notice Perform the upkeep action according to the performData passed from checkUpkeep/checkLog
     /// @dev This function is called by the automation network to perform the upkeep action
-    function performUpkeep(
-        bytes calldata performData
-    ) external override(ILogAutomation, AutomationCompatibleInterface) {
+    function performUpkeep(bytes calldata performData) external override(ILogAutomation) {
         if (msg.sender != trustedForwarder) {
             revert UnauthorizedSender();
         }
@@ -135,9 +111,6 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
             _registerGaugeUpkeep(gauge);
         } else if (action == PerformAction.CANCEL_UPKEEP) {
             _cancelGaugeUpkeep(gauge);
-        } else if (action == PerformAction.WITHDRAW_UPKEEP_BALANCE) {
-            _withdrawGaugeUpkeep(gauge);
-            _removeGaugeUpkeep(gauge);
         } else {
             revert InvalidPerformAction();
         }
@@ -180,29 +153,8 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
     function _cancelGaugeUpkeep(address gauge) internal {
         uint256 upkeepId = gaugeUpkeepId[gauge];
         IKeeperRegistryMaster(keeperRegistry).cancelUpkeep(upkeepId);
-        cancelledGaugeUpkeeps.push(gauge);
-        cancelledUpkeepBlockNumber[gauge] = block.number;
-        emit GaugeUpkeepCancelled(gauge, upkeepId);
-    }
-
-    function _withdrawGaugeUpkeep(address gauge) internal {
-        uint256 upkeepId = gaugeUpkeepId[gauge];
-        IKeeperRegistryMaster(keeperRegistry).withdrawFunds(upkeepId, address(this));
-        emit GaugeUpkeepWithdrawn(gauge, upkeepId);
-    }
-
-    function _removeGaugeUpkeep(address gauge) internal {
-        uint256 index;
-        for (uint256 i = 0; i < cancelledGaugeUpkeeps.length; i++) {
-            if (cancelledGaugeUpkeeps[i] == gauge) {
-                index = i;
-                break;
-            }
-        }
-        cancelledGaugeUpkeeps[index] = cancelledGaugeUpkeeps[cancelledGaugeUpkeeps.length - 1];
-        cancelledGaugeUpkeeps.pop();
-        delete cancelledUpkeepBlockNumber[gauge];
         delete gaugeUpkeepId[gauge];
+        emit GaugeUpkeepCancelled(gauge, upkeepId);
     }
 
     function _extractGaugeFromCreatedLog(Log memory log) internal pure returns (address gauge) {
@@ -211,6 +163,12 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, AutomationCo
 
     function _bytes32ToAddress(bytes32 _address) internal pure returns (address) {
         return address(uint160(uint256(_address)));
+    }
+
+    /// @inheritdoc IGaugeUpkeepManager
+    function withdrawUpkeep(uint256 upkeepId) external override onlyOwner {
+        IKeeperRegistryMaster(keeperRegistry).withdrawFunds(upkeepId, address(this));
+        emit GaugeUpkeepWithdrawn(upkeepId);
     }
 
     /// @inheritdoc IGaugeUpkeepManager
