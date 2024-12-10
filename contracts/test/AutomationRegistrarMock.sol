@@ -17,9 +17,7 @@ contract AutomationRegistrarMock {
 
     event UpkeepRegistered(RegistrationParams requestParams);
 
-    function registerUpkeep(
-        RegistrationParams calldata requestParams
-    ) external returns (uint256) {
+    function registerUpkeep(RegistrationParams calldata requestParams) external returns (uint256) {
         emit UpkeepRegistered(requestParams);
         return 1;
     }
