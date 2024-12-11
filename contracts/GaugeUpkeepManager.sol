@@ -113,12 +113,11 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     function _registerGaugeUpkeep(address _gauge) internal returns (uint256 upkeepId) {
         address[] memory gauges = new address[](1);
         gauges[0] = _gauge;
-        bytes memory job = ICronUpkeepFactory(cronUpkeepFactory).encodeCronJob(
+        address cronUpkeep = ICronUpkeepFactory(cronUpkeepFactory).newCronUpkeep(
             voter,
             abi.encodeWithSignature(DISTRIBUTE_FUNCTION, gauges),
             CRON_EXPRESSION
         );
-        address cronUpkeep = ICronUpkeepFactory(cronUpkeepFactory).newCronUpkeepWithJob(job);
         IAutomationRegistrar.RegistrationParams memory params = IAutomationRegistrar.RegistrationParams({
             name: UPKEEP_NAME,
             encryptedEmail: "",

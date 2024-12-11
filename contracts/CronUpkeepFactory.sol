@@ -17,17 +17,21 @@ contract CronUpkeepFactory is ICronUpkeepFactory {
     }
 
     /// @inheritdoc ICronUpkeepFactory
-    function newCronUpkeepWithJob(bytes memory _encodedJob) public override returns (address cronUpkeep) {
-        cronUpkeep = address(new CronUpkeep(msg.sender, cronDelegate, MAX_JOBS, _encodedJob));
-        emit NewCronUpkeepCreated(cronUpkeep, msg.sender);
-    }
-
-    /// @inheritdoc ICronUpkeepFactory
-    function encodeCronJob(
+    function newCronUpkeep(
         address _target,
         bytes memory _handler,
         string memory _cronString
-    ) external pure override returns (bytes memory) {
+    ) public override returns (address cronUpkeep) {
+        bytes memory encodedJob = _encodeCronJob(_target, _handler, _cronString);
+        cronUpkeep = address(new CronUpkeep(msg.sender, cronDelegate, MAX_JOBS, encodedJob));
+        emit NewCronUpkeepCreated(cronUpkeep, msg.sender);
+    }
+
+    function _encodeCronJob(
+        address _target,
+        bytes memory _handler,
+        string memory _cronString
+    ) internal pure returns (bytes memory) {
         Spec memory spec = CronExternal.toSpec(_cronString);
         return abi.encode(_target, _handler, spec);
     }
