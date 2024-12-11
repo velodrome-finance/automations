@@ -30,7 +30,7 @@ interface IGaugeUpkeepManager {
     /// @notice Automation registrar address
     function automationRegistrar() external view returns (address);
 
-    /// @notice Automation cron delegate address
+    /// @notice Cron upkeep factory address
     function cronUpkeepFactory() external view returns (address);
 
     /// @notice Voter address
@@ -43,7 +43,9 @@ interface IGaugeUpkeepManager {
     function newUpkeepGasLimit() external view returns (uint32);
 
     /// @notice Whether an address is a trusted forwarder
-    function trustedForwarder(address) external view returns (bool);
+    /// @param _forwarder Forwarder address
+    /// @return True if set as trusted forwarder, false otherwise
+    function trustedForwarder(address _forwarder) external view returns (bool);
 
     /// @notice Upkeep ID for a gauge
     /// @param _gauge Gauge address
