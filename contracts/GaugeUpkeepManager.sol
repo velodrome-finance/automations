@@ -197,6 +197,9 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
 
     /// @inheritdoc IGaugeUpkeepManager
     function setTrustedForwarder(address _trustedForwarder, bool _isTrusted) external override onlyOwner {
+        if (_trustedForwarder == address(0)) {
+            revert AddressZeroNotAllowed();
+        }
         trustedForwarder[_trustedForwarder] = _isTrusted;
         emit TrustedForwarderSet(_trustedForwarder, _isTrusted);
     }
