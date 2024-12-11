@@ -14,6 +14,7 @@ const AUTOMATION_REGISTRAR_ADDRESS = process.env.AUTOMATION_REGISTRAR_ADDRESS
 const KEEPER_REGISTRY_ADDRESS = process.env.KEEPER_REGISTRY_ADDRESS
 const LINK_TOKEN_ADDRESS = process.env.LINK_TOKEN_ADDRESS
 const VOTER_ADDRESS = process.env.VOTER_ADDRESS
+const CROSSCHAIN_GAUGE_FACTORIES = process.env.CROSSCHAIN_GAUGE_FACTORIES
 const NEW_UPKEEP_FUND_AMOUNT = process.env.NEW_UPKEEP_FUND_AMOUNT
 const NEW_UPKEEP_GAS_LIMIT = process.env.NEW_UPKEEP_GAS_LIMIT
 
@@ -24,6 +25,7 @@ assert.ok(
 assert.ok(KEEPER_REGISTRY_ADDRESS, 'KEEPER_REGISTRY_ADDRESS is required')
 assert.ok(LINK_TOKEN_ADDRESS, 'LINK_TOKEN_ADDRESS is required')
 assert.ok(VOTER_ADDRESS, 'VOTER_ADDRESS is required')
+assert.ok(CROSSCHAIN_GAUGE_FACTORIES, 'CROSSCHAIN_GAUGE_FACTORIES is required')
 assert.ok(NEW_UPKEEP_FUND_AMOUNT, 'NEW_UPKEEP_FUND_AMOUNT is required')
 assert.ok(NEW_UPKEEP_GAS_LIMIT, 'NEW_UPKEEP_GAS_LIMIT is required')
 
@@ -67,6 +69,7 @@ async function main() {
     VOTER_ADDRESS!,
     NEW_UPKEEP_FUND_AMOUNT!,
     NEW_UPKEEP_GAS_LIMIT!,
+    CROSSCHAIN_GAUGE_FACTORIES!.split(','),
   )
   await gaugeUpkeepManager.deployed()
   console.log('GaugeUpkeepManager deployed to:', gaugeUpkeepManager.address)

@@ -47,6 +47,9 @@ interface IGaugeUpkeepManager {
     /// @return True if set as trusted forwarder, false otherwise
     function trustedForwarder(address _forwarder) external view returns (bool);
 
+    /// @notice Whether a gauge factory is a crosschain factory
+    function crosschainGaugeFactory(address) external view returns (bool);
+
     /// @notice Upkeep ID for a gauge
     /// @param _gauge Gauge address
     /// @return Upkeep ID

@@ -6,6 +6,7 @@ import {
   CronUpkeep,
   GaugeUpkeepManager,
   AutomationRegistrarMock,
+  FactoryRegistryMock,
   VoterMock,
 } from '../../typechain-types'
 import { getNextEpochUTC } from '../utils'
@@ -19,7 +20,9 @@ describe('GaugeUpkeepManager Unit Tests', function () {
   let cronUpkeep: CronUpkeep
   let automationRegistrarMock: AutomationRegistrarMock
   let veloVoterMock: VoterMock
+  let factoryRegistryMock: FactoryRegistryMock
   let fakeGaugeAddress: string
+  let fakeCrosschainFactory: string
   let registerPerformData: string
   let cancelPerformData: string
   let accounts: SignerWithAddress[]
@@ -37,8 +40,17 @@ describe('GaugeUpkeepManager Unit Tests', function () {
     const linkToken = await erc20MintableFactory.deploy()
 
     // deploy velo voter mock
+    const poolMockFactory = await ethers.getContractFactory('PoolMock')
+    const poolMock = await poolMockFactory.deploy()
+    const factoryRegistryMockFactory = await ethers.getContractFactory(
+      'FactoryRegistryMock',
+    )
+    factoryRegistryMock = await factoryRegistryMockFactory.deploy()
     const veloVoterMockFactory = await ethers.getContractFactory('VoterMock')
-    veloVoterMock = await veloVoterMockFactory.deploy()
+    veloVoterMock = await veloVoterMockFactory.deploy(
+      factoryRegistryMock.address,
+      poolMock.address,
+    )
 
     // deploy automation registrar mock
     const automationRegistrarMockFactory = await ethers.getContractFactory(
@@ -71,6 +83,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
     // deploy gauge upkeep manager
     const gaugeUpkeepManagerFactory =
       await ethers.getContractFactory('GaugeUpkeepManager')
+    fakeCrosschainFactory = ethers.Wallet.createRandom().address
     gaugeUpkeepManager = await gaugeUpkeepManagerFactory.deploy(
       linkToken.address,
       keeperRegistryMock.address,
@@ -79,6 +92,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       veloVoterMock.address,
       upkeepFundAmount,
       upkeepGasLimit,
+      [fakeCrosschainFactory],
     )
     gaugeUpkeepManager.setTrustedForwarder(accounts[0].address, true)
 
@@ -152,6 +166,32 @@ describe('GaugeUpkeepManager Unit Tests', function () {
           .connect(accounts[1])
           .performUpkeep(registerPerformData),
       ).to.be.revertedWithCustomError(gaugeUpkeepManager, 'UnauthorizedSender')
+    })
+
+    it('should not trigger upkeep registration for crosschain gauges', async () => {
+      const createGaugeTx = await veloVoterMock.createGauge(fakeGaugeAddress)
+      const createGaugeReceipt = await createGaugeTx.wait()
+      const createGaugeLog = createGaugeReceipt.logs[0]
+      createGaugeLog.topics[1] = ethers.utils.hexZeroPad(
+        fakeCrosschainFactory,
+        32,
+      )
+      const log = {
+        index: createGaugeLog.transactionIndex,
+        txHash: createGaugeLog.transactionHash,
+        blockNumber: createGaugeLog.blockNumber,
+        blockHash: createGaugeLog.blockHash,
+        timestamp: 0,
+        source: veloVoterMock.address,
+        topics: createGaugeLog.topics,
+        data: createGaugeLog.data,
+      }
+
+      const [upkeepNeeded, performData] =
+        await gaugeUpkeepManager.callStatic.checkLog(log, HashZero)
+
+      expect(upkeepNeeded).to.be.false
+      expect(performData).to.equal('0x')
     })
   })
 
@@ -291,6 +331,32 @@ describe('GaugeUpkeepManager Unit Tests', function () {
           .connect(accounts[1])
           .performUpkeep(registerPerformData),
       ).to.be.revertedWithCustomError(gaugeUpkeepManager, 'UnauthorizedSender')
+    })
+
+    it('should not trigger upkeep revival for crosschain gauges', async () => {
+      await gaugeUpkeepManager.performUpkeep(registerPerformData)
+      await gaugeUpkeepManager.performUpkeep(cancelPerformData)
+      await factoryRegistryMock.setGaugeFactory(fakeCrosschainFactory)
+
+      const reviveGaugeTx = await veloVoterMock.reviveGauge(fakeGaugeAddress)
+      const reviveGaugeReceipt = await reviveGaugeTx.wait()
+      const reviveGaugeLog = reviveGaugeReceipt.logs[0]
+      const log = {
+        index: reviveGaugeLog.transactionIndex,
+        txHash: reviveGaugeLog.transactionHash,
+        blockNumber: reviveGaugeLog.blockNumber,
+        blockHash: reviveGaugeLog.blockHash,
+        timestamp: 0,
+        source: veloVoterMock.address,
+        topics: reviveGaugeLog.topics,
+        data: reviveGaugeLog.data,
+      }
+
+      const [upkeepNeeded, performData] =
+        await gaugeUpkeepManager.callStatic.checkLog(log, HashZero)
+
+      expect(upkeepNeeded).to.be.false
+      expect(performData).to.equal('0x')
     })
   })
 })
