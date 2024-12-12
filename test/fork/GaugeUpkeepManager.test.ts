@@ -543,4 +543,32 @@ describe('GaugeUpkeepManager Script Tests', function () {
     expect(gauge).to.equal(gaugeAddress)
     expect(gaugeUpkeepId).to.equal(upkeepId)
   })
+
+  it('Gauge upkeep transfer flow', async () => {
+    await gaugeUpkeepManager.transferUpkeepAdmin(
+      gaugeUpkeepId,
+      accounts[0].address,
+    )
+    await keeperRegistry.acceptUpkeepAdmin(gaugeUpkeepId)
+    const upkeepInfo = await keeperRegistry.getUpkeep(gaugeUpkeepId)
+
+    expect(upkeepInfo.admin).to.equal(accounts[0].address)
+  })
+
+  it('Witdraw contract LINK balance', async () => {
+    const ownerBalanceBefore = await linkToken.balanceOf(accounts[0].address)
+    const contractBalanceBefore = await linkToken.balanceOf(
+      gaugeUpkeepManager.address,
+    )
+    await gaugeUpkeepManager.withdrawLinkBalance()
+    const ownerBalanceAfter = await linkToken.balanceOf(accounts[0].address)
+    const contractBalanceAfter = await linkToken.balanceOf(
+      gaugeUpkeepManager.address,
+    )
+
+    expect(contractBalanceAfter).to.equal(0)
+    expect(ownerBalanceAfter).to.equal(
+      ownerBalanceBefore.add(contractBalanceBefore),
+    )
+  })
 })
