@@ -174,16 +174,15 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         return address(uint160(uint256(_address)));
     }
 
-    function _getGaugeFactoryFromGauge(address gauge) internal view returns (address) {
-        address pool = IVoter(voter).poolForGauge(gauge);
+    function _getGaugeFactoryFromGauge(address _gauge) internal view returns (address gaugeFactory) {
+        address pool = IVoter(voter).poolForGauge(_gauge);
         address factoryRegistry = IVoter(voter).factoryRegistry();
         address poolFactory = IPool(pool).factory();
-        (, address gaugeFactory) = IFactoryRegistry(factoryRegistry).factoriesToPoolFactory(poolFactory);
-        return gaugeFactory;
+        (, gaugeFactory) = IFactoryRegistry(factoryRegistry).factoriesToPoolFactory(poolFactory);
     }
 
-    function _isCrosschainGaugeFactory(address gaugeFactory) internal view returns (bool) {
-        return crosschainGaugeFactory[gaugeFactory];
+    function _isCrosschainGaugeFactory(address _gaugeFactory) internal view returns (bool) {
+        return crosschainGaugeFactory[_gaugeFactory];
     }
 
     /// @inheritdoc IGaugeUpkeepManager
