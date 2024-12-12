@@ -3,6 +3,7 @@ pragma solidity 0.8.6;
 
 contract VoterMock {
     address public fakePool;
+    address public fakeGaugeFactory;
 
     event GaugeCreated(
         address indexed poolFactory,
@@ -23,7 +24,16 @@ contract VoterMock {
     }
 
     function createGauge(address gauge) external {
-        emit GaugeCreated(address(0), address(0), address(0), address(0), address(0), address(0), gauge, address(0));
+        emit GaugeCreated(
+            address(0),
+            address(0),
+            fakeGaugeFactory,
+            address(0),
+            address(0),
+            address(0),
+            gauge,
+            address(0)
+        );
     }
 
     function killGauge(address gauge) external {
@@ -40,5 +50,9 @@ contract VoterMock {
 
     function poolForGauge(address) external view returns (address) {
         return fakePool;
+    }
+
+    function setGaugeFactory(address _gaugeFactory) external {
+        fakeGaugeFactory = _gaugeFactory;
     }
 }

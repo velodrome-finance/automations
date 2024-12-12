@@ -169,13 +169,10 @@ describe('GaugeUpkeepManager Unit Tests', function () {
     })
 
     it('should not trigger upkeep registration for crosschain gauges', async () => {
+      await veloVoterMock.setGaugeFactory(fakeCrosschainFactory)
       const createGaugeTx = await veloVoterMock.createGauge(fakeGaugeAddress)
       const createGaugeReceipt = await createGaugeTx.wait()
       const createGaugeLog = createGaugeReceipt.logs[0]
-      createGaugeLog.topics[1] = ethers.utils.hexZeroPad(
-        fakeCrosschainFactory,
-        32,
-      )
       const log = {
         index: createGaugeLog.transactionIndex,
         txHash: createGaugeLog.transactionHash,
