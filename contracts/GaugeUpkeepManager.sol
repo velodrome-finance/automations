@@ -92,7 +92,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         address gaugeFactory;
         bytes32 eventSignature = _log.topics[0];
         if (eventSignature == GAUGE_CREATED_SIGNATURE) {
-            gaugeFactory = _bytes32ToAddress(_log.topics[1]);
+            gaugeFactory = _bytes32ToAddress(_log.topics[3]);
             gauge = _extractGaugeFromCreatedLog(_log);
             if (gaugeUpkeepId[gauge] == 0 && !_isCrosschainGaugeFactory(gaugeFactory)) {
                 return (true, abi.encode(PerformAction.REGISTER_UPKEEP, gauge));
