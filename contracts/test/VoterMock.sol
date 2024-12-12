@@ -23,7 +23,7 @@ contract VoterMock {
         fakePool = _pool;
     }
 
-    function createGauge(address gauge) external {
+    function createGauge(address _gauge) external {
         emit GaugeCreated(
             address(0),
             address(0),
@@ -31,21 +31,21 @@ contract VoterMock {
             address(0),
             address(0),
             address(0),
-            gauge,
+            _gauge,
             address(0)
         );
     }
 
-    function killGauge(address gauge) external {
-        emit GaugeKilled(gauge);
+    function killGauge(address _gauge) external {
+        emit GaugeKilled(_gauge);
     }
 
-    function reviveGauge(address gauge) external {
-        emit GaugeRevived(gauge);
+    function reviveGauge(address _gauge) external {
+        emit GaugeRevived(_gauge);
     }
 
-    function distribute(address gauge) external {
-        emit Distributed(gauge);
+    function distribute(address _gauge) external {
+        emit Distributed(_gauge);
     }
 
     function poolForGauge(address) external view returns (address) {

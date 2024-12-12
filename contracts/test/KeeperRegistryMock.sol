@@ -5,11 +5,11 @@ contract KeeperRegistryMock {
     event UpkeepCancelled(uint256 id);
     event UpkeepWithdrawn(uint256 id, address to);
 
-    function cancelUpkeep(uint256 id) external {
-        emit UpkeepCancelled(id);
+    function cancelUpkeep(uint256 _id) external {
+        emit UpkeepCancelled(_id);
     }
 
-    function withdrawFunds(uint256 id, address to) external {
-        emit UpkeepWithdrawn(id, to);
+    function withdrawFunds(uint256 _id, address _to) external {
+        emit UpkeepWithdrawn(_id, _to);
     }
 }
