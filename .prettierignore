@@ -5,12 +5,13 @@ abi
 artifacts
 cache
 typechain
+vendor
 
 **/**.d.ts
 **/**.d.ts.map
 
-*.md
 .github/**/*.yml
+.gitmodules
 
 .env.example
 .gitignore
