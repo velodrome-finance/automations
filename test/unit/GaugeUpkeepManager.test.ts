@@ -42,15 +42,14 @@ describe('GaugeUpkeepManager Unit Tests', function () {
     // deploy velo voter mock
     const poolMockFactory = await ethers.getContractFactory('PoolMock')
     const poolMock = await poolMockFactory.deploy()
+    const veloVoterMockFactory = await ethers.getContractFactory('VoterMock')
+    veloVoterMock = await veloVoterMockFactory.deploy(poolMock.address)
+
+    // deploy factory registry mock
     const factoryRegistryMockFactory = await ethers.getContractFactory(
       'FactoryRegistryMock',
     )
     factoryRegistryMock = await factoryRegistryMockFactory.deploy()
-    const veloVoterMockFactory = await ethers.getContractFactory('VoterMock')
-    veloVoterMock = await veloVoterMockFactory.deploy(
-      factoryRegistryMock.address,
-      poolMock.address,
-    )
 
     // deploy automation registrar mock
     const automationRegistrarMockFactory = await ethers.getContractFactory(
@@ -90,6 +89,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       automationRegistrarMock.address,
       cronUpkeepFactory.address,
       veloVoterMock.address,
+      factoryRegistryMock.address,
       upkeepFundAmount,
       upkeepGasLimit,
       [fakeCrosschainFactory],

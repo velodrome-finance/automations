@@ -2,7 +2,6 @@
 pragma solidity 0.8.6;
 
 contract VoterMock {
-    address public fakeFactoryRegistry;
     address public fakePool;
 
     event GaugeCreated(
@@ -19,8 +18,7 @@ contract VoterMock {
     event GaugeRevived(address indexed gauge);
     event Distributed(address indexed gauge);
 
-    constructor(address _factoryRegistry, address _pool) {
-        fakeFactoryRegistry = _factoryRegistry;
+    constructor(address _pool) {
         fakePool = _pool;
     }
 
@@ -38,10 +36,6 @@ contract VoterMock {
 
     function distribute(address gauge) external {
         emit Distributed(gauge);
-    }
-
-    function factoryRegistry() external view returns (address) {
-        return fakeFactoryRegistry;
     }
 
     function poolForGauge(address) external view returns (address) {

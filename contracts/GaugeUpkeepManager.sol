@@ -26,6 +26,8 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     address public immutable override cronUpkeepFactory;
     /// @inheritdoc IGaugeUpkeepManager
     address public immutable override voter;
+    /// @inheritdoc IGaugeUpkeepManager
+    address public immutable override factoryRegistry;
 
     /// @inheritdoc IGaugeUpkeepManager
     uint96 public override newUpkeepFundAmount;
@@ -57,6 +59,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         address _automationRegistrar,
         address _cronUpkeepFactory,
         address _voter,
+        address _factoryRegistry,
         uint96 _newUpkeepFundAmount,
         uint32 _newUpkeepGasLimit,
         address[] memory _crosschainGaugeFactories
@@ -66,6 +69,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         automationRegistrar = _automationRegistrar;
         cronUpkeepFactory = _cronUpkeepFactory;
         voter = _voter;
+        factoryRegistry = _factoryRegistry;
         newUpkeepFundAmount = _newUpkeepFundAmount;
         newUpkeepGasLimit = _newUpkeepGasLimit;
 
@@ -176,7 +180,6 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
 
     function _getGaugeFactoryFromGauge(address _gauge) internal view returns (address gaugeFactory) {
         address pool = IVoter(voter).poolForGauge(_gauge);
-        address factoryRegistry = IVoter(voter).factoryRegistry();
         address poolFactory = IPool(pool).factory();
         (, gaugeFactory) = IFactoryRegistry(factoryRegistry).factoriesToPoolFactory(poolFactory);
     }

@@ -36,6 +36,9 @@ interface IGaugeUpkeepManager {
     /// @notice Voter address
     function voter() external view returns (address);
 
+    /// @notice Factory registry address
+    function factoryRegistry() external view returns (address);
+
     /// @notice Amount of LINK to transfer to upkeep on registration
     function newUpkeepFundAmount() external view returns (uint96);
 
