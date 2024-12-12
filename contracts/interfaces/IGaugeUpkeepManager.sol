@@ -60,6 +60,15 @@ interface IGaugeUpkeepManager {
     /// @return Upkeep ID
     function gaugeUpkeepId(address _gauge) external view returns (uint256);
 
+    /// @notice Get an upkeep ID from the list of active upkeeps
+    /// @param _index Active upkeep IDs array index
+    /// @return Upkeep ID
+    function activeUpkeepIds(uint256 _index) external view returns (uint256);
+
+    /// @notice Get the total number of active gauge upkeeps
+    /// @return Active upkeeps array length
+    function activeUpkeepsCount() external view returns (uint256);
+
     /// @notice Withdraw remaining upkeep LINK balance to contract balance
     /// @param _upkeepId Gauge upkeep ID owned by the contract
     /// @dev Upkeep must be cancelled before withdrawing

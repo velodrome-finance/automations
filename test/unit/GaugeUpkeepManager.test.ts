@@ -182,13 +182,19 @@ describe('GaugeUpkeepManager Unit Tests', function () {
         .to.emit(gaugeUpkeepManager, 'GaugeUpkeepRegistered')
         .withArgs(fakeGaugeAddress, 1)
 
+      const upkeepId = await gaugeUpkeepManager.gaugeUpkeepId(fakeGaugeAddress)
+      const activeUpkeepId = await gaugeUpkeepManager.activeUpkeepIds(0)
+      const activeUpkeepsCount = await gaugeUpkeepManager.activeUpkeepsCount()
+
+      expect(upkeepId).to.equal(1)
+      expect(activeUpkeepId).to.equal(1)
+      expect(activeUpkeepsCount).to.equal(1)
+
+      // get cron upkeep address and attach to contract
       const receipt = await tx.wait()
       const upkeepRegisteredLog = receipt.logs.find(
         (log) => log.address === automationRegistrarMock.address,
       )
-
-      expect(upkeepRegisteredLog).to.exist
-
       const iface = new ethers.utils.Interface(AutomationRegistrarMockAbi)
       const decodedLog = iface.parseLog(upkeepRegisteredLog!)
       const cronUpkeepAddress = decodedLog?.args[0][2]
@@ -282,15 +288,12 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       await expect(tx)
         .to.emit(gaugeUpkeepManager, 'GaugeUpkeepCancelled')
         .withArgs(fakeGaugeAddress, 1)
-    })
-
-    it('should remove a cron upkeep after cancellation', async () => {
-      await gaugeUpkeepManager.performUpkeep(registerPerformData)
-      await gaugeUpkeepManager.performUpkeep(cancelPerformData)
 
       const upkeepId = await gaugeUpkeepManager.gaugeUpkeepId(fakeGaugeAddress)
+      const activeUpkeepsCount = await gaugeUpkeepManager.activeUpkeepsCount()
 
       expect(upkeepId).to.equal(0)
+      expect(activeUpkeepsCount).to.equal(0)
     })
 
     it('should not allow non-trusted forwarder to cancel upkeep', async () => {
@@ -354,6 +357,14 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       expect(tx)
         .to.emit(gaugeUpkeepManager, 'GaugeUpkeepRegistered')
         .withArgs(fakeGaugeAddress, 1)
+
+      const upkeepId = await gaugeUpkeepManager.gaugeUpkeepId(fakeGaugeAddress)
+      const activeUpkeepId = await gaugeUpkeepManager.activeUpkeepIds(0)
+      const activeUpkeepsCount = await gaugeUpkeepManager.activeUpkeepsCount()
+
+      expect(upkeepId).to.equal(1)
+      expect(activeUpkeepId).to.equal(1)
+      expect(activeUpkeepsCount).to.equal(1)
     })
 
     it('should not allow non-trusted forwarder to revive upkeep', async () => {

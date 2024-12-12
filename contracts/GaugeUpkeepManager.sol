@@ -40,6 +40,8 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
 
     /// @inheritdoc IGaugeUpkeepManager
     mapping(address => uint256) public override gaugeUpkeepId;
+    /// @inheritdoc IGaugeUpkeepManager
+    uint256[] public override activeUpkeepIds;
 
     uint8 private constant CONDITIONAL_TRIGGER_TYPE = 0;
     string private constant UPKEEP_NAME = "cron upkeep";
@@ -120,6 +122,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
             _registerGaugeUpkeep(gauge);
         } else if (action == PerformAction.CANCEL_UPKEEP) {
             _cancelGaugeUpkeep(gauge);
+            _removeGaugeUpkeep(gauge);
         } else {
             revert InvalidPerformAction();
         }
@@ -146,6 +149,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
             amount: newUpkeepFundAmount
         });
         upkeepId = _registerUpkeep(params);
+        activeUpkeepIds.push(upkeepId);
         gaugeUpkeepId[_gauge] = upkeepId;
         emit GaugeUpkeepRegistered(_gauge, upkeepId);
     }
@@ -163,8 +167,20 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     function _cancelGaugeUpkeep(address _gauge) internal {
         uint256 upkeepId = gaugeUpkeepId[_gauge];
         IKeeperRegistryMaster(keeperRegistry).cancelUpkeep(upkeepId);
-        delete gaugeUpkeepId[_gauge];
         emit GaugeUpkeepCancelled(_gauge, upkeepId);
+    }
+
+    function _removeGaugeUpkeep(address _gauge) internal {
+        uint256 upkeepId = gaugeUpkeepId[_gauge];
+        uint256 length = activeUpkeepIds.length;
+        for (uint256 i = 0; i < length; i++) {
+            if (activeUpkeepIds[i] == upkeepId) {
+                activeUpkeepIds[i] = activeUpkeepIds[length - 1];
+                activeUpkeepIds.pop();
+                break;
+            }
+        }
+        delete gaugeUpkeepId[_gauge];
     }
 
     function _extractGaugeFromCreatedLog(Log memory _log) internal pure returns (address gauge) {
@@ -183,6 +199,11 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
 
     function _isCrosschainGaugeFactory(address _gaugeFactory) internal view returns (bool) {
         return crosschainGaugeFactory[_gaugeFactory];
+    }
+
+    /// @inheritdoc IGaugeUpkeepManager
+    function activeUpkeepsCount() external view override returns (uint256) {
+        return activeUpkeepIds.length;
     }
 
     /// @inheritdoc IGaugeUpkeepManager
