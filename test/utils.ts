@@ -8,15 +8,15 @@ export function findLog(receipt: TransactionReceipt, eventSignature: string) {
   return log
 }
 
-export function getNextWednesdayMidnightUTC(): Date {
+export function getNextEpochUTC(): Date {
   const now = new Date()
   const currentDay = now.getUTCDay()
-  const daysUntilWednesday = (3 - currentDay + 7) % 7 || 7
+  const daysUntilThursday = (4 - currentDay + 7) % 7 || 7
   return new Date(
     Date.UTC(
       now.getUTCFullYear(),
       now.getUTCMonth(),
-      now.getUTCDate() + daysUntilWednesday,
+      now.getUTCDate() + daysUntilThursday,
       0,
       0,
       0,

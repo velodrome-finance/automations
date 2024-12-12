@@ -40,4 +40,4 @@ To deploy the contracts, execute:
 npx hardhat run scripts/deploy.ts --network <network>
 ```
 
-**Note:** The contract require LINK tokens to pay for the upkeep registration.
+**Note:** The contract requires LINK tokens to pay for upkeep registrations.

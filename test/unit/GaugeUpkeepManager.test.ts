@@ -8,7 +8,7 @@ import {
   AutomationRegistrarMock,
   VoterMock,
 } from '../../typechain-types'
-import { getNextWednesdayMidnightUTC } from '../utils'
+import { getNextEpochUTC } from '../utils'
 import { AutomationRegistrarMockAbi } from '../abi'
 import { PerformAction } from '../constants'
 
@@ -82,7 +82,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
     )
     gaugeUpkeepManager.setTrustedForwarder(accounts[0].address, true)
 
-    // fund cron upkeep manager with link token
+    // fund gauge upkeep manager with link token
     await linkToken.transfer(
       gaugeUpkeepManager.address,
       ethers.utils.parseEther('1'),
@@ -166,7 +166,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
     })
 
     it('should trigger a cron upkeep when scheduled', async () => {
-      const timestamp = getNextWednesdayMidnightUTC().getTime() / 1000
+      const timestamp = getNextEpochUTC().getTime() / 1000
       await time.increaseTo(timestamp)
 
       const [upkeepNeeded, performData] = await cronUpkeep

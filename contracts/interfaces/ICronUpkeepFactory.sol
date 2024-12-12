@@ -8,16 +8,13 @@ interface ICronUpkeepFactory {
     function cronDelegate() external view returns (address);
 
     /// @notice Creates a new CronUpkeep contract, with msg.sender as the owner, and registers a cron job
-    function newCronUpkeepWithJob(bytes memory encodedJob) external returns (address);
-
-    /// @notice Converts, validates, and encodes a full cron spec. This payload is then passed to newCronUpkeepWithJob.
-    /// @param target the destination contract of a cron job
-    /// @param handler the function signature on the target contract to call
-    /// @param cronString the cron string to convert and encode
-    /// @return the abi encoding of the entire cron job
-    function encodeCronJob(
-        address target,
-        bytes memory handler,
-        string memory cronString
-    ) external pure returns (bytes memory);
+    /// @param _target The destination contract of a cron job
+    /// @param _handler The function signature on the target contract to call
+    /// @param _cronString The cron string to convert and encode
+    /// @return The address of the newly created CronUpkeep contract
+    function newCronUpkeep(
+        address _target,
+        bytes memory _handler,
+        string memory _cronString
+    ) external returns (address);
 }

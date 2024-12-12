@@ -5,6 +5,21 @@ interface IGaugeUpkeepManager {
     event GaugeUpkeepRegistered(address indexed gauge, uint256 indexed upkeepId);
     event GaugeUpkeepCancelled(address indexed gauge, uint256 indexed upkeepId);
     event GaugeUpkeepWithdrawn(uint256 indexed upkeepId);
+    event GaugeUpkeepAdminTransferred(uint256 indexed upkeepId, address indexed newAdmin);
+    event NewUpkeepGasLimitSet(uint32 newUpkeepGasLimit);
+    event NewUpkeepFundAmountSet(uint96 newUpkeepFundAmount);
+    event TrustedForwarderSet(address indexed trustedForwarder, bool isTrusted);
+    event LinkBalanceWithdrawn(address indexed receiver, uint256 amount);
+
+    error InvalidPerformAction();
+    error AutoApproveDisabled();
+    error UnauthorizedSender();
+    error AddressZeroNotAllowed();
+
+    enum PerformAction {
+        REGISTER_UPKEEP,
+        CANCEL_UPKEEP
+    }
 
     /// @notice LINK token address
     function linkToken() external view returns (address);
@@ -15,7 +30,7 @@ interface IGaugeUpkeepManager {
     /// @notice Automation registrar address
     function automationRegistrar() external view returns (address);
 
-    /// @notice Automation cron delegate address
+    /// @notice Cron upkeep factory address
     function cronUpkeepFactory() external view returns (address);
 
     /// @notice Voter address
@@ -27,35 +42,39 @@ interface IGaugeUpkeepManager {
     /// @notice Gas limit for new upkeeps
     function newUpkeepGasLimit() external view returns (uint32);
 
-    /// @notice Weather an address is a trusted forwarder
-    function trustedForwarder(address) external view returns (bool);
+    /// @notice Whether an address is a trusted forwarder
+    /// @param _forwarder Forwarder address
+    /// @return True if set as trusted forwarder, false otherwise
+    function trustedForwarder(address _forwarder) external view returns (bool);
 
     /// @notice Upkeep ID for a gauge
-    function gaugeUpkeepId(address gauge) external view returns (uint256);
+    /// @param _gauge Gauge address
+    /// @return Upkeep ID
+    function gaugeUpkeepId(address _gauge) external view returns (uint256);
 
     /// @notice Withdraw remaining upkeep LINK balance to contract balance
-    /// @param upkeepId Gauge upkeep ID owned by the contract
+    /// @param _upkeepId Gauge upkeep ID owned by the contract
     /// @dev Upkeep must be cancelled before withdrawing
-    function withdrawUpkeep(uint256 upkeepId) external;
+    function withdrawUpkeep(uint256 _upkeepId) external;
 
     /// @notice Transfer contract LINK balance to owner
     function withdrawLinkBalance() external;
 
     /// @notice Transfer gauge upkeep admin rights to a new address
-    /// @param upkeepId Upkeep ID
-    /// @param newAdmin New admin address
-    function transferUpkeepAdmin(uint256 upkeepId, address newAdmin) external;
+    /// @param _upkeepId Upkeep ID
+    /// @param _newAdmin New admin address
+    function transferUpkeepAdmin(uint256 _upkeepId, address _newAdmin) external;
 
     /// @notice Update the gas limit for new gauge upkeeps
-    /// @param newUpkeepGasLimit New upkeep gas limit
-    function setNewUpkeepGasLimit(uint32 newUpkeepGasLimit) external;
+    /// @param _newUpkeepGasLimit New upkeep gas limit
+    function setNewUpkeepGasLimit(uint32 _newUpkeepGasLimit) external;
 
     /// @notice Update the LINK amount to transfer to new gauge upkeeps
-    /// @param newUpkeepFundAmount New upkeep fund amount
-    function setNewUpkeepFundAmount(uint96 newUpkeepFundAmount) external;
+    /// @param _newUpkeepFundAmount New upkeep fund amount
+    function setNewUpkeepFundAmount(uint96 _newUpkeepFundAmount) external;
 
     /// @notice Set the automation trusted forwarder address
-    /// @param trustedForwarder Upkeep trusted forwarder address
-    /// @param isTrusted True to enable trusted forwarder, false to disable
-    function setTrustedForwarder(address trustedForwarder, bool isTrusted) external;
+    /// @param _trustedForwarder Upkeep trusted forwarder address
+    /// @param _isTrusted True to enable trusted forwarder, false to disable
+    function setTrustedForwarder(address _trustedForwarder, bool _isTrusted) external;
 }
