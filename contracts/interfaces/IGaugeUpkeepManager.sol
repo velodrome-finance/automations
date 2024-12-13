@@ -36,6 +36,9 @@ interface IGaugeUpkeepManager {
     /// @notice Voter address
     function voter() external view returns (address);
 
+    /// @notice Factory registry address
+    function factoryRegistry() external view returns (address);
+
     /// @notice Amount of LINK to transfer to upkeep on registration
     function newUpkeepFundAmount() external view returns (uint96);
 
@@ -46,6 +49,11 @@ interface IGaugeUpkeepManager {
     /// @param _forwarder Forwarder address
     /// @return True if set as trusted forwarder, false otherwise
     function trustedForwarder(address _forwarder) external view returns (bool);
+
+    /// @notice Whether a gauge factory is a crosschain factory
+    /// @param _gaugeFactory Gauge factory address
+    /// @return True if the gauge factory is a crosschain factory
+    function crosschainGaugeFactory(address _gaugeFactory) external view returns (bool);
 
     /// @notice Upkeep ID for a gauge
     /// @param _gauge Gauge address

@@ -26,6 +26,7 @@ import {
   KEEPER_REGISTRY_ADDRESS,
   LINK_TOKEN_ADDRESS,
   VOTER_ADDRESS,
+  CROSSCHAIN_GAUGE_FACTORIES,
   NEW_UPKEEP_FUND_AMOUNT,
   NEW_UPKEEP_GAS_LIMIT,
   POOL_FACTORY_ADDRESS,
@@ -156,6 +157,7 @@ describe('GaugeUpkeepManager Script Tests', function () {
       voter.address,
       NEW_UPKEEP_FUND_AMOUNT,
       NEW_UPKEEP_GAS_LIMIT,
+      CROSSCHAIN_GAUGE_FACTORIES.split(','),
     )
     // transfer link tokens to deployer
     await impersonateAccount(LINK_HOLDER_ADDRESS)

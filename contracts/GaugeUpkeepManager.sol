@@ -6,6 +6,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ILogAutomation, Log} from "@chainlink/contracts/src/v0.8/automation/interfaces/ILogAutomation.sol";
 import {IKeeperRegistryMaster} from "@chainlink/contracts/src/v0.8/automation/interfaces/v2_1/IKeeperRegistryMaster.sol";
+import {IVoter} from "../vendor/velodrome-contracts/contracts/interfaces/IVoter.sol";
+import {IPool} from "../vendor/velodrome-contracts/contracts/interfaces/IPool.sol";
+import {IFactoryRegistry} from "../vendor/velodrome-contracts/contracts/interfaces/factories/IFactoryRegistry.sol";
 import {IAutomationRegistrar} from "./interfaces/IAutomationRegistrar.sol";
 import {IGaugeUpkeepManager} from "./interfaces/IGaugeUpkeepManager.sol";
 import {ICronUpkeepFactory} from "./interfaces/ICronUpkeepFactory.sol";
@@ -23,6 +26,8 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     address public immutable override cronUpkeepFactory;
     /// @inheritdoc IGaugeUpkeepManager
     address public immutable override voter;
+    /// @inheritdoc IGaugeUpkeepManager
+    address public immutable override factoryRegistry;
 
     /// @inheritdoc IGaugeUpkeepManager
     uint96 public override newUpkeepFundAmount;
@@ -30,6 +35,8 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     uint32 public override newUpkeepGasLimit;
     /// @inheritdoc IGaugeUpkeepManager
     mapping(address => bool) public override trustedForwarder;
+    /// @inheritdoc IGaugeUpkeepManager
+    mapping(address => bool) public override crosschainGaugeFactory;
 
     /// @inheritdoc IGaugeUpkeepManager
     mapping(address => uint256) public override gaugeUpkeepId;
@@ -53,7 +60,8 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         address _cronUpkeepFactory,
         address _voter,
         uint96 _newUpkeepFundAmount,
-        uint32 _newUpkeepGasLimit
+        uint32 _newUpkeepGasLimit,
+        address[] memory _crosschainGaugeFactories
     ) {
         linkToken = _linkToken;
         keeperRegistry = _keeperRegistry;
@@ -62,6 +70,12 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         voter = _voter;
         newUpkeepFundAmount = _newUpkeepFundAmount;
         newUpkeepGasLimit = _newUpkeepGasLimit;
+
+        // Initialize crosschain gauge factories
+        for (uint256 i = 0; i < _crosschainGaugeFactories.length; i++) {
+            crosschainGaugeFactory[_crosschainGaugeFactories[i]] = true;
+        }
+        factoryRegistry = IVoter(_voter).factoryRegistry();
     }
 
     /// @notice Called by the automation DON when a new log is emitted by the target contract
@@ -73,21 +87,22 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         Log calldata _log,
         bytes memory
     ) external view override returns (bool upkeepNeeded, bytes memory performData) {
-        address gauge;
         bytes32 eventSignature = _log.topics[0];
         if (eventSignature == GAUGE_CREATED_SIGNATURE) {
-            gauge = _extractGaugeFromCreatedLog(_log);
-            if (gaugeUpkeepId[gauge] == 0) {
+            address gaugeFactory = _bytes32ToAddress(_log.topics[3]);
+            address gauge = _extractGaugeFromCreatedLog(_log);
+            if (gaugeUpkeepId[gauge] == 0 && !_isCrosschainGaugeFactory(gaugeFactory)) {
                 return (true, abi.encode(PerformAction.REGISTER_UPKEEP, gauge));
             }
         } else if (eventSignature == GAUGE_KILLED_SIGNATURE) {
-            gauge = _bytes32ToAddress(_log.topics[1]);
+            address gauge = _bytes32ToAddress(_log.topics[1]);
             if (gaugeUpkeepId[gauge] != 0) {
                 return (true, abi.encode(PerformAction.CANCEL_UPKEEP, gauge));
             }
         } else if (eventSignature == GAUGE_REVIVED_SIGNATURE) {
-            gauge = _bytes32ToAddress(_log.topics[1]);
-            if (gaugeUpkeepId[gauge] == 0) {
+            address gauge = _bytes32ToAddress(_log.topics[1]);
+            address gaugeFactory = _getGaugeFactoryFromGauge(gauge);
+            if (gaugeUpkeepId[gauge] == 0 && !_isCrosschainGaugeFactory(gaugeFactory)) {
                 return (true, abi.encode(PerformAction.REGISTER_UPKEEP, gauge));
             }
         }
@@ -158,6 +173,16 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
 
     function _bytes32ToAddress(bytes32 _address) internal pure returns (address) {
         return address(uint160(uint256(_address)));
+    }
+
+    function _getGaugeFactoryFromGauge(address _gauge) internal view returns (address gaugeFactory) {
+        address pool = IVoter(voter).poolForGauge(_gauge);
+        address poolFactory = IPool(pool).factory();
+        (, gaugeFactory) = IFactoryRegistry(factoryRegistry).factoriesToPoolFactory(poolFactory);
+    }
+
+    function _isCrosschainGaugeFactory(address _gaugeFactory) internal view returns (bool) {
+        return crosschainGaugeFactory[_gaugeFactory];
     }
 
     /// @inheritdoc IGaugeUpkeepManager
