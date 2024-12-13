@@ -9,8 +9,6 @@ export const KEEPER_REGISTRY_ADDRESS =
   process.env.KEEPER_REGISTRY_ADDRESS || 'unset'
 export const LINK_TOKEN_ADDRESS = process.env.LINK_TOKEN_ADDRESS || 'unset'
 export const VOTER_ADDRESS = process.env.VOTER_ADDRESS || 'unset'
-export const FACTORY_REGISTRY_ADDRESS =
-  process.env.FACTORY_REGISTRY_ADDRESS || 'unset'
 export const CROSSCHAIN_GAUGE_FACTORIES =
   process.env.CROSSCHAIN_GAUGE_FACTORIES || 'unset'
 export const NEW_UPKEEP_FUND_AMOUNT =

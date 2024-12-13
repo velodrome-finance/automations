@@ -59,7 +59,6 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         address _automationRegistrar,
         address _cronUpkeepFactory,
         address _voter,
-        address _factoryRegistry,
         uint96 _newUpkeepFundAmount,
         uint32 _newUpkeepGasLimit,
         address[] memory _crosschainGaugeFactories
@@ -69,7 +68,6 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         automationRegistrar = _automationRegistrar;
         cronUpkeepFactory = _cronUpkeepFactory;
         voter = _voter;
-        factoryRegistry = _factoryRegistry;
         newUpkeepFundAmount = _newUpkeepFundAmount;
         newUpkeepGasLimit = _newUpkeepGasLimit;
 
@@ -77,6 +75,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         for (uint256 i = 0; i < _crosschainGaugeFactories.length; i++) {
             crosschainGaugeFactory[_crosschainGaugeFactories[i]] = true;
         }
+        factoryRegistry = IVoter(_voter).factoryRegistry();
     }
 
     /// @notice Called by the automation DON when a new log is emitted by the target contract
