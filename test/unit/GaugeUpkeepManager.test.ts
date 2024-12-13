@@ -22,7 +22,8 @@ describe('GaugeUpkeepManager Unit Tests', function () {
   let veloVoterMock: VoterMock
   let factoryRegistryMock: FactoryRegistryMock
   let fakeGaugeAddress: string
-  let fakeCrosschainFactory: string
+  let fakeCrosschainFactoryAddress: string
+  let fakeNonCrosschainFactoryAddress: string
   let registerPerformData: string
   let cancelPerformData: string
   let accounts: SignerWithAddress[]
@@ -34,6 +35,10 @@ describe('GaugeUpkeepManager Unit Tests', function () {
   beforeEach(async function () {
     accounts = await ethers.getSigners()
 
+    // generate fake gauge factory addresses
+    fakeCrosschainFactoryAddress = ethers.Wallet.createRandom().address
+    fakeNonCrosschainFactoryAddress = ethers.Wallet.createRandom().address
+
     // deploy link token
     const erc20MintableFactory =
       await ethers.getContractFactory('ERC20Mintable')
@@ -43,7 +48,9 @@ describe('GaugeUpkeepManager Unit Tests', function () {
     const factoryRegistryMockFactory = await ethers.getContractFactory(
       'FactoryRegistryMock',
     )
-    factoryRegistryMock = await factoryRegistryMockFactory.deploy()
+    factoryRegistryMock = await factoryRegistryMockFactory.deploy(
+      fakeNonCrosschainFactoryAddress,
+    )
 
     // deploy velo voter mock
     const poolMockFactory = await ethers.getContractFactory('PoolMock')
@@ -52,6 +59,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
     veloVoterMock = await veloVoterMockFactory.deploy(
       poolMock.address,
       factoryRegistryMock.address,
+      fakeNonCrosschainFactoryAddress,
     )
 
     // deploy automation registrar mock
@@ -85,7 +93,6 @@ describe('GaugeUpkeepManager Unit Tests', function () {
     // deploy gauge upkeep manager
     const gaugeUpkeepManagerFactory =
       await ethers.getContractFactory('GaugeUpkeepManager')
-    fakeCrosschainFactory = ethers.Wallet.createRandom().address
     gaugeUpkeepManager = await gaugeUpkeepManagerFactory.deploy(
       linkToken.address,
       keeperRegistryMock.address,
@@ -94,7 +101,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       veloVoterMock.address,
       upkeepFundAmount,
       upkeepGasLimit,
-      [fakeCrosschainFactory],
+      [fakeCrosschainFactoryAddress],
     )
     gaugeUpkeepManager.setTrustedForwarder(accounts[0].address, true)
 
@@ -171,7 +178,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
     })
 
     it('should not trigger upkeep registration for crosschain gauges', async () => {
-      await veloVoterMock.setGaugeFactory(fakeCrosschainFactory)
+      await veloVoterMock.setGaugeFactory(fakeCrosschainFactoryAddress)
       const createGaugeTx = await veloVoterMock.createGauge(fakeGaugeAddress)
       const createGaugeReceipt = await createGaugeTx.wait()
       const createGaugeLog = createGaugeReceipt.logs[0]
@@ -335,7 +342,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
     it('should not trigger upkeep revival for crosschain gauges', async () => {
       await gaugeUpkeepManager.performUpkeep(registerPerformData)
       await gaugeUpkeepManager.performUpkeep(cancelPerformData)
-      await factoryRegistryMock.setGaugeFactory(fakeCrosschainFactory)
+      await factoryRegistryMock.setGaugeFactory(fakeCrosschainFactoryAddress)
 
       const reviveGaugeTx = await veloVoterMock.reviveGauge(fakeGaugeAddress)
       const reviveGaugeReceipt = await reviveGaugeTx.wait()

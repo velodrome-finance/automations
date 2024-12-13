@@ -20,9 +20,10 @@ contract VoterMock {
     event GaugeRevived(address indexed gauge);
     event Distributed(address indexed gauge);
 
-    constructor(address _pool, address _factoryRegistry) {
+    constructor(address _pool, address _factoryRegistry, address _gaugeFactory) {
         pool = _pool;
         factoryRegistry = _factoryRegistry;
+        gaugeFactory = _gaugeFactory;
     }
 
     function createGauge(address _gauge) external {

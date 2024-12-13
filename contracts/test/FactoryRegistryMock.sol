@@ -4,6 +4,10 @@ pragma solidity 0.8.6;
 contract FactoryRegistryMock {
     address gaugeFactory;
 
+    constructor(address _gaugeFactory) {
+        gaugeFactory = _gaugeFactory;
+    }
+
     function factoriesToPoolFactory(address) external view returns (address, address) {
         return (address(0), gaugeFactory);
     }
