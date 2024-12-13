@@ -87,23 +87,21 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         Log calldata _log,
         bytes memory
     ) external view override returns (bool upkeepNeeded, bytes memory performData) {
-        address gauge;
-        address gaugeFactory;
         bytes32 eventSignature = _log.topics[0];
         if (eventSignature == GAUGE_CREATED_SIGNATURE) {
-            gaugeFactory = _bytes32ToAddress(_log.topics[3]);
-            gauge = _extractGaugeFromCreatedLog(_log);
+            address gaugeFactory = _bytes32ToAddress(_log.topics[3]);
+            address gauge = _extractGaugeFromCreatedLog(_log);
             if (gaugeUpkeepId[gauge] == 0 && !_isCrosschainGaugeFactory(gaugeFactory)) {
                 return (true, abi.encode(PerformAction.REGISTER_UPKEEP, gauge));
             }
         } else if (eventSignature == GAUGE_KILLED_SIGNATURE) {
-            gauge = _bytes32ToAddress(_log.topics[1]);
+            address gauge = _bytes32ToAddress(_log.topics[1]);
             if (gaugeUpkeepId[gauge] != 0) {
                 return (true, abi.encode(PerformAction.CANCEL_UPKEEP, gauge));
             }
         } else if (eventSignature == GAUGE_REVIVED_SIGNATURE) {
-            gauge = _bytes32ToAddress(_log.topics[1]);
-            gaugeFactory = _getGaugeFactoryFromGauge(gauge);
+            address gauge = _bytes32ToAddress(_log.topics[1]);
+            address gaugeFactory = _getGaugeFactoryFromGauge(gauge);
             if (gaugeUpkeepId[gauge] == 0 && !_isCrosschainGaugeFactory(gaugeFactory)) {
                 return (true, abi.encode(PerformAction.REGISTER_UPKEEP, gauge));
             }
