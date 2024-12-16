@@ -64,7 +64,7 @@ async function registerLogTriggerUpkeep(
   automationRegistrar: AutomationRegistrar2_1,
   eventSignature: string,
   voterAddress: string,
-  gauugeUpkeepManagerAddress: string,
+  gaugeUpkeepManagerAddress: string,
 ) {
   const triggerConfig = ethers.utils.defaultAbiCoder.encode(
     ['address', 'uint8', 'bytes32', 'bytes32', 'bytes32', 'bytes32'],
@@ -80,9 +80,9 @@ async function registerLogTriggerUpkeep(
   const registerTx = await automationRegistrar.registerUpkeep({
     name: 'LogTriggerUpkeep',
     encryptedEmail: '0x',
-    upkeepContract: gauugeUpkeepManagerAddress,
+    upkeepContract: gaugeUpkeepManagerAddress,
     gasLimit: 5_000_000,
-    adminAddress: gauugeUpkeepManagerAddress,
+    adminAddress: gaugeUpkeepManagerAddress,
     triggerType: 1,
     checkData: '0x',
     triggerConfig,
@@ -230,18 +230,18 @@ describe('GaugeUpkeepManager Script Tests', function () {
 
   it('Gauge upkeep registration flow', async () => {
     // create gauge via voter
-    const voterGoverner = await voter.governor()
-    await impersonateAccount(voterGoverner)
-    const voterSigner = await ethers.getSigner(voterGoverner)
+    const voterGovernor = await voter.governor()
+    await impersonateAccount(voterGovernor)
+    const voterSigner = await ethers.getSigner(voterGovernor)
     const createGaugeTx = await voter.populateTransaction.createGauge(
       POOL_FACTORY_ADDRESS,
       POOL_ADDRESS,
     )
     const resultTx = await voterSigner.sendTransaction({
       ...createGaugeTx,
-      from: voterGoverner,
+      from: voterGovernor,
     })
-    await stopImpersonatingAccount(voterGoverner)
+    await stopImpersonatingAccount(voterGovernor)
     const resultReceipt = await resultTx.wait()
     const gaugeCreatedLog = findLog(
       resultReceipt,
@@ -555,7 +555,7 @@ describe('GaugeUpkeepManager Script Tests', function () {
     expect(upkeepInfo.admin).to.equal(accounts[0].address)
   })
 
-  it('Witdraw contract LINK balance', async () => {
+  it('Withdraw contract LINK balance', async () => {
     const ownerBalanceBefore = await linkToken.balanceOf(accounts[0].address)
     const contractBalanceBefore = await linkToken.balanceOf(
       gaugeUpkeepManager.address,
