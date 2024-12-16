@@ -94,4 +94,14 @@ interface IGaugeUpkeepManager {
     /// @param _trustedForwarder Upkeep trusted forwarder address
     /// @param _isTrusted True to enable trusted forwarder, false to disable
     function setTrustedForwarder(address _trustedForwarder, bool _isTrusted) external;
+
+    /// @notice Register gauge upkeeps
+    /// @param _gauges Array of gauge addresses
+    /// @return Array of registered upkeep IDs
+    function registerGaugeUpkeeps(address[] calldata _gauges) external returns (uint256[] memory);
+
+    /// @notice Deregister gauge upkeeps
+    /// @param _gauges Array of gauge addresses
+    /// @return Array of deregistered upkeep IDs
+    function deregisterGaugeUpkeeps(address[] calldata _gauges) external returns (uint256[] memory);
 }
