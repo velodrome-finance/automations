@@ -3,11 +3,14 @@ import { ethers } from 'hardhat'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { time } from '@nomicfoundation/hardhat-network-helpers'
 import {
-  CronUpkeep,
-  GaugeUpkeepManager,
-  AutomationRegistrarMock,
-  FactoryRegistryMock,
+  IERC20,
   VoterMock,
+  CronUpkeep,
+  CronUpkeepFactory,
+  GaugeUpkeepManager,
+  FactoryRegistryMock,
+  KeeperRegistryMock,
+  AutomationRegistrarMock,
 } from '../../typechain-types'
 import { getNextEpochUTC } from '../utils'
 import { AutomationRegistrarMockAbi } from '../abi'
@@ -18,6 +21,9 @@ const { AddressZero, HashZero } = ethers.constants
 describe('GaugeUpkeepManager Unit Tests', function () {
   let gaugeUpkeepManager: GaugeUpkeepManager
   let cronUpkeep: CronUpkeep
+  let cronUpkeepFactory: CronUpkeepFactory
+  let linkToken: IERC20
+  let keeperRegistryMock: KeeperRegistryMock
   let automationRegistrarMock: AutomationRegistrarMock
   let veloVoterMock: VoterMock
   let factoryRegistryMock: FactoryRegistryMock
@@ -42,7 +48,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
     // deploy link token
     const erc20MintableFactory =
       await ethers.getContractFactory('ERC20Mintable')
-    const linkToken = await erc20MintableFactory.deploy()
+    linkToken = await erc20MintableFactory.deploy()
 
     // deploy factory registry mock
     const factoryRegistryMockFactory = await ethers.getContractFactory(
@@ -71,7 +77,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
     // deploy keeper registry mock
     const keeperRegistryMockFactory =
       await ethers.getContractFactory('KeeperRegistryMock')
-    const keeperRegistryMock = await keeperRegistryMockFactory.deploy()
+    keeperRegistryMock = await keeperRegistryMockFactory.deploy()
 
     // deploy cron library
     const cronLibraryFactory = await ethers.getContractFactory(
@@ -88,7 +94,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
         },
       },
     )
-    const cronUpkeepFactory = await CronUpkeepFactory.deploy()
+    cronUpkeepFactory = await CronUpkeepFactory.deploy()
 
     // deploy gauge upkeep manager
     const gaugeUpkeepManagerFactory =
@@ -122,6 +128,28 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       ['uint8', 'address'],
       [PerformAction.CancelUpkeep, fakeGaugeAddress],
     )
+  })
+
+  describe('Deployment', function () {
+    it('should deploy the contract with the correct parameters', async () => {
+      expect(await gaugeUpkeepManager.linkToken()).to.equal(linkToken.address)
+      expect(await gaugeUpkeepManager.keeperRegistry()).to.equal(
+        keeperRegistryMock.address,
+      )
+      expect(await gaugeUpkeepManager.automationRegistrar()).to.equal(
+        automationRegistrarMock.address,
+      )
+      expect(await gaugeUpkeepManager.cronUpkeepFactory()).to.equal(
+        cronUpkeepFactory.address,
+      )
+      expect(await gaugeUpkeepManager.voter()).to.equal(veloVoterMock.address)
+      expect(await gaugeUpkeepManager.newUpkeepFundAmount()).to.equal(
+        upkeepFundAmount,
+      )
+      expect(await gaugeUpkeepManager.newUpkeepGasLimit()).to.equal(
+        upkeepGasLimit,
+      )
+    })
   })
 
   describe('Register gauge upkeep', function () {
@@ -363,6 +391,33 @@ describe('GaugeUpkeepManager Unit Tests', function () {
 
       expect(upkeepNeeded).to.be.false
       expect(performData).to.equal('0x')
+    })
+  })
+
+  describe('Owner functions', function () {
+    it('should set a new upkeep gas limit', async () => {
+      const newUpkeepGasLimit = 100000
+      await gaugeUpkeepManager.setNewUpkeepGasLimit(newUpkeepGasLimit)
+
+      expect(await gaugeUpkeepManager.newUpkeepGasLimit()).to.equal(
+        newUpkeepGasLimit,
+      )
+    })
+
+    it('should set a new upkeep fund amount', async () => {
+      const newUpkeepFundAmount = ethers.utils.parseEther('0.2')
+      await gaugeUpkeepManager.setNewUpkeepFundAmount(newUpkeepFundAmount)
+
+      expect(await gaugeUpkeepManager.newUpkeepFundAmount()).to.equal(
+        newUpkeepFundAmount,
+      )
+    })
+
+    it('should set a new trusted forwarder', async () => {
+      await gaugeUpkeepManager.setTrustedForwarder(accounts[1].address, true)
+
+      expect(await gaugeUpkeepManager.trustedForwarder(accounts[1].address)).to
+        .be.true
     })
   })
 })
