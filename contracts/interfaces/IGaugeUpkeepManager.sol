@@ -18,6 +18,7 @@ interface IGaugeUpkeepManager {
     error NoLinkBalance();
     error NotGauge(address gauge);
     error CrosschainGaugeNotAllowed(address gauge);
+    error GaugeUpkeepExists(address gauge);
     error GaugeUpkeepNotFound(address gauge);
 
     enum PerformAction {

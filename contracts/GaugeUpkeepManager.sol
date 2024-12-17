@@ -269,6 +269,9 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
             if (_isCrosschainGaugeFactory(gaugeFactory)) {
                 revert CrosschainGaugeNotAllowed(gauge);
             }
+            if (gaugeUpkeepId[gauge] != 0) {
+                revert GaugeUpkeepExists(gauge);
+            }
             upkeepIds[i] = _registerGaugeUpkeep(_gauges[i]);
         }
     }
