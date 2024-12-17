@@ -15,6 +15,8 @@ interface IGaugeUpkeepManager {
     error AutoApproveDisabled();
     error UnauthorizedSender();
     error AddressZeroNotAllowed();
+    error NotGauge(address gauge);
+    error CrosschainGaugeNotAllowed(address gauge);
 
     enum PerformAction {
         REGISTER_UPKEEP,
