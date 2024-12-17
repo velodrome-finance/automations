@@ -215,6 +215,9 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     function withdrawLinkBalance() external override onlyOwner {
         address receiver = owner();
         uint256 balance = IERC20(linkToken).balanceOf(address(this));
+        if (balance == 0) {
+            revert NoLinkBalance();
+        }
         IERC20(linkToken).safeTransfer(receiver, balance);
         emit LinkBalanceWithdrawn(receiver, balance);
     }

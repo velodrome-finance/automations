@@ -15,6 +15,7 @@ interface IGaugeUpkeepManager {
     error AutoApproveDisabled();
     error UnauthorizedSender();
     error AddressZeroNotAllowed();
+    error NoLinkBalance();
     error NotGauge(address gauge);
     error CrosschainGaugeNotAllowed(address gauge);
     error GaugeUpkeepNotFound(address gauge);
