@@ -17,6 +17,7 @@ interface IGaugeUpkeepManager {
     error AddressZeroNotAllowed();
     error NotGauge(address gauge);
     error CrosschainGaugeNotAllowed(address gauge);
+    error GaugeUpkeepNotFound(address gauge);
 
     enum PerformAction {
         REGISTER_UPKEEP,

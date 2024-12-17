@@ -274,15 +274,19 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     function deregisterGaugeUpkeeps(
         address[] calldata _gauges
     ) external override onlyOwner returns (uint256[] memory upkeepIds) {
+        address gauge;
+        uint256 upkeepId;
         uint256 length = _gauges.length;
         upkeepIds = new uint256[](length);
         for (uint256 i = 0; i < length; i++) {
-            uint256 upkeepId = gaugeUpkeepId[_gauges[i]];
-            if (upkeepId != 0) {
-                _cancelGaugeUpkeep(_gauges[i], upkeepId);
-                _removeGaugeUpkeep(_gauges[i], upkeepId);
-                upkeepIds[i] = upkeepId;
+            gauge = _gauges[i];
+            upkeepId = gaugeUpkeepId[gauge];
+            if (upkeepId == 0) {
+                revert GaugeUpkeepNotFound(gauge);
             }
+            _cancelGaugeUpkeep(gauge, upkeepId);
+            _removeGaugeUpkeep(gauge, upkeepId);
+            upkeepIds[i] = upkeepId;
         }
     }
 }
