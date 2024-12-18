@@ -259,6 +259,8 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
             if (gaugeUpkeepId[gauge] != 0) {
                 revert GaugeUpkeepExists(gauge);
             }
+        }
+        for (uint256 i = 0; i < length; i++) {
             upkeepIds[i] = _registerGaugeUpkeep(_gauges[i]);
         }
     }
@@ -277,6 +279,10 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
             if (upkeepId == 0) {
                 revert GaugeUpkeepNotFound(gauge);
             }
+        }
+        for (uint256 i = 0; i < length; i++) {
+            gauge = _gauges[i];
+            upkeepId = gaugeUpkeepId[gauge];
             _cancelGaugeUpkeep(gauge, upkeepId);
             upkeepIds[i] = upkeepId;
         }
