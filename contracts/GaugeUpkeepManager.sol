@@ -223,15 +223,6 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     }
 
     /// @inheritdoc IGaugeUpkeepManager
-    function transferUpkeepAdmin(uint256 _upkeepId, address _newAdmin) external override onlyOwner {
-        if (_newAdmin == address(0)) {
-            revert AddressZeroNotAllowed();
-        }
-        IKeeperRegistryMaster(keeperRegistry).transferUpkeepAdmin(_upkeepId, _newAdmin);
-        emit GaugeUpkeepAdminTransferred(_upkeepId, _newAdmin);
-    }
-
-    /// @inheritdoc IGaugeUpkeepManager
     function setNewUpkeepGasLimit(uint32 _newUpkeepGasLimit) external override onlyOwner {
         newUpkeepGasLimit = _newUpkeepGasLimit;
         emit NewUpkeepGasLimitSet(_newUpkeepGasLimit);

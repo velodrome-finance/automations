@@ -5,7 +5,6 @@ interface IGaugeUpkeepManager {
     event GaugeUpkeepRegistered(address indexed gauge, uint256 indexed upkeepId);
     event GaugeUpkeepCancelled(address indexed gauge, uint256 indexed upkeepId);
     event GaugeUpkeepWithdrawn(uint256 indexed upkeepId);
-    event GaugeUpkeepAdminTransferred(uint256 indexed upkeepId, address indexed newAdmin);
     event NewUpkeepGasLimitSet(uint32 newUpkeepGasLimit);
     event NewUpkeepFundAmountSet(uint96 newUpkeepFundAmount);
     event TrustedForwarderSet(address indexed trustedForwarder, bool isTrusted);
@@ -81,11 +80,6 @@ interface IGaugeUpkeepManager {
 
     /// @notice Transfer contract LINK balance to owner
     function withdrawLinkBalance() external;
-
-    /// @notice Transfer gauge upkeep admin rights to a new address
-    /// @param _upkeepId Upkeep ID
-    /// @param _newAdmin New admin address
-    function transferUpkeepAdmin(uint256 _upkeepId, address _newAdmin) external;
 
     /// @notice Update the gas limit for new gauge upkeeps
     /// @param _newUpkeepGasLimit New upkeep gas limit
