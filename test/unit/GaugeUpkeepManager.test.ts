@@ -430,5 +430,51 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       expect(await gaugeUpkeepManager.trustedForwarder(accounts[1].address)).to
         .be.true
     })
+
+    it('should register gauge upkeeps in bulk', async () => {
+      const gaugeAddresses = [
+        accounts[1].address,
+        accounts[2].address,
+        accounts[3].address,
+      ]
+
+      const tx = await gaugeUpkeepManager.registerGaugeUpkeeps(gaugeAddresses)
+
+      expect(tx)
+        .to.emit(gaugeUpkeepManager, 'GaugeUpkeepRegistered')
+        .withArgs(gaugeAddresses[0], 1)
+        .to.emit(gaugeUpkeepManager, 'GaugeUpkeepRegistered')
+        .withArgs(gaugeAddresses[1], 2)
+        .to.emit(gaugeUpkeepManager, 'GaugeUpkeepRegistered')
+        .withArgs(gaugeAddresses[2], 3)
+
+      const upkeepsCount = await gaugeUpkeepManager.activeUpkeepsCount()
+
+      expect(upkeepsCount).to.equal(3)
+    })
+
+    it('should deregister gauge upkeeps in bulk', async () => {
+      const gaugeAddresses = [
+        accounts[1].address,
+        accounts[2].address,
+        accounts[3].address,
+      ]
+
+      await gaugeUpkeepManager.registerGaugeUpkeeps(gaugeAddresses)
+
+      const tx = await gaugeUpkeepManager.deregisterGaugeUpkeeps(gaugeAddresses)
+
+      expect(tx)
+        .to.emit(gaugeUpkeepManager, 'GaugeUpkeepCancelled')
+        .withArgs(gaugeAddresses[0], 1)
+        .to.emit(gaugeUpkeepManager, 'GaugeUpkeepCancelled')
+        .withArgs(gaugeAddresses[1], 2)
+        .to.emit(gaugeUpkeepManager, 'GaugeUpkeepCancelled')
+        .withArgs(gaugeAddresses[2], 3)
+
+      const upkeepsCount = await gaugeUpkeepManager.activeUpkeepsCount()
+
+      expect(upkeepsCount).to.equal(0)
+    })
   })
 })

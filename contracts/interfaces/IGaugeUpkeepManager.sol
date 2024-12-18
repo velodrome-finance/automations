@@ -5,7 +5,6 @@ interface IGaugeUpkeepManager {
     event GaugeUpkeepRegistered(address indexed gauge, uint256 indexed upkeepId);
     event GaugeUpkeepCancelled(address indexed gauge, uint256 indexed upkeepId);
     event GaugeUpkeepWithdrawn(uint256 indexed upkeepId);
-    event GaugeUpkeepAdminTransferred(uint256 indexed upkeepId, address indexed newAdmin);
     event NewUpkeepGasLimitSet(uint32 newUpkeepGasLimit);
     event NewUpkeepFundAmountSet(uint96 newUpkeepFundAmount);
     event TrustedForwarderSet(address indexed trustedForwarder, bool isTrusted);
@@ -15,6 +14,11 @@ interface IGaugeUpkeepManager {
     error AutoApproveDisabled();
     error UnauthorizedSender();
     error AddressZeroNotAllowed();
+    error NoLinkBalance();
+    error NotGauge(address gauge);
+    error CrosschainGaugeNotAllowed(address gauge);
+    error GaugeUpkeepExists(address gauge);
+    error GaugeUpkeepNotFound(address gauge);
 
     enum PerformAction {
         REGISTER_UPKEEP,
@@ -77,11 +81,6 @@ interface IGaugeUpkeepManager {
     /// @notice Transfer contract LINK balance to owner
     function withdrawLinkBalance() external;
 
-    /// @notice Transfer gauge upkeep admin rights to a new address
-    /// @param _upkeepId Upkeep ID
-    /// @param _newAdmin New admin address
-    function transferUpkeepAdmin(uint256 _upkeepId, address _newAdmin) external;
-
     /// @notice Update the gas limit for new gauge upkeeps
     /// @param _newUpkeepGasLimit New upkeep gas limit
     function setNewUpkeepGasLimit(uint32 _newUpkeepGasLimit) external;
@@ -94,4 +93,14 @@ interface IGaugeUpkeepManager {
     /// @param _trustedForwarder Upkeep trusted forwarder address
     /// @param _isTrusted True to enable trusted forwarder, false to disable
     function setTrustedForwarder(address _trustedForwarder, bool _isTrusted) external;
+
+    /// @notice Register gauge upkeeps
+    /// @param _gauges Array of gauge addresses
+    /// @return Array of registered upkeep IDs
+    function registerGaugeUpkeeps(address[] calldata _gauges) external returns (uint256[] memory);
+
+    /// @notice Deregister gauge upkeeps
+    /// @param _gauges Array of gauge addresses
+    /// @return Array of deregistered upkeep IDs
+    function deregisterGaugeUpkeeps(address[] calldata _gauges) external returns (uint256[] memory);
 }

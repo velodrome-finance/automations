@@ -121,9 +121,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         if (action == PerformAction.REGISTER_UPKEEP) {
             _registerGaugeUpkeep(gauge);
         } else if (action == PerformAction.CANCEL_UPKEEP) {
-            uint256 upkeepId = gaugeUpkeepId[gauge];
-            _cancelGaugeUpkeep(gauge, upkeepId);
-            _removeGaugeUpkeep(gauge, upkeepId);
+            _cancelGaugeUpkeep(gauge);
         } else {
             revert InvalidPerformAction();
         }
@@ -165,21 +163,19 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         }
     }
 
-    function _cancelGaugeUpkeep(address _gauge, uint256 _upkeepId) internal {
-        IKeeperRegistryMaster(keeperRegistry).cancelUpkeep(_upkeepId);
-        emit GaugeUpkeepCancelled(_gauge, _upkeepId);
-    }
-
-    function _removeGaugeUpkeep(address _gauge, uint256 _upkeepId) internal {
+    function _cancelGaugeUpkeep(address _gauge) internal returns (uint256 upkeepId) {
+        upkeepId = gaugeUpkeepId[_gauge];
         uint256 length = activeUpkeepIds.length;
         for (uint256 i = 0; i < length; i++) {
-            if (activeUpkeepIds[i] == _upkeepId) {
+            if (activeUpkeepIds[i] == upkeepId) {
                 activeUpkeepIds[i] = activeUpkeepIds[length - 1];
                 activeUpkeepIds.pop();
                 break;
             }
         }
         delete gaugeUpkeepId[_gauge];
+        IKeeperRegistryMaster(keeperRegistry).cancelUpkeep(upkeepId);
+        emit GaugeUpkeepCancelled(_gauge, upkeepId);
     }
 
     function _extractGaugeFromCreatedLog(Log memory _log) internal pure returns (address gauge) {
@@ -215,17 +211,11 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     function withdrawLinkBalance() external override onlyOwner {
         address receiver = owner();
         uint256 balance = IERC20(linkToken).balanceOf(address(this));
+        if (balance == 0) {
+            revert NoLinkBalance();
+        }
         IERC20(linkToken).safeTransfer(receiver, balance);
         emit LinkBalanceWithdrawn(receiver, balance);
-    }
-
-    /// @inheritdoc IGaugeUpkeepManager
-    function transferUpkeepAdmin(uint256 _upkeepId, address _newAdmin) external override onlyOwner {
-        if (_newAdmin == address(0)) {
-            revert AddressZeroNotAllowed();
-        }
-        IKeeperRegistryMaster(keeperRegistry).transferUpkeepAdmin(_upkeepId, _newAdmin);
-        emit GaugeUpkeepAdminTransferred(_upkeepId, _newAdmin);
     }
 
     /// @inheritdoc IGaugeUpkeepManager
@@ -247,5 +237,49 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         }
         trustedForwarder[_trustedForwarder] = _isTrusted;
         emit TrustedForwarderSet(_trustedForwarder, _isTrusted);
+    }
+
+    /// @inheritdoc IGaugeUpkeepManager
+    function registerGaugeUpkeeps(
+        address[] calldata _gauges
+    ) external override onlyOwner returns (uint256[] memory upkeepIds) {
+        address gauge;
+        address gaugeFactory;
+        uint256 length = _gauges.length;
+        for (uint256 i = 0; i < length; i++) {
+            gauge = _gauges[i];
+            if (gaugeUpkeepId[gauge] != 0) {
+                revert GaugeUpkeepExists(gauge);
+            }
+            if (!IVoter(voter).isGauge(gauge)) {
+                revert NotGauge(gauge);
+            }
+            gaugeFactory = _getGaugeFactoryFromGauge(gauge);
+            if (_isCrosschainGaugeFactory(gaugeFactory)) {
+                revert CrosschainGaugeNotAllowed(gauge);
+            }
+        }
+        upkeepIds = new uint256[](length);
+        for (uint256 i = 0; i < length; i++) {
+            upkeepIds[i] = _registerGaugeUpkeep(_gauges[i]);
+        }
+    }
+
+    /// @inheritdoc IGaugeUpkeepManager
+    function deregisterGaugeUpkeeps(
+        address[] calldata _gauges
+    ) external override onlyOwner returns (uint256[] memory upkeepIds) {
+        address gauge;
+        uint256 length = _gauges.length;
+        for (uint256 i = 0; i < length; i++) {
+            gauge = _gauges[i];
+            if (gaugeUpkeepId[gauge] == 0) {
+                revert GaugeUpkeepNotFound(gauge);
+            }
+        }
+        upkeepIds = new uint256[](length);
+        for (uint256 i = 0; i < length; i++) {
+            upkeepIds[i] = _cancelGaugeUpkeep(_gauges[i]);
+        }
     }
 }

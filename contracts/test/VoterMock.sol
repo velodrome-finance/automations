@@ -42,6 +42,10 @@ contract VoterMock {
         emit Distributed(_gauge);
     }
 
+    function isGauge(address) external view returns (bool) {
+        return true;
+    }
+
     function poolForGauge(address) external view returns (address) {
         return pool;
     }
