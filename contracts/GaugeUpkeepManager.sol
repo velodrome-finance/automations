@@ -123,7 +123,6 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         } else if (action == PerformAction.CANCEL_UPKEEP) {
             uint256 upkeepId = gaugeUpkeepId[gauge];
             _cancelGaugeUpkeep(gauge, upkeepId);
-            _removeGaugeUpkeep(gauge, upkeepId);
         } else {
             revert InvalidPerformAction();
         }
@@ -166,11 +165,6 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     }
 
     function _cancelGaugeUpkeep(address _gauge, uint256 _upkeepId) internal {
-        IKeeperRegistryMaster(keeperRegistry).cancelUpkeep(_upkeepId);
-        emit GaugeUpkeepCancelled(_gauge, _upkeepId);
-    }
-
-    function _removeGaugeUpkeep(address _gauge, uint256 _upkeepId) internal {
         uint256 length = activeUpkeepIds.length;
         for (uint256 i = 0; i < length; i++) {
             if (activeUpkeepIds[i] == _upkeepId) {
@@ -180,6 +174,8 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
             }
         }
         delete gaugeUpkeepId[_gauge];
+        IKeeperRegistryMaster(keeperRegistry).cancelUpkeep(_upkeepId);
+        emit GaugeUpkeepCancelled(_gauge, _upkeepId);
     }
 
     function _extractGaugeFromCreatedLog(Log memory _log) internal pure returns (address gauge) {
@@ -282,7 +278,6 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
                 revert GaugeUpkeepNotFound(gauge);
             }
             _cancelGaugeUpkeep(gauge, upkeepId);
-            _removeGaugeUpkeep(gauge, upkeepId);
             upkeepIds[i] = upkeepId;
         }
     }
