@@ -121,8 +121,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         if (action == PerformAction.REGISTER_UPKEEP) {
             _registerGaugeUpkeep(gauge);
         } else if (action == PerformAction.CANCEL_UPKEEP) {
-            uint256 upkeepId = gaugeUpkeepId[gauge];
-            _cancelGaugeUpkeep(gauge, upkeepId);
+            _cancelGaugeUpkeep(gauge);
         } else {
             revert InvalidPerformAction();
         }
@@ -164,18 +163,19 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         }
     }
 
-    function _cancelGaugeUpkeep(address _gauge, uint256 _upkeepId) internal {
+    function _cancelGaugeUpkeep(address _gauge) internal returns (uint256 upkeepId) {
+        upkeepId = gaugeUpkeepId[_gauge];
         uint256 length = activeUpkeepIds.length;
         for (uint256 i = 0; i < length; i++) {
-            if (activeUpkeepIds[i] == _upkeepId) {
+            if (activeUpkeepIds[i] == upkeepId) {
                 activeUpkeepIds[i] = activeUpkeepIds[length - 1];
                 activeUpkeepIds.pop();
                 break;
             }
         }
         delete gaugeUpkeepId[_gauge];
-        IKeeperRegistryMaster(keeperRegistry).cancelUpkeep(_upkeepId);
-        emit GaugeUpkeepCancelled(_gauge, _upkeepId);
+        IKeeperRegistryMaster(keeperRegistry).cancelUpkeep(upkeepId);
+        emit GaugeUpkeepCancelled(_gauge, upkeepId);
     }
 
     function _extractGaugeFromCreatedLog(Log memory _log) internal pure returns (address gauge) {
@@ -246,9 +246,11 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         address gauge;
         address gaugeFactory;
         uint256 length = _gauges.length;
-        upkeepIds = new uint256[](length);
         for (uint256 i = 0; i < length; i++) {
             gauge = _gauges[i];
+            if (gaugeUpkeepId[gauge] != 0) {
+                revert GaugeUpkeepExists(gauge);
+            }
             if (!IVoter(voter).isGauge(gauge)) {
                 revert NotGauge(gauge);
             }
@@ -256,10 +258,8 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
             if (_isCrosschainGaugeFactory(gaugeFactory)) {
                 revert CrosschainGaugeNotAllowed(gauge);
             }
-            if (gaugeUpkeepId[gauge] != 0) {
-                revert GaugeUpkeepExists(gauge);
-            }
         }
+        upkeepIds = new uint256[](length);
         for (uint256 i = 0; i < length; i++) {
             upkeepIds[i] = _registerGaugeUpkeep(_gauges[i]);
         }
@@ -270,21 +270,16 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         address[] calldata _gauges
     ) external override onlyOwner returns (uint256[] memory upkeepIds) {
         address gauge;
-        uint256 upkeepId;
         uint256 length = _gauges.length;
-        upkeepIds = new uint256[](length);
         for (uint256 i = 0; i < length; i++) {
             gauge = _gauges[i];
-            upkeepId = gaugeUpkeepId[gauge];
-            if (upkeepId == 0) {
+            if (gaugeUpkeepId[gauge] == 0) {
                 revert GaugeUpkeepNotFound(gauge);
             }
         }
+        upkeepIds = new uint256[](length);
         for (uint256 i = 0; i < length; i++) {
-            gauge = _gauges[i];
-            upkeepId = gaugeUpkeepId[gauge];
-            _cancelGaugeUpkeep(gauge, upkeepId);
-            upkeepIds[i] = upkeepId;
+            upkeepIds[i] = _cancelGaugeUpkeep(_gauges[i]);
         }
     }
 }
