@@ -10,6 +10,7 @@ This repository contains the scripts designed to automate the Velodrome ecosyste
     - `GaugeKilled`: Deregisters the upkeep for the gauge when it is killed.
     - `GaugeRevived`: Registers a new upkeep for the gauge when it is revived.
 - **CronUpkeepFactory**: This contract is responsible for creating cron upkeeps for the `GaugeUpkeepManager` contract.
+- **UpkeepBalanceMonitor**: This is an utility contract that watches the balances of all active gauge upkeeps and triggers top-up transactions when the balance falls below a certain threshold.
 
 ## Installation
 
@@ -53,10 +54,12 @@ pnpm run test:fork
 
 ## Deployment
 
-1. Deploy contracts by running:
+### Gauge Upkeep Manager
+
+1. Deploy `GaugeUpkeepManager` and `CronUpkeepFactory` contracts by running:
 
 ```bash
-npx hardhat run scripts/deploy.ts --network <network>
+npx hardhat run scripts/deploy_upkeep_manager.ts --network <network>
 ```
 
 2. Transfer LINK tokens to the `GaugeUpkeepManager` contract required for new gauge upkeep registrations. The amount of LINK required is determined by the `NEW_UPKEEP_FUND_AMOUNT` environment variable.
@@ -64,3 +67,17 @@ npx hardhat run scripts/deploy.ts --network <network>
 3. Register one upkeep for each log trigger type (`GaugeCreated`, `GaugeKilled`, `GaugeRevived`) emmited by the `Voter` contract and targeting the `GaugeUpkeepManager` contract. Currently, this is done manually by using the [Automation UI](https://automation.chain.link/). Make sure to set the gas limit to the maximum value (5m) to avoid out-of-gas errors.
 
 4. After registering the upkeeps, set the trusted forwarders on the `GaugeUpkeepManager` contract. This is done by calling the `setTrustedForwarder` function with the address of the `Forwarder` contract as parameter. Each log trigger upkeep has a unique forwarder address, so this step must be repeated for each upkeep.
+
+### Upkeep Balance Monitor
+
+1. Deploy the `UpkeepBalanceMonitor` contract by running:
+
+```bash
+npx hardhat run scripts/deploy_balance_monitor.ts --network <network>
+```
+
+1. Transfer LINK tokens to the `UpkeepBalanceMonitor` contract which will be used to top-up the gauge upkeeps.
+
+2. Register the `UpkeepBalanceMonitor` as a custom logic upkeep. Currently, this is done manually by using the [Automation UI](https://automation.chain.link/). The gas limit is determined by the `MAX_BATCH_SIZE` environment variable.
+
+3. After registering the upkeep, set the trusted forwarder on the `UpkeepBalanceMonitor` contract. This is done by calling the `setTrustedForwarder` function with the address of the `Forwarder` contract as parameter.

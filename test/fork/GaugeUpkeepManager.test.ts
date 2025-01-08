@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { ethers } from 'hardhat'
+import { ethers, network } from 'hardhat'
 import {
   time,
   impersonateAccount,
@@ -102,6 +102,8 @@ async function registerLogTriggerUpkeep(
   return ethers.BigNumber.from(logUpkeepId)
 }
 
+let snapshotId: any
+
 describe('GaugeUpkeepManager Script Tests', function () {
   let accounts: SignerWithAddress[]
   let gaugeUpkeepManager: GaugeUpkeepManager
@@ -117,6 +119,8 @@ describe('GaugeUpkeepManager Script Tests', function () {
 
   before(async function () {
     accounts = await ethers.getSigners()
+    // take a snapshot at the start
+    snapshotId = await network.provider.send('evm_snapshot')
     // setup link token contract
     linkToken = await ethers.getContractAt('ERC20Mintable', LINK_TOKEN_ADDRESS)
     // setup automation registrar contract
@@ -226,6 +230,11 @@ describe('GaugeUpkeepManager Script Tests', function () {
     for (const forwarder of forwarders) {
       await gaugeUpkeepManager.setTrustedForwarder(forwarder, true)
     }
+  })
+
+  after(async function () {
+    // revert to the initial snapshot
+    await network.provider.send('evm_revert', [snapshotId])
   })
 
   it('Gauge upkeep registration flow', async () => {

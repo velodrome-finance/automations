@@ -6,6 +6,7 @@
 import { ethers, run } from 'hardhat'
 import * as assert from 'assert'
 import * as dotenv from 'dotenv'
+import { verifyContract } from './utils'
 
 // Load environment variables
 dotenv.config()
@@ -28,27 +29,6 @@ assert.ok(VOTER_ADDRESS, 'VOTER_ADDRESS is required')
 assert.ok(CROSSCHAIN_GAUGE_FACTORIES, 'CROSSCHAIN_GAUGE_FACTORIES is required')
 assert.ok(NEW_UPKEEP_FUND_AMOUNT, 'NEW_UPKEEP_FUND_AMOUNT is required')
 assert.ok(NEW_UPKEEP_GAS_LIMIT, 'NEW_UPKEEP_GAS_LIMIT is required')
-
-async function verifyContract(
-  address: string,
-  constructorArgs: any[] = [],
-  libraries = {},
-) {
-  try {
-    console.log(`Verifying contract at address: ${address}`)
-    await run('verify:verify', {
-      address,
-      constructorArguments: constructorArgs,
-      libraries,
-    })
-    console.log(`Contract verified successfully: ${address}`)
-  } catch (error) {
-    console.error(
-      `Verification failed for contract at address: ${address}`,
-      error,
-    )
-  }
-}
 
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
