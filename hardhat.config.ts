@@ -46,6 +46,11 @@ const config: HardhatUserConfig = {
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
   },
+  etherscan: {
+    apiKey: {
+      optimisticEthereum: process.env.ETHERSCAN_API_KEY || '',
+    },
+  },
 }
 
 if (process.env.FORK_ENABLED === 'true') {

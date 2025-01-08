@@ -3,7 +3,7 @@
 //
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
-import { ethers } from 'hardhat'
+import { ethers, run } from 'hardhat'
 import * as assert from 'assert'
 import * as dotenv from 'dotenv'
 
@@ -28,6 +28,27 @@ assert.ok(VOTER_ADDRESS, 'VOTER_ADDRESS is required')
 assert.ok(CROSSCHAIN_GAUGE_FACTORIES, 'CROSSCHAIN_GAUGE_FACTORIES is required')
 assert.ok(NEW_UPKEEP_FUND_AMOUNT, 'NEW_UPKEEP_FUND_AMOUNT is required')
 assert.ok(NEW_UPKEEP_GAS_LIMIT, 'NEW_UPKEEP_GAS_LIMIT is required')
+
+async function verifyContract(
+  address: string,
+  constructorArgs: any[] = [],
+  libraries = {},
+) {
+  try {
+    console.log(`Verifying contract at address: ${address}`)
+    await run('verify:verify', {
+      address,
+      constructorArguments: constructorArgs,
+      libraries,
+    })
+    console.log(`Contract verified successfully: ${address}`)
+  } catch (error) {
+    console.error(
+      `Verification failed for contract at address: ${address}`,
+      error,
+    )
+  }
+}
 
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
@@ -73,6 +94,26 @@ async function main() {
   )
   await gaugeUpkeepManager.deployed()
   console.log('GaugeUpkeepManager deployed to:', gaugeUpkeepManager.address)
+
+  // Verify CronLibrary contract
+  await verifyContract(cronLibrary.address)
+
+  // Verify CronUpkeepFactory contract
+  await verifyContract(cronUpkeepFactory.address, [], {
+    Cron: cronLibrary.address,
+  })
+
+  // Verify GaugeUpkeepManager contract
+  await verifyContract(gaugeUpkeepManager.address, [
+    LINK_TOKEN_ADDRESS!,
+    KEEPER_REGISTRY_ADDRESS!,
+    AUTOMATION_REGISTRAR_ADDRESS!,
+    cronUpkeepFactory.address,
+    VOTER_ADDRESS!,
+    NEW_UPKEEP_FUND_AMOUNT!,
+    NEW_UPKEEP_GAS_LIMIT!,
+    CROSSCHAIN_GAUGE_FACTORIES!.split(','),
+  ])
 }
 
 // We recommend this pattern to be able to use async/await everywhere
