@@ -19,20 +19,20 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, Pausable {
     /// @inheritdoc IUpkeepBalanceMonitor
     address public override forwarderAddress;
 
-    Config private config;
+    Config private _config;
 
-    constructor(address _gaugeUpkeepManager, Config memory _config) {
+    constructor(address _gaugeUpkeepManager, Config memory config) {
         gaugeUpkeepManager = _gaugeUpkeepManager;
         linkToken = IGaugeUpkeepManager(_gaugeUpkeepManager).linkToken();
         keeperRegistry = IGaugeUpkeepManager(_gaugeUpkeepManager).keeperRegistry();
-        setConfig(_config);
+        setConfig(config);
     }
 
     /// @inheritdoc IUpkeepBalanceMonitor
     function getUnderfundedUpkeeps() public view override returns (uint256[] memory, uint96[] memory) {
-        Config memory _config = config;
-        uint256[] memory needsFunding = new uint256[](_config.maxBatchSize);
-        uint96[] memory topUpAmounts = new uint96[](_config.maxBatchSize);
+        Config memory config = _config;
+        uint256[] memory needsFunding = new uint256[](config.maxBatchSize);
+        uint96[] memory topUpAmounts = new uint96[](config.maxBatchSize);
 
         uint256 count;
         uint256 availableFunds = LinkTokenInterface(linkToken).balanceOf(address(this));
@@ -42,11 +42,11 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, Pausable {
             uint256 upkeepId = IGaugeUpkeepManager(gaugeUpkeepManager).activeUpkeepIds(i);
             uint96 upkeepBalance = IAutomationRegistryConsumer(keeperRegistry).getBalance(upkeepId);
             uint96 minBalance = IAutomationRegistryConsumer(keeperRegistry).getMinBalance(upkeepId);
-            uint96 topUpThreshold = (minBalance * _config.minPercentage) / 100;
-            uint96 topUpAmount = ((minBalance * _config.targetPercentage) / 100) - upkeepBalance;
+            uint96 topUpThreshold = (minBalance * config.minPercentage) / 100;
+            uint96 topUpAmount = ((minBalance * config.targetPercentage) / 100) - upkeepBalance;
 
-            if (topUpAmount > _config.maxTopUpAmount) {
-                topUpAmount = _config.maxTopUpAmount;
+            if (topUpAmount > config.maxTopUpAmount) {
+                topUpAmount = config.maxTopUpAmount;
             }
             if (upkeepBalance <= topUpThreshold && availableFunds >= topUpAmount) {
                 needsFunding[count] = upkeepId;
@@ -54,11 +54,11 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, Pausable {
                 count++;
                 availableFunds -= topUpAmount;
             }
-            if (count == _config.maxBatchSize) {
+            if (count == config.maxBatchSize) {
                 break;
             }
         }
-        if (count < _config.maxBatchSize) {
+        if (count < config.maxBatchSize) {
             assembly {
                 mstore(needsFunding, count)
                 mstore(topUpAmounts, count)
@@ -69,9 +69,11 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, Pausable {
 
     /// @inheritdoc IUpkeepBalanceMonitor
     function topUp(uint256[] memory _upkeepIds, uint96[] memory _topUpAmounts) public override whenNotPaused {
-        if (msg.sender != address(forwarderAddress) && msg.sender != owner()) revert OnlyForwarderOrOwner();
-        if (_upkeepIds.length != _topUpAmounts.length) revert InvalidTopUpData();
-        for (uint256 i = 0; i < _upkeepIds.length; i++) {
+        if (msg.sender != forwarderAddress && msg.sender != owner()) revert OnlyForwarderOrOwner();
+
+        uint256 upkeepIdsLength = _upkeepIds.length;
+        if (upkeepIdsLength != _topUpAmounts.length) revert InvalidTopUpData();
+        for (uint256 i = 0; i < upkeepIdsLength; i++) {
             try
                 LinkTokenInterface(linkToken).transferAndCall(
                     keeperRegistry,
@@ -128,21 +130,21 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, Pausable {
     }
 
     /// @inheritdoc IUpkeepBalanceMonitor
-    function setConfig(Config memory _config) public override onlyOwner {
+    function setConfig(Config memory config) public override onlyOwner {
         if (
-            _config.maxBatchSize == 0 ||
-            _config.minPercentage < 100 ||
-            _config.targetPercentage <= _config.minPercentage ||
-            _config.maxTopUpAmount == 0
+            config.maxBatchSize == 0 ||
+            config.minPercentage < 100 ||
+            config.targetPercentage <= config.minPercentage ||
+            config.maxTopUpAmount == 0
         ) {
             revert InvalidConfig();
         }
-        config = _config;
-        emit ConfigSet(_config);
+        _config = config;
+        emit ConfigSet(config);
     }
 
     /// @inheritdoc IUpkeepBalanceMonitor
     function getConfig() external view override returns (Config memory) {
-        return config;
+        return _config;
     }
 }

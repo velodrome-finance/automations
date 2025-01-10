@@ -10,7 +10,7 @@ This repository contains the scripts designed to automate the Velodrome ecosyste
     - `GaugeKilled`: Deregisters the upkeep for the gauge when it is killed.
     - `GaugeRevived`: Registers a new upkeep for the gauge when it is revived.
 - **CronUpkeepFactory**: This contract is responsible for creating cron upkeeps for the `GaugeUpkeepManager` contract.
-- **UpkeepBalanceMonitor**: This is an utility contract that watches the balances of all active gauge upkeeps and triggers top-up transactions when the balance falls below a certain threshold.
+- **UpkeepBalanceMonitor**: This is a utility contract that watches the balances of all active gauge upkeeps and triggers top-up transactions when the balance falls below a certain threshold.
 
 ## Installation
 

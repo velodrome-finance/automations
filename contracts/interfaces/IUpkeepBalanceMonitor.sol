@@ -37,9 +37,12 @@ interface IUpkeepBalanceMonitor {
     function forwarderAddress() external view returns (address);
 
     /// @notice Gets a list of upkeeps that are underfunded
-    /// @return needsFunding list of underfunded upkeepIDs
-    /// @return topUpAmounts amount to top up each upkeep
-    function getUnderfundedUpkeeps() external view returns (uint256[] memory, uint96[] memory);
+    /// @return _needsFunding list of underfunded upkeepIDs
+    /// @return _topUpAmounts amount to top up each upkeep
+    function getUnderfundedUpkeeps()
+        external
+        view
+        returns (uint256[] memory _needsFunding, uint96[] memory _topUpAmounts);
 
     /// @notice Called by the keeper/owner to send funds to underfunded upkeeps
     /// @param _upkeepIds the list of upkeep ids to fund
@@ -47,9 +50,9 @@ interface IUpkeepBalanceMonitor {
     function topUp(uint256[] memory _upkeepIds, uint96[] memory _topUpAmounts) external;
 
     /// @notice Gets list of upkeeps ids that are underfunded and returns a keeper-compatible payload.
-    /// @return upkeepNeeded signals if upkeep is needed
-    /// @return performData is an abi encoded list of subscription ids that need funds
-    function checkUpkeep(bytes calldata) external view returns (bool, bytes memory);
+    /// @return _upkeepNeeded signals if upkeep is needed
+    /// @return _performData is an abi encoded list of subscription ids that need funds
+    function checkUpkeep(bytes calldata) external view returns (bool _upkeepNeeded, bytes memory _performData);
 
     /// @notice Called by the keeper to send funds to underfunded addresses.
     /// @param _performData the abi encoded list of upkeeps to fund
@@ -78,6 +81,6 @@ interface IUpkeepBalanceMonitor {
     function setTrustedForwarder(address _trustedForwarder) external;
 
     /// @notice Gets the contract config
-    /// @return config the current contract configuration
-    function getConfig() external view returns (Config memory);
+    /// @return _config the current contract configuration
+    function getConfig() external view returns (Config memory _config);
 }
