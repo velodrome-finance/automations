@@ -6,25 +6,22 @@ import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
 import {IAutomationRegistryConsumer} from "@chainlink/contracts/src/v0.8/automation/interfaces/IAutomationRegistryConsumer.sol";
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
 import {IUpkeepBalanceMonitor} from "./interfaces/IUpkeepBalanceMonitor.sol";
-import {IGaugeUpkeepManager} from "./interfaces/IGaugeUpkeepManager.sol";
 
 contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, Pausable {
-    /// @inheritdoc IUpkeepBalanceMonitor
-    address public immutable override gaugeUpkeepManager;
     /// @inheritdoc IUpkeepBalanceMonitor
     address public immutable override keeperRegistry;
     /// @inheritdoc IUpkeepBalanceMonitor
     address public immutable override linkToken;
-
     /// @inheritdoc IUpkeepBalanceMonitor
     address public override forwarderAddress;
+    /// @inheritdoc IUpkeepBalanceMonitor
+    uint256[] public override watchList;
 
     Config private _config;
 
-    constructor(address _gaugeUpkeepManager, Config memory config) {
-        gaugeUpkeepManager = _gaugeUpkeepManager;
-        linkToken = IGaugeUpkeepManager(_gaugeUpkeepManager).linkToken();
-        keeperRegistry = IGaugeUpkeepManager(_gaugeUpkeepManager).keeperRegistry();
+    constructor(address _linkToken, address _keeperRegistry, Config memory config) {
+        linkToken = _linkToken;
+        keeperRegistry = _keeperRegistry;
         setConfig(config);
     }
 
@@ -34,12 +31,11 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, Pausable {
         uint256[] memory needsFunding = new uint256[](config.maxBatchSize);
         uint96[] memory topUpAmounts = new uint96[](config.maxBatchSize);
 
-        uint256 count;
         uint256 availableFunds = LinkTokenInterface(linkToken).balanceOf(address(this));
-        uint256 upkeepsCount = IGaugeUpkeepManager(gaugeUpkeepManager).activeUpkeepsCount();
+        uint256 count;
 
-        for (uint256 i = 0; i < upkeepsCount; i++) {
-            uint256 upkeepId = IGaugeUpkeepManager(gaugeUpkeepManager).activeUpkeepIds(i);
+        for (uint256 i = 0; i < watchList.length; i++) {
+            uint256 upkeepId = watchList[i];
             uint96 upkeepBalance = IAutomationRegistryConsumer(keeperRegistry).getBalance(upkeepId);
             uint96 minBalance = IAutomationRegistryConsumer(keeperRegistry).getMinBalance(upkeepId);
             uint96 topUpThreshold = (minBalance * config.minPercentage) / 100;
@@ -127,6 +123,24 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, Pausable {
     function setTrustedForwarder(address _trustedForwarder) external override onlyOwner {
         forwarderAddress = _trustedForwarder;
         emit ForwarderSet(_trustedForwarder);
+    }
+
+    /// @inheritdoc IUpkeepBalanceMonitor
+    function addToWatchList(uint256 _upkeepId) external override onlyOwner {
+        // todo: check for duplicates
+        watchList.push(_upkeepId);
+    }
+
+    /// @inheritdoc IUpkeepBalanceMonitor
+    function removeFromWatchList(uint256 _upkeepId) external override onlyOwner {
+        uint256 length = watchList.length;
+        for (uint256 i = 0; i < length; i++) {
+            if (watchList[i] == _upkeepId) {
+                watchList[i] = watchList[length - 1];
+                watchList.pop();
+                break;
+            }
+        }
     }
 
     /// @inheritdoc IUpkeepBalanceMonitor

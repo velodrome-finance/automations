@@ -107,7 +107,8 @@ describe('UpkeepBalanceMonitor Script Tests', function () {
       'UpkeepBalanceMonitor',
     )
     upkeepBalanceMonitor = await upkeepBalanceMonitorFactory.deploy(
-      gaugeUpkeepManager.address,
+      LINK_TOKEN_ADDRESS,
+      KEEPER_REGISTRY_ADDRESS,
       {
         maxBatchSize: 10,
         minPercentage: 120,
@@ -157,6 +158,12 @@ describe('UpkeepBalanceMonitor Script Tests', function () {
 
     // register gauge upkeep via gauge upkeep manager
     await gaugeUpkeepManager.registerGaugeUpkeeps([gaugeAddress])
+
+    const gaugeUpkeepId = await gaugeUpkeepManager.gaugeUpkeepId(gaugeAddress)
+
+    // todo: implement this in gauge upkeep manager
+    await upkeepBalanceMonitor.addToWatchList(gaugeUpkeepId)
+
     const [underfundedUpkeepsBefore] =
       await upkeepBalanceMonitor.callStatic.getUnderfundedUpkeeps()
 

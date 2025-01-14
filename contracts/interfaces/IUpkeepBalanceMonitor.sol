@@ -24,9 +24,6 @@ interface IUpkeepBalanceMonitor {
     error OnlyForwarderOrOwner();
     error AddressZeroNotAllowed();
 
-    /// @notice Gauge upkeep manager address
-    function gaugeUpkeepManager() external view returns (address);
-
     /// @notice Keeper registry address
     function keeperRegistry() external view returns (address);
 
@@ -35,6 +32,11 @@ interface IUpkeepBalanceMonitor {
 
     /// @notice Gets the upkeep's forwarder contract
     function forwarderAddress() external view returns (address);
+
+    /// @notice Gets an upkeep ID from the watchlist
+    /// @param _index the index of the upkeep in the watchlist
+    /// @return _upkeepId the upkeep ID
+    function watchList(uint256 _index) external view returns (uint256 _upkeepId);
 
     /// @notice Gets a list of upkeeps that are underfunded
     /// @return _needsFunding list of underfunded upkeepIDs
@@ -68,6 +70,14 @@ interface IUpkeepBalanceMonitor {
 
     /// @notice Unpause the contract.
     function unpause() external;
+
+    /// @notice Adds an upkeep to the watchlist
+    /// @param _upkeepId the upkeep ID to add
+    function addToWatchList(uint256 _upkeepId) external;
+
+    /// @notice Removes an upkeep from the watchlist
+    /// @param _upkeepId the upkeep ID to remove
+    function removeFromWatchList(uint256 _upkeepId) external;
 
     /// @notice Sets the contract config
     /// @param _config the new config
