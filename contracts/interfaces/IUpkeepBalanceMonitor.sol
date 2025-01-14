@@ -6,11 +6,13 @@ interface IUpkeepBalanceMonitor {
     /// @member minPercentage is the percentage of the upkeep's minBalance at which top-up occurs
     /// @member targetPercentage is the percentage of the upkeep's minBalance to top-up to
     /// @member maxTopUpAmount is the maximum amount of LINK to top-up an upkeep with
+    /// @member maxIterations is the maximum number of iterations to search for underfunded upkeeps
     struct Config {
         uint8 maxBatchSize;
         uint24 minPercentage;
         uint24 targetPercentage;
         uint96 maxTopUpAmount;
+        uint256 maxIterations;
     }
 
     event ConfigSet(Config config);

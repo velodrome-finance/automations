@@ -114,6 +114,7 @@ describe('UpkeepBalanceMonitor Script Tests', function () {
         minPercentage: 120,
         targetPercentage: 300,
         maxTopUpAmount: ethers.utils.parseEther('10'),
+        maxIterations: 10,
       },
     )
     // transfer link tokens to upkeep balance monitor

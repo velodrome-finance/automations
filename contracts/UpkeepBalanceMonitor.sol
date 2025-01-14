@@ -31,11 +31,16 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, Pausable {
         uint256[] memory needsFunding = new uint256[](config.maxBatchSize);
         uint96[] memory topUpAmounts = new uint96[](config.maxBatchSize);
 
+        uint256 iterationLimit = watchList.length < config.maxIterations ? watchList.length : config.maxIterations;
+        uint256 startIndex = uint256(keccak256(abi.encodePacked(block.number))) % watchList.length;
+
         uint256 availableFunds = LinkTokenInterface(linkToken).balanceOf(address(this));
         uint256 count;
 
-        for (uint256 i = 0; i < watchList.length; i++) {
-            uint256 upkeepId = watchList[i];
+        for (uint256 i = 0; i < iterationLimit && count < config.maxBatchSize; i++) {
+            uint256 currentIndex = (startIndex + i) % watchList.length;
+            uint256 upkeepId = watchList[currentIndex];
+
             uint96 upkeepBalance = IAutomationRegistryConsumer(keeperRegistry).getBalance(upkeepId);
             uint96 minBalance = IAutomationRegistryConsumer(keeperRegistry).getMinBalance(upkeepId);
             uint96 topUpThreshold = (minBalance * config.minPercentage) / 100;
