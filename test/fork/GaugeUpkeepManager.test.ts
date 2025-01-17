@@ -15,6 +15,7 @@ import {
   AutomationRegistrar2_1,
   IKeeperRegistryMaster,
   IERC20,
+  UpkeepBalanceMonitor,
 } from '../../typechain-types'
 import {
   CronUpkeepFactoryAbi,
@@ -27,8 +28,6 @@ import {
   LINK_TOKEN_ADDRESS,
   VOTER_ADDRESS,
   CROSSCHAIN_GAUGE_FACTORIES,
-  NEW_UPKEEP_FUND_AMOUNT,
-  NEW_UPKEEP_GAS_LIMIT,
   POOL_FACTORY_ADDRESS,
   POOL_ADDRESS,
   LINK_HOLDER_ADDRESS,
@@ -107,6 +106,7 @@ let snapshotId: any
 describe('GaugeUpkeepManager Script Tests', function () {
   let accounts: SignerWithAddress[]
   let gaugeUpkeepManager: GaugeUpkeepManager
+  let upkeepBalanceMonitor: UpkeepBalanceMonitor
   let voter: Voter
   let keeperRegistry: IKeeperRegistryMaster
   let linkToken: IERC20
@@ -116,6 +116,9 @@ describe('GaugeUpkeepManager Script Tests', function () {
   let gaugeUpkeepId: BigNumber
   let gaugeAddress: string
   let cronUpkeepAddress: string
+
+  const newUpkeepGasLimit = 1e6
+  const newUpkeepFundAmount = ethers.utils.parseEther('1')
 
   before(async function () {
     accounts = await ethers.getSigners()
@@ -135,6 +138,21 @@ describe('GaugeUpkeepManager Script Tests', function () {
     )
     // setup voter contract
     voter = await ethers.getContractAt('Voter', VOTER_ADDRESS)
+    // deploy upkeep balance monitor
+    const upkeepBalanceMonitorFactory = await ethers.getContractFactory(
+      'UpkeepBalanceMonitor',
+    )
+    upkeepBalanceMonitor = await upkeepBalanceMonitorFactory.deploy(
+      linkToken.address,
+      keeperRegistry.address,
+      {
+        maxBatchSize: 10,
+        minPercentage: 120,
+        targetPercentage: 300,
+        maxTopUpAmount: ethers.utils.parseEther('10'),
+        maxIterations: 10,
+      },
+    )
     // setup cron library
     const cronLibraryFactory = await ethers.getContractFactory(
       '@chainlink/contracts/src/v0.8/automation/libraries/external/Cron.sol:Cron',
@@ -157,11 +175,16 @@ describe('GaugeUpkeepManager Script Tests', function () {
       linkToken.address,
       keeperRegistry.address,
       automationRegistrar.address,
+      upkeepBalanceMonitor.address,
       cronUpkeepFactory.address,
       voter.address,
-      NEW_UPKEEP_FUND_AMOUNT,
-      NEW_UPKEEP_GAS_LIMIT,
-      CROSSCHAIN_GAUGE_FACTORIES.split(','),
+      newUpkeepFundAmount,
+      newUpkeepGasLimit,
+      CROSSCHAIN_GAUGE_FACTORIES,
+    )
+    // set gauge upkeep manager as watch list manager in balance monitor
+    await upkeepBalanceMonitor.grantWatchlistManagerRole(
+      gaugeUpkeepManager.address,
     )
     // transfer link tokens to deployer
     await impersonateAccount(LINK_HOLDER_ADDRESS)
@@ -179,6 +202,11 @@ describe('GaugeUpkeepManager Script Tests', function () {
     await linkToken.transfer(
       gaugeUpkeepManager.address,
       ethers.utils.parseEther('50'),
+    )
+    // transfer link tokens to upkeep balance monitor
+    await linkToken.transfer(
+      upkeepBalanceMonitor.address,
+      ethers.utils.parseEther('10'),
     )
     // impersonate automation registrar owner and set auto approve for log trigger type
     const automationRegistrarOwner = await automationRegistrar.owner()
@@ -357,6 +385,27 @@ describe('GaugeUpkeepManager Script Tests', function () {
     expect(success).to.be.true
 
     // todo: check if distribute is called on gauge
+  })
+
+  it('Gauge upkeep balance top-up flow', async function () {
+    const [underfundedUpkeepsBefore] =
+      await upkeepBalanceMonitor.callStatic.getUnderfundedUpkeeps()
+
+    expect(underfundedUpkeepsBefore.length).to.equal(1)
+
+    // upkeep should be triggered
+    const checkUpkeepResult =
+      await upkeepBalanceMonitor.callStatic.checkUpkeep(HashZero)
+
+    expect(checkUpkeepResult.upkeepNeeded).to.be.true
+
+    // perform upkeep with check data
+    await upkeepBalanceMonitor.performUpkeep(checkUpkeepResult.performData)
+
+    const [underfundedUpkeepsAfter] =
+      await upkeepBalanceMonitor.callStatic.getUnderfundedUpkeeps()
+
+    expect(underfundedUpkeepsAfter.length).to.equal(0)
   })
 
   it('Gauge upkeep cancellation flow', async () => {

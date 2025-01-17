@@ -3,12 +3,13 @@ pragma solidity 0.8.6;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {IAutomationRegistryConsumer} from "@chainlink/contracts/src/v0.8/automation/interfaces/IAutomationRegistryConsumer.sol";
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
 import {IUpkeepBalanceMonitor} from "./interfaces/IUpkeepBalanceMonitor.sol";
 
-contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, Pausable {
+contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, AccessControl, Pausable {
     using EnumerableSet for EnumerableSet.UintSet;
 
     /// @inheritdoc IUpkeepBalanceMonitor
@@ -21,6 +22,13 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, Pausable {
     EnumerableSet.UintSet private _watchList;
 
     Config private _config;
+
+    bytes32 private constant WATCHLIST_MANAGER_ROLE = keccak256("WATCHLIST_MANAGER_ROLE");
+
+    modifier onlyOwnerOrWatchlistManager() {
+        if (owner() != msg.sender && !hasRole(WATCHLIST_MANAGER_ROLE, msg.sender)) revert OnlyWatchlistManagerOrOwner();
+        _;
+    }
 
     constructor(address _linkToken, address _keeperRegistry, Config memory config) {
         linkToken = _linkToken;
@@ -136,13 +144,23 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, Pausable {
     }
 
     /// @inheritdoc IUpkeepBalanceMonitor
-    function addToWatchList(uint256 _upkeepId) external override onlyOwner {
+    function grantWatchlistManagerRole(address manager) external override onlyOwner {
+        _grantRole(WATCHLIST_MANAGER_ROLE, manager);
+    }
+
+    /// @inheritdoc IUpkeepBalanceMonitor
+    function revokeWatchlistManagerRole(address manager) external override onlyOwner {
+        _revokeRole(WATCHLIST_MANAGER_ROLE, manager);
+    }
+
+    /// @inheritdoc IUpkeepBalanceMonitor
+    function addToWatchList(uint256 _upkeepId) external override onlyOwnerOrWatchlistManager {
         _watchList.add(_upkeepId);
         emit WatchListUpdated(_upkeepId, true);
     }
 
     /// @inheritdoc IUpkeepBalanceMonitor
-    function removeFromWatchList(uint256 _upkeepId) external override onlyOwner {
+    function removeFromWatchList(uint256 _upkeepId) external override onlyOwnerOrWatchlistManager {
         _watchList.remove(_upkeepId);
         emit WatchListUpdated(_upkeepId, false);
     }

@@ -25,6 +25,7 @@ interface IUpkeepBalanceMonitor {
     error InvalidConfig();
     error InvalidTopUpData();
     error OnlyForwarderOrOwner();
+    error OnlyWatchlistManagerOrOwner();
     error AddressZeroNotAllowed();
 
     /// @notice Keeper registry address
@@ -87,6 +88,14 @@ interface IUpkeepBalanceMonitor {
     /// @param _trustedForwarder the new forwarder
     /// @dev this should only need to be called once, after registering the contract with the registry
     function setTrustedForwarder(address _trustedForwarder) external;
+
+    /// @notice Grants the watchlist manager role to an address
+    /// @param _manager the address to grant the role to
+    function grantWatchlistManagerRole(address _manager) external;
+
+    /// @notice Revokes the watchlist manager role from an address
+    /// @param _manager the address to revoke the role from
+    function revokeWatchlistManagerRole(address _manager) external;
 
     /// @notice Gets the contract config
     /// @return _config the current contract configuration
