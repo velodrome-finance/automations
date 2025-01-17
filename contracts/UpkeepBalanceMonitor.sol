@@ -171,7 +171,8 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, AccessControl, 
             config.maxBatchSize == 0 ||
             config.minPercentage < 100 ||
             config.targetPercentage <= config.minPercentage ||
-            config.maxTopUpAmount == 0
+            config.maxTopUpAmount == 0 ||
+            config.maxIterations == 0
         ) {
             revert InvalidConfig();
         }
