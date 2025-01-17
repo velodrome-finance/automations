@@ -18,6 +18,7 @@ interface IUpkeepBalanceMonitor {
     event ConfigSet(Config config);
     event ForwarderSet(address forwarderAddress);
     event FundsWithdrawn(uint256 amountWithdrawn, address payee);
+    event WatchListUpdated(uint256 upkeepId, bool added);
     event TopUpFailed(uint256 indexed upkeepId);
     event TopUpSucceeded(uint256 indexed upkeepId, uint96 amount);
 
@@ -34,11 +35,6 @@ interface IUpkeepBalanceMonitor {
 
     /// @notice Gets the upkeep's forwarder contract
     function forwarderAddress() external view returns (address);
-
-    /// @notice Gets an upkeep ID from the watchlist
-    /// @param _index the index of the upkeep in the watchlist
-    /// @return _upkeepId the upkeep ID
-    function watchList(uint256 _index) external view returns (uint256 _upkeepId);
 
     /// @notice Gets a list of upkeeps that are underfunded
     /// @return _needsFunding list of underfunded upkeepIDs
@@ -95,4 +91,8 @@ interface IUpkeepBalanceMonitor {
     /// @notice Gets the contract config
     /// @return _config the current contract configuration
     function getConfig() external view returns (Config memory _config);
+
+    /// @notice Gets the watchlist
+    /// @return _watchList the current list of upkeeps to watch
+    function getWatchList() external view returns (uint256[] memory _watchList);
 }

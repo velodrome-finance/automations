@@ -3,19 +3,22 @@ pragma solidity 0.8.6;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {IAutomationRegistryConsumer} from "@chainlink/contracts/src/v0.8/automation/interfaces/IAutomationRegistryConsumer.sol";
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
 import {IUpkeepBalanceMonitor} from "./interfaces/IUpkeepBalanceMonitor.sol";
 
 contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, Pausable {
+    using EnumerableSet for EnumerableSet.UintSet;
+
     /// @inheritdoc IUpkeepBalanceMonitor
     address public immutable override keeperRegistry;
     /// @inheritdoc IUpkeepBalanceMonitor
     address public immutable override linkToken;
     /// @inheritdoc IUpkeepBalanceMonitor
     address public override forwarderAddress;
-    /// @inheritdoc IUpkeepBalanceMonitor
-    uint256[] public override watchList;
+
+    EnumerableSet.UintSet private _watchList;
 
     Config private _config;
 
@@ -31,15 +34,17 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, Pausable {
         uint256[] memory needsFunding = new uint256[](config.maxBatchSize);
         uint96[] memory topUpAmounts = new uint96[](config.maxBatchSize);
 
-        uint256 iterationLimit = watchList.length < config.maxIterations ? watchList.length : config.maxIterations;
-        uint256 startIndex = uint256(keccak256(abi.encodePacked(block.number))) % watchList.length;
+        uint256 startIndex = uint256(keccak256(abi.encodePacked(block.number))) % _watchList.length();
+        uint256 iterationLimit = _watchList.length() < config.maxIterations
+            ? _watchList.length()
+            : config.maxIterations;
 
         uint256 availableFunds = LinkTokenInterface(linkToken).balanceOf(address(this));
         uint256 count;
 
         for (uint256 i = 0; i < iterationLimit && count < config.maxBatchSize; i++) {
-            uint256 currentIndex = (startIndex + i) % watchList.length;
-            uint256 upkeepId = watchList[currentIndex];
+            uint256 currentIndex = (startIndex + i) % _watchList.length();
+            uint256 upkeepId = _watchList.at(currentIndex);
 
             uint96 upkeepBalance = IAutomationRegistryConsumer(keeperRegistry).getBalance(upkeepId);
             uint96 minBalance = IAutomationRegistryConsumer(keeperRegistry).getMinBalance(upkeepId);
@@ -132,20 +137,14 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, Pausable {
 
     /// @inheritdoc IUpkeepBalanceMonitor
     function addToWatchList(uint256 _upkeepId) external override onlyOwner {
-        // todo: check for duplicates
-        watchList.push(_upkeepId);
+        _watchList.add(_upkeepId);
+        emit WatchListUpdated(_upkeepId, true);
     }
 
     /// @inheritdoc IUpkeepBalanceMonitor
     function removeFromWatchList(uint256 _upkeepId) external override onlyOwner {
-        uint256 length = watchList.length;
-        for (uint256 i = 0; i < length; i++) {
-            if (watchList[i] == _upkeepId) {
-                watchList[i] = watchList[length - 1];
-                watchList.pop();
-                break;
-            }
-        }
+        _watchList.remove(_upkeepId);
+        emit WatchListUpdated(_upkeepId, false);
     }
 
     /// @inheritdoc IUpkeepBalanceMonitor
@@ -165,5 +164,10 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, Pausable {
     /// @inheritdoc IUpkeepBalanceMonitor
     function getConfig() external view override returns (Config memory) {
         return _config;
+    }
+
+    /// @inheritdoc IUpkeepBalanceMonitor
+    function getWatchList() external view override returns (uint256[] memory) {
+        return _watchList.values();
     }
 }

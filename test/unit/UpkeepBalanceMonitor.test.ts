@@ -1,5 +1,6 @@
 import { expect } from 'chai'
 import { ethers } from 'hardhat'
+import { BigNumber } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { mine } from '@nomicfoundation/hardhat-network-helpers'
 import { matchSet } from '../utils'
@@ -98,5 +99,33 @@ describe('UpkeepBalanceMonitor Unit Tests', function () {
     const matching = matchSet(checkedUpkeepIds, allUpkeepIds)
 
     expect(matching).to.be.true
+  })
+
+  it('should retrieve watch list', async function () {
+    const watchList = await upkeepBalanceMonitor.getWatchList()
+
+    expect(watchList.length).to.equal(upkeepCount)
+  })
+
+  it('should add to watch list', async function () {
+    const newUpkeepId = upkeepCount
+
+    await upkeepBalanceMonitor.addToWatchList(newUpkeepId)
+
+    const watchList = await upkeepBalanceMonitor.getWatchList()
+
+    expect(watchList.length).to.equal(upkeepCount + 1)
+    expect(watchList).to.deep.include(BigNumber.from(newUpkeepId))
+  })
+
+  it('should remove from watch list', async function () {
+    const upkeepIdToRemove = 0
+
+    await upkeepBalanceMonitor.removeFromWatchList(upkeepIdToRemove)
+
+    const watchList = await upkeepBalanceMonitor.getWatchList()
+
+    expect(watchList.length).to.equal(upkeepCount - 1)
+    expect(watchList).to.not.deep.include(BigNumber.from(upkeepIdToRemove))
   })
 })
