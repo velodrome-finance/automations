@@ -144,13 +144,13 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, AccessControl, 
     }
 
     /// @inheritdoc IUpkeepBalanceMonitor
-    function grantWatchlistManagerRole(address manager) external override onlyOwner {
-        _grantRole(WATCHLIST_MANAGER_ROLE, manager);
+    function grantWatchlistManagerRole(address _manager) external override onlyOwner {
+        _grantRole(WATCHLIST_MANAGER_ROLE, _manager);
     }
 
     /// @inheritdoc IUpkeepBalanceMonitor
-    function revokeWatchlistManagerRole(address manager) external override onlyOwner {
-        _revokeRole(WATCHLIST_MANAGER_ROLE, manager);
+    function revokeWatchlistManagerRole(address _manager) external override onlyOwner {
+        _revokeRole(WATCHLIST_MANAGER_ROLE, _manager);
     }
 
     /// @inheritdoc IUpkeepBalanceMonitor
