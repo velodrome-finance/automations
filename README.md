@@ -81,3 +81,5 @@ npx hardhat run scripts/deploy_balance_monitor.ts --network <network>
 2. Register the `UpkeepBalanceMonitor` as a custom logic upkeep. Currently, this is done manually by using the [Automation UI](https://automation.chain.link/). The gas limit is determined by the `MAX_BATCH_SIZE` environment variable.
 
 3. After registering the upkeep, set the trusted forwarder on the `UpkeepBalanceMonitor` contract. This is done by calling the `setTrustedForwarder` function with the address of the `Forwarder` contract as parameter.
+
+4. Additionally, to enable the `GaugeUpkeepManager` to add and remove upkeeps from the watchlist as they are registered or canceled, it must be granted permission by calling `grantWatchlistManagerRole` on the `UpkeepBalanceMonitor` contract.
