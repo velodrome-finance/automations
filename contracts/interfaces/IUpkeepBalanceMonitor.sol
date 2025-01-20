@@ -104,4 +104,13 @@ interface IUpkeepBalanceMonitor {
     /// @notice Gets the watchlist
     /// @return _watchList the current list of upkeeps to watch
     function getWatchList() external view returns (uint256[] memory _watchList);
+
+    /// @notice Gets the length of the watchlist
+    /// @return the length of the watchlist
+    function getWatchListLength() external view returns (uint256);
+
+    /// @notice Gets an item from the watchlist by index
+    /// @param _index the index of the item to get
+    /// @return the upkeep ID at the specified index
+    function getWatchListItem(uint256 _index) external view returns (uint256);
 }

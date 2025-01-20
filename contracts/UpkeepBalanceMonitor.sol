@@ -195,4 +195,14 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, AccessControl, 
     function getWatchList() external view override returns (uint256[] memory) {
         return _watchList.values();
     }
+
+    /// @inheritdoc IUpkeepBalanceMonitor
+    function getWatchListLength() external view override returns (uint256) {
+        return _watchList.length();
+    }
+
+    /// @inheritdoc IUpkeepBalanceMonitor
+    function getWatchListItem(uint256 _index) external view override returns (uint256) {
+        return _watchList.at(_index);
+    }
 }

@@ -128,4 +128,18 @@ describe('UpkeepBalanceMonitor Unit Tests', function () {
     expect(watchList.length).to.equal(upkeepCount - 1)
     expect(watchList).to.not.deep.include(BigNumber.from(upkeepIdToRemove))
   })
+
+  it('should return the length of the watchlist', async function () {
+    expect(
+      (await upkeepBalanceMonitor.getWatchListLength()).toNumber(),
+    ).to.equal(upkeepCount)
+  })
+
+  it('should return the item from the watchlist by index', async function () {
+    for (let i = 0; i < upkeepCount; i++) {
+      expect(
+        (await upkeepBalanceMonitor.getWatchListItem(i)).toNumber(),
+      ).to.equal(i)
+    }
+  })
 })
