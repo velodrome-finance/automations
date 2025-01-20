@@ -57,16 +57,20 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, AccessControl, 
             uint96 upkeepBalance = IAutomationRegistryConsumer(keeperRegistry).getBalance(upkeepId);
             uint96 minBalance = IAutomationRegistryConsumer(keeperRegistry).getMinBalance(upkeepId);
             uint96 topUpThreshold = (minBalance * config.minPercentage) / 100;
-            uint96 topUpAmount = ((minBalance * config.targetPercentage) / 100) - upkeepBalance;
+            uint96 targetBalance = (minBalance * config.targetPercentage) / 100;
 
-            if (topUpAmount > config.maxTopUpAmount) {
-                topUpAmount = config.maxTopUpAmount;
-            }
-            if (upkeepBalance <= topUpThreshold && availableFunds >= topUpAmount) {
-                needsFunding[count] = upkeepId;
-                topUpAmounts[count] = topUpAmount;
-                count++;
-                availableFunds -= topUpAmount;
+            if (upkeepBalance < targetBalance) {
+                uint96 topUpAmount = targetBalance - upkeepBalance;
+
+                if (topUpAmount > config.maxTopUpAmount) {
+                    topUpAmount = config.maxTopUpAmount;
+                }
+                if (upkeepBalance <= topUpThreshold && availableFunds >= topUpAmount) {
+                    needsFunding[count] = upkeepId;
+                    topUpAmounts[count] = topUpAmount;
+                    count++;
+                    availableFunds -= topUpAmount;
+                }
             }
             if (count == config.maxBatchSize) {
                 break;

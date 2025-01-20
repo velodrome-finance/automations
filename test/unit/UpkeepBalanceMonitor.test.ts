@@ -50,15 +50,32 @@ describe('UpkeepBalanceMonitor Unit Tests', function () {
     )
 
     // add upkeeps to the watch list
-    await upkeepBalanceMonitor.addToWatchList(
-      Array.from({ length: upkeepCount }, (_, i) => i),
-    )
+    for (let i = 0; i < upkeepCount; i++) {
+      await upkeepBalanceMonitor.addToWatchList([i])
+      await keeperRegistryMock.setBalance(i, ethers.utils.parseEther('1'))
+      await keeperRegistryMock.setMinBalance(i, ethers.utils.parseEther('2'))
+    }
 
     // transfer funds to upkeep balance monitor
     await linkToken.transfer(
       upkeepBalanceMonitor.address,
       ethers.utils.parseEther('10'),
     )
+  })
+
+  it('should not revert if upkeepBalance is greater than target balance', async function () {
+    const upkeepId = 1
+    const minBalance = ethers.utils.parseEther('1')
+    const upkeepBalance = ethers.utils.parseEther('5') // greater than target balance
+
+    await keeperRegistryMock.setMinBalance(upkeepId, minBalance)
+    await keeperRegistryMock.setBalance(upkeepId, upkeepBalance)
+
+    const [underfundedUpkeepIds, topUpAmounts] =
+      await upkeepBalanceMonitor.getUnderfundedUpkeeps()
+
+    expect(underfundedUpkeepIds).to.not.include(upkeepId)
+    expect(topUpAmounts).to.not.include(ethers.utils.parseEther('0.5'))
   })
 
   it('should iterate within the max iterations limit', async function () {
