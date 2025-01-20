@@ -50,9 +50,9 @@ describe('UpkeepBalanceMonitor Unit Tests', function () {
     )
 
     // add upkeeps to the watch list
-    for (let i = 0; i < upkeepCount; i++) {
-      await upkeepBalanceMonitor.addToWatchList(i)
-    }
+    await upkeepBalanceMonitor.addToWatchList(
+      Array.from({ length: upkeepCount }, (_, i) => i),
+    )
 
     // transfer funds to upkeep balance monitor
     await linkToken.transfer(
@@ -110,7 +110,7 @@ describe('UpkeepBalanceMonitor Unit Tests', function () {
   it('should add to watch list', async function () {
     const newUpkeepId = upkeepCount
 
-    await upkeepBalanceMonitor.addToWatchList(newUpkeepId)
+    await upkeepBalanceMonitor.addToWatchList([newUpkeepId])
 
     const watchList = await upkeepBalanceMonitor.getWatchList()
 
@@ -121,7 +121,7 @@ describe('UpkeepBalanceMonitor Unit Tests', function () {
   it('should remove from watch list', async function () {
     const upkeepIdToRemove = 0
 
-    await upkeepBalanceMonitor.removeFromWatchList(upkeepIdToRemove)
+    await upkeepBalanceMonitor.removeFromWatchList([upkeepIdToRemove])
 
     const watchList = await upkeepBalanceMonitor.getWatchList()
 
