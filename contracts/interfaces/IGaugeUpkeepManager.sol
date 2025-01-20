@@ -8,6 +8,7 @@ interface IGaugeUpkeepManager {
     event NewUpkeepGasLimitSet(uint32 newUpkeepGasLimit);
     event NewUpkeepFundAmountSet(uint96 newUpkeepFundAmount);
     event TrustedForwarderSet(address indexed trustedForwarder, bool isTrusted);
+    event UpkeepBalanceMonitorSet(address indexed upkeepBalanceMonitor);
     event LinkBalanceWithdrawn(address indexed receiver, uint256 amount);
 
     error InvalidPerformAction();
@@ -87,6 +88,10 @@ interface IGaugeUpkeepManager {
     /// @param _trustedForwarder Upkeep trusted forwarder address
     /// @param _isTrusted True to enable trusted forwarder, false to disable
     function setTrustedForwarder(address _trustedForwarder, bool _isTrusted) external;
+
+    /// @notice Set the upkeep balance monitor address
+    /// @param _upkeepBalanceMonitor Upkeep balance monitor contract address
+    function setUpkeepBalanceMonitor(address _upkeepBalanceMonitor) external;
 
     /// @notice Register gauge upkeeps
     /// @param _gauges Array of gauge addresses

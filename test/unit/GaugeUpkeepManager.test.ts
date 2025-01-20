@@ -454,6 +454,18 @@ describe('GaugeUpkeepManager Unit Tests', function () {
         .be.true
     })
 
+    it('should set a new upkeep balance monitor', async () => {
+      const newUpkeepBalanceMonitor = accounts[1]
+
+      await gaugeUpkeepManager.setUpkeepBalanceMonitor(
+        newUpkeepBalanceMonitor.address,
+      )
+
+      expect(await gaugeUpkeepManager.upkeepBalanceMonitor()).to.equal(
+        newUpkeepBalanceMonitor.address,
+      )
+    })
+
     it('should register gauge upkeeps in bulk', async () => {
       const gaugeAddresses = [
         accounts[1].address,

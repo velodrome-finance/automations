@@ -24,13 +24,13 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     /// @inheritdoc IGaugeUpkeepManager
     address public immutable override automationRegistrar;
     /// @inheritdoc IGaugeUpkeepManager
-    address public immutable override upkeepBalanceMonitor;
-    /// @inheritdoc IGaugeUpkeepManager
     address public immutable override cronUpkeepFactory;
     /// @inheritdoc IGaugeUpkeepManager
     address public immutable override voter;
     /// @inheritdoc IGaugeUpkeepManager
     address public immutable override factoryRegistry;
+    /// @inheritdoc IGaugeUpkeepManager
+    address public override upkeepBalanceMonitor;
 
     /// @inheritdoc IGaugeUpkeepManager
     uint96 public override newUpkeepFundAmount;
@@ -236,6 +236,12 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         }
         trustedForwarder[_trustedForwarder] = _isTrusted;
         emit TrustedForwarderSet(_trustedForwarder, _isTrusted);
+    }
+
+    /// @inheritdoc IGaugeUpkeepManager
+    function setUpkeepBalanceMonitor(address _upkeepBalanceMonitor) external override onlyOwner {
+        upkeepBalanceMonitor = _upkeepBalanceMonitor;
+        emit UpkeepBalanceMonitorSet(_upkeepBalanceMonitor);
     }
 
     /// @inheritdoc IGaugeUpkeepManager
