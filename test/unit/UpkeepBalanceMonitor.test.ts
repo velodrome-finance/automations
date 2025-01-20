@@ -63,112 +63,116 @@ describe('UpkeepBalanceMonitor Unit Tests', function () {
     )
   })
 
-  it('should not revert if upkeepBalance is greater than target balance', async function () {
-    const upkeepId = 1
-    const minBalance = ethers.utils.parseEther('1')
-    const upkeepBalance = ethers.utils.parseEther('5') // greater than target balance
+  describe('Get underfunded upkeeps', function () {
+    it('should not revert if upkeepBalance is greater than target balance', async function () {
+      const upkeepId = 1
+      const minBalance = ethers.utils.parseEther('1')
+      const upkeepBalance = ethers.utils.parseEther('5') // greater than target balance
 
-    await keeperRegistryMock.setMinBalance(upkeepId, minBalance)
-    await keeperRegistryMock.setBalance(upkeepId, upkeepBalance)
+      await keeperRegistryMock.setMinBalance(upkeepId, minBalance)
+      await keeperRegistryMock.setBalance(upkeepId, upkeepBalance)
 
-    const [underfundedUpkeepIds, topUpAmounts] =
-      await upkeepBalanceMonitor.getUnderfundedUpkeeps()
+      const [underfundedUpkeepIds, topUpAmounts] =
+        await upkeepBalanceMonitor.getUnderfundedUpkeeps()
 
-    expect(underfundedUpkeepIds).to.not.include(upkeepId)
-    expect(topUpAmounts).to.not.include(ethers.utils.parseEther('0.5'))
-  })
-
-  it('should not return more than maxBatchSize upkeep ids', async function () {
-    await upkeepBalanceMonitor.setConfig({
-      ...defaultConfig,
-      maxBatchSize: 1,
+      expect(underfundedUpkeepIds).to.not.include(upkeepId)
+      expect(topUpAmounts).to.not.include(ethers.utils.parseEther('0.5'))
     })
 
-    const [underfundedUpkeepIds] =
-      await upkeepBalanceMonitor.getUnderfundedUpkeeps()
+    it('should not return more than maxBatchSize upkeep ids', async function () {
+      await upkeepBalanceMonitor.setConfig({
+        ...defaultConfig,
+        maxBatchSize: 1,
+      })
 
-    expect(underfundedUpkeepIds.length).to.eq(1)
-  })
-
-  it('should iterate within the max iterations limit', async function () {
-    // sanity check
-    expect(defaultConfig.maxBatchSize).to.be.gte(defaultConfig.maxIterations)
-
-    const [underfundedUpkeepIds] =
-      await upkeepBalanceMonitor.getUnderfundedUpkeeps()
-
-    expect(underfundedUpkeepIds.length).to.equal(defaultConfig.maxIterations)
-
-    // mine a block to change the block number and start index
-    await mine(1)
-
-    const [underfundedUpkeepIds2] =
-      await upkeepBalanceMonitor.getUnderfundedUpkeeps()
-
-    expect(underfundedUpkeepIds2.length).to.equal(defaultConfig.maxIterations)
-  })
-
-  it('should cycle through all upkeeps in multiple iterations', async function () {
-    const checkedUpkeepIds = new Set<number>()
-    const allUpkeepIds = new Set<number>(
-      Array.from({ length: upkeepCount }, (_, i) => i),
-    )
-
-    while (!matchSet(checkedUpkeepIds, allUpkeepIds)) {
       const [underfundedUpkeepIds] =
         await upkeepBalanceMonitor.getUnderfundedUpkeeps()
 
-      underfundedUpkeepIds.forEach(async (upkeepId) => {
-        checkedUpkeepIds.add(upkeepId.toNumber())
-      })
+      expect(underfundedUpkeepIds.length).to.eq(1)
+    })
 
+    it('should iterate within the max iterations limit', async function () {
+      // sanity check
+      expect(defaultConfig.maxBatchSize).to.be.gte(defaultConfig.maxIterations)
+
+      const [underfundedUpkeepIds] =
+        await upkeepBalanceMonitor.getUnderfundedUpkeeps()
+
+      expect(underfundedUpkeepIds.length).to.equal(defaultConfig.maxIterations)
+
+      // mine a block to change the block number and start index
       await mine(1)
-    }
 
-    const matching = matchSet(checkedUpkeepIds, allUpkeepIds)
+      const [underfundedUpkeepIds2] =
+        await upkeepBalanceMonitor.getUnderfundedUpkeeps()
 
-    expect(matching).to.be.true
+      expect(underfundedUpkeepIds2.length).to.equal(defaultConfig.maxIterations)
+    })
+
+    it('should cycle through all upkeeps in multiple iterations', async function () {
+      const checkedUpkeepIds = new Set<number>()
+      const allUpkeepIds = new Set<number>(
+        Array.from({ length: upkeepCount }, (_, i) => i),
+      )
+
+      while (!matchSet(checkedUpkeepIds, allUpkeepIds)) {
+        const [underfundedUpkeepIds] =
+          await upkeepBalanceMonitor.getUnderfundedUpkeeps()
+
+        underfundedUpkeepIds.forEach(async (upkeepId) => {
+          checkedUpkeepIds.add(upkeepId.toNumber())
+        })
+
+        await mine(1)
+      }
+
+      const matching = matchSet(checkedUpkeepIds, allUpkeepIds)
+
+      expect(matching).to.be.true
+    })
   })
 
-  it('should retrieve watch list', async function () {
-    const watchList = await upkeepBalanceMonitor.getWatchList()
+  describe('Watch list', function () {
+    it('should retrieve watch list', async function () {
+      const watchList = await upkeepBalanceMonitor.getWatchList()
 
-    expect(watchList.length).to.equal(upkeepCount)
-  })
+      expect(watchList.length).to.equal(upkeepCount)
+    })
 
-  it('should add to watch list', async function () {
-    const newUpkeepId = upkeepCount
+    it('should add to watch list', async function () {
+      const newUpkeepId = upkeepCount
 
-    await upkeepBalanceMonitor.addToWatchList([newUpkeepId])
+      await upkeepBalanceMonitor.addToWatchList([newUpkeepId])
 
-    const watchList = await upkeepBalanceMonitor.getWatchList()
+      const watchList = await upkeepBalanceMonitor.getWatchList()
 
-    expect(watchList.length).to.equal(upkeepCount + 1)
-    expect(watchList).to.deep.include(BigNumber.from(newUpkeepId))
-  })
+      expect(watchList.length).to.equal(upkeepCount + 1)
+      expect(watchList).to.deep.include(BigNumber.from(newUpkeepId))
+    })
 
-  it('should remove from watch list', async function () {
-    const upkeepIdToRemove = 0
+    it('should remove from watch list', async function () {
+      const upkeepIdToRemove = 0
 
-    await upkeepBalanceMonitor.removeFromWatchList([upkeepIdToRemove])
+      await upkeepBalanceMonitor.removeFromWatchList([upkeepIdToRemove])
 
-    const watchList = await upkeepBalanceMonitor.getWatchList()
+      const watchList = await upkeepBalanceMonitor.getWatchList()
 
-    expect(watchList.length).to.equal(upkeepCount - 1)
-    expect(watchList).to.not.deep.include(BigNumber.from(upkeepIdToRemove))
-  })
+      expect(watchList.length).to.equal(upkeepCount - 1)
+      expect(watchList).to.not.deep.include(BigNumber.from(upkeepIdToRemove))
+    })
 
-  it('should return the length of the watchlist', async function () {
-    expect(
-      (await upkeepBalanceMonitor.getWatchListLength()).toNumber(),
-    ).to.equal(upkeepCount)
-  })
-
-  it('should return the item from the watchlist by index', async function () {
-    for (let i = 0; i < upkeepCount; i++) {
+    it('should return the length of the watchlist', async function () {
       expect(
-        (await upkeepBalanceMonitor.getWatchListItem(i)).toNumber(),
-      ).to.equal(i)
-    }
+        (await upkeepBalanceMonitor.getWatchListLength()).toNumber(),
+      ).to.equal(upkeepCount)
+    })
+
+    it('should return the item from the watchlist by index', async function () {
+      for (let i = 0; i < upkeepCount; i++) {
+        expect(
+          (await upkeepBalanceMonitor.getWatchListItem(i)).toNumber(),
+        ).to.equal(i)
+      }
+    })
   })
 })
