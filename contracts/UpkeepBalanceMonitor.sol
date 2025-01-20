@@ -50,7 +50,7 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, AccessControl, 
         uint256 availableFunds = LinkTokenInterface(linkToken).balanceOf(address(this));
         uint256 count;
 
-        for (uint256 i = 0; i < iterationLimit && count < config.maxBatchSize; i++) {
+        for (uint256 i = 0; i < iterationLimit; i++) {
             uint256 currentIndex = (startIndex + i) % _watchList.length();
             uint256 upkeepId = _watchList.at(currentIndex);
 

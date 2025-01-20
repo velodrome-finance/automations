@@ -78,6 +78,18 @@ describe('UpkeepBalanceMonitor Unit Tests', function () {
     expect(topUpAmounts).to.not.include(ethers.utils.parseEther('0.5'))
   })
 
+  it('should not return more than maxBatchSize upkeep ids', async function () {
+    await upkeepBalanceMonitor.setConfig({
+      ...defaultConfig,
+      maxBatchSize: 1,
+    })
+
+    const [underfundedUpkeepIds] =
+      await upkeepBalanceMonitor.getUnderfundedUpkeeps()
+
+    expect(underfundedUpkeepIds.length).to.eq(1)
+  })
+
   it('should iterate within the max iterations limit', async function () {
     // sanity check
     expect(defaultConfig.maxBatchSize).to.be.gte(defaultConfig.maxIterations)
