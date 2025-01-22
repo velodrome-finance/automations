@@ -244,6 +244,9 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
 
     /// @inheritdoc IGaugeUpkeepManager
     function setUpkeepBalanceMonitor(address _upkeepBalanceMonitor) external override onlyOwner {
+        if (_upkeepBalanceMonitor == address(0)) {
+            revert AddressZeroNotAllowed();
+        }
         upkeepBalanceMonitor = _upkeepBalanceMonitor;
         emit UpkeepBalanceMonitorSet(_upkeepBalanceMonitor);
     }

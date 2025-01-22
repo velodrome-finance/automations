@@ -143,6 +143,9 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, AccessControl, 
 
     /// @inheritdoc IUpkeepBalanceMonitor
     function setTrustedForwarder(address _trustedForwarder) external override onlyOwner {
+        if (_trustedForwarder == address(0)) {
+            revert AddressZeroNotAllowed();
+        }
         forwarderAddress = _trustedForwarder;
         emit ForwarderSet(_trustedForwarder);
     }
