@@ -162,6 +162,7 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, AccessControl, 
 
     /// @inheritdoc IUpkeepBalanceMonitor
     function addToWatchList(uint256 _upkeepId) public override onlyOwnerOrWatchlistManager {
+        if (_upkeepId == 0) revert ZeroIdNotAllowed();
         _watchList.add(_upkeepId);
         emit WatchListUpdated(_upkeepId, true);
     }

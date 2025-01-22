@@ -15,6 +15,7 @@ describe('UpkeepBalanceMonitor Unit Tests', function () {
   let linkToken: IERC20
   let keeperRegistryMock: KeeperRegistryMock
   let accounts: SignerWithAddress[]
+  let upkeepIds: number[]
 
   const upkeepCount = 10
 
@@ -49,13 +50,13 @@ describe('UpkeepBalanceMonitor Unit Tests', function () {
       defaultConfig,
     )
 
+    upkeepIds = Array.from({ length: upkeepCount }, (_, i) => i + 1)
+
     // add upkeeps to the watch list
-    await upkeepBalanceMonitor['addToWatchList(uint256[])'](
-      Array.from({ length: upkeepCount }, (_, i) => i),
-    )
+    await upkeepBalanceMonitor['addToWatchList(uint256[])'](upkeepIds)
 
     // set balances and min balances for upkeeps
-    for (let i = 0; i < upkeepCount; i++) {
+    for (let i = 1; i <= upkeepCount; i++) {
       await keeperRegistryMock.setBalance(i, ethers.utils.parseEther('1'))
       await keeperRegistryMock.setMinBalance(i, ethers.utils.parseEther('2'))
     }
@@ -115,9 +116,7 @@ describe('UpkeepBalanceMonitor Unit Tests', function () {
 
     it('should cycle through all upkeeps in multiple iterations', async function () {
       const checkedUpkeepIds = new Set<number>()
-      const allUpkeepIds = new Set<number>(
-        Array.from({ length: upkeepCount }, (_, i) => i),
-      )
+      const allUpkeepIds = new Set<number>(upkeepIds)
 
       while (!matchSet(checkedUpkeepIds, allUpkeepIds)) {
         const [underfundedUpkeepIds] =
@@ -144,7 +143,7 @@ describe('UpkeepBalanceMonitor Unit Tests', function () {
     })
 
     it('should add to watch list', async function () {
-      const newUpkeepId = upkeepCount
+      const newUpkeepId = upkeepCount + 1
 
       await upkeepBalanceMonitor['addToWatchList(uint256)'](newUpkeepId)
 
@@ -155,7 +154,7 @@ describe('UpkeepBalanceMonitor Unit Tests', function () {
     })
 
     it('should remove from watch list', async function () {
-      const upkeepIdToRemove = 0
+      const upkeepIdToRemove = 1
 
       await upkeepBalanceMonitor['removeFromWatchList(uint256)'](
         upkeepIdToRemove,
@@ -177,7 +176,7 @@ describe('UpkeepBalanceMonitor Unit Tests', function () {
       for (let i = 0; i < upkeepCount; i++) {
         expect(
           (await upkeepBalanceMonitor.getWatchListItem(i)).toNumber(),
-        ).to.equal(i)
+        ).to.equal(i + 1)
       }
     })
   })

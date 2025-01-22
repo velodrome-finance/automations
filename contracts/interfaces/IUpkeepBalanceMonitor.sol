@@ -27,6 +27,7 @@ interface IUpkeepBalanceMonitor {
     error OnlyForwarderOrOwner();
     error OnlyWatchlistManagerOrOwner();
     error AddressZeroNotAllowed();
+    error ZeroIdNotAllowed();
 
     /// @notice Keeper registry address
     function keeperRegistry() external view returns (address);
