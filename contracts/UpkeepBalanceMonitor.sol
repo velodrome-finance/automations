@@ -168,7 +168,8 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, AccessControl, 
 
     /// @inheritdoc IUpkeepBalanceMonitor
     function addToWatchList(uint256[] memory _upkeepIds) external override onlyOwner {
-        for (uint256 i = 0; i < _upkeepIds.length; i++) {
+        uint256 length = _upkeepIds.length;
+        for (uint256 i = 0; i < length; i++) {
             addToWatchList(_upkeepIds[i]);
         }
     }
@@ -181,7 +182,8 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, AccessControl, 
 
     /// @inheritdoc IUpkeepBalanceMonitor
     function removeFromWatchList(uint256[] memory _upkeepIds) external override onlyOwner {
-        for (uint256 i = 0; i < _upkeepIds.length; i++) {
+        uint256 length = _upkeepIds.length;
+        for (uint256 i = 0; i < length; i++) {
             removeFromWatchList(_upkeepIds[i]);
         }
     }
