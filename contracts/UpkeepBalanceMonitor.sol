@@ -161,20 +161,28 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, AccessControl, 
     }
 
     /// @inheritdoc IUpkeepBalanceMonitor
-    function addToWatchList(uint256[] memory _upkeepIds) external override onlyOwnerOrWatchlistManager {
+    function addToWatchList(uint256 _upkeepId) public override onlyOwnerOrWatchlistManager {
+        _watchList.add(_upkeepId);
+        emit WatchListUpdated(_upkeepId, true);
+    }
+
+    /// @inheritdoc IUpkeepBalanceMonitor
+    function addToWatchList(uint256[] memory _upkeepIds) external override onlyOwner {
         for (uint256 i = 0; i < _upkeepIds.length; i++) {
-            uint256 upkeepId = _upkeepIds[i];
-            _watchList.add(upkeepId);
-            emit WatchListUpdated(upkeepId, true);
+            addToWatchList(_upkeepIds[i]);
         }
     }
 
     /// @inheritdoc IUpkeepBalanceMonitor
-    function removeFromWatchList(uint256[] memory _upkeepIds) external override onlyOwnerOrWatchlistManager {
+    function removeFromWatchList(uint256 _upkeepId) public override onlyOwnerOrWatchlistManager {
+        _watchList.remove(_upkeepId);
+        emit WatchListUpdated(_upkeepId, false);
+    }
+
+    /// @inheritdoc IUpkeepBalanceMonitor
+    function removeFromWatchList(uint256[] memory _upkeepIds) external override onlyOwner {
         for (uint256 i = 0; i < _upkeepIds.length; i++) {
-            uint256 upkeepId = _upkeepIds[i];
-            _watchList.remove(upkeepId);
-            emit WatchListUpdated(upkeepId, false);
+            removeFromWatchList(_upkeepIds[i]);
         }
     }
 

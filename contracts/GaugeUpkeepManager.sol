@@ -175,15 +175,11 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     }
 
     function _addToWatchList(uint256 _upkeepId) internal {
-        uint256[] memory upkeeps = new uint256[](1);
-        upkeeps[0] = _upkeepId;
-        IUpkeepBalanceMonitor(upkeepBalanceMonitor).addToWatchList(upkeeps);
+        IUpkeepBalanceMonitor(upkeepBalanceMonitor).addToWatchList(_upkeepId);
     }
 
     function _removeFromWatchList(uint256 _upkeepId) internal {
-        uint256[] memory upkeeps = new uint256[](1);
-        upkeeps[0] = _upkeepId;
-        IUpkeepBalanceMonitor(upkeepBalanceMonitor).removeFromWatchList(upkeeps);
+        IUpkeepBalanceMonitor(upkeepBalanceMonitor).removeFromWatchList(_upkeepId);
     }
 
     function _extractGaugeFromCreatedLog(Log memory _log) internal pure returns (address gauge) {

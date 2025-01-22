@@ -50,8 +50,12 @@ describe('UpkeepBalanceMonitor Unit Tests', function () {
     )
 
     // add upkeeps to the watch list
+    await upkeepBalanceMonitor['addToWatchList(uint256[])'](
+      Array.from({ length: upkeepCount }, (_, i) => i),
+    )
+
+    // set balances and min balances for upkeeps
     for (let i = 0; i < upkeepCount; i++) {
-      await upkeepBalanceMonitor.addToWatchList([i])
       await keeperRegistryMock.setBalance(i, ethers.utils.parseEther('1'))
       await keeperRegistryMock.setMinBalance(i, ethers.utils.parseEther('2'))
     }
@@ -142,7 +146,7 @@ describe('UpkeepBalanceMonitor Unit Tests', function () {
     it('should add to watch list', async function () {
       const newUpkeepId = upkeepCount
 
-      await upkeepBalanceMonitor.addToWatchList([newUpkeepId])
+      await upkeepBalanceMonitor['addToWatchList(uint256)'](newUpkeepId)
 
       const watchList = await upkeepBalanceMonitor.getWatchList()
 
@@ -153,7 +157,9 @@ describe('UpkeepBalanceMonitor Unit Tests', function () {
     it('should remove from watch list', async function () {
       const upkeepIdToRemove = 0
 
-      await upkeepBalanceMonitor.removeFromWatchList([upkeepIdToRemove])
+      await upkeepBalanceMonitor['removeFromWatchList(uint256)'](
+        upkeepIdToRemove,
+      )
 
       const watchList = await upkeepBalanceMonitor.getWatchList()
 
