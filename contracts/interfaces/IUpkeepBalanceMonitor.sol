@@ -77,7 +77,7 @@ interface IUpkeepBalanceMonitor {
 
     /// @notice Adds a list of upkeeps to the watchlist
     /// @param _upkeepIds the list of upkeep IDs to add
-    function addToWatchList(uint256[] memory _upkeepIds) external;
+    function addMultipleToWatchList(uint256[] memory _upkeepIds) external;
 
     /// @notice Removes an upkeep from the watchlist
     /// @param _upkeepId the upkeep ID to remove
@@ -85,7 +85,7 @@ interface IUpkeepBalanceMonitor {
 
     /// @notice Removes a list of upkeeps from the watchlist
     /// @param _upkeepIds the list of upkeep IDs to remove
-    function removeFromWatchList(uint256[] memory _upkeepIds) external;
+    function removeMultipleFromWatchList(uint256[] memory _upkeepIds) external;
 
     /// @notice Sets the contract config
     /// @param _config the new config

@@ -53,7 +53,7 @@ describe('UpkeepBalanceMonitor Unit Tests', function () {
     upkeepIds = Array.from({ length: upkeepCount }, (_, i) => i + 1)
 
     // add upkeeps to the watch list
-    await upkeepBalanceMonitor['addToWatchList(uint256[])'](upkeepIds)
+    await upkeepBalanceMonitor.addMultipleToWatchList(upkeepIds)
 
     // set balances and min balances for upkeeps
     for (let i = 1; i <= upkeepCount; i++) {
@@ -145,7 +145,7 @@ describe('UpkeepBalanceMonitor Unit Tests', function () {
     it('should add to watch list', async function () {
       const newUpkeepId = upkeepCount + 1
 
-      await upkeepBalanceMonitor['addToWatchList(uint256)'](newUpkeepId)
+      await upkeepBalanceMonitor.addToWatchList(newUpkeepId)
 
       const watchList = await upkeepBalanceMonitor.getWatchList()
 
@@ -156,9 +156,7 @@ describe('UpkeepBalanceMonitor Unit Tests', function () {
     it('should remove from watch list', async function () {
       const upkeepIdToRemove = 1
 
-      await upkeepBalanceMonitor['removeFromWatchList(uint256)'](
-        upkeepIdToRemove,
-      )
+      await upkeepBalanceMonitor.removeFromWatchList(upkeepIdToRemove)
 
       const watchList = await upkeepBalanceMonitor.getWatchList()
 
