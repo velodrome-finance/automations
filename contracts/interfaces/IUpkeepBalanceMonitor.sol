@@ -51,7 +51,7 @@ interface IUpkeepBalanceMonitor {
     /// @param _topUpAmounts the list of amounts to fund each upkeep with
     function topUp(uint256[] memory _upkeepIds, uint96[] memory _topUpAmounts) external;
 
-    /// @notice Gets list of upkeeps ids that are underfunded and returns a keeper-compatible payload.
+    /// @notice Gets list of upkeep ids that are underfunded and returns a keeper-compatible payload.
     /// @return _upkeepNeeded signals if upkeep is needed
     /// @return _performData is an abi encoded list of subscription ids that need funds
     function checkUpkeep(bytes calldata) external view returns (bool _upkeepNeeded, bytes memory _performData);
