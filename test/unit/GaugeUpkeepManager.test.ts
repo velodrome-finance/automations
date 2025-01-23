@@ -1,5 +1,6 @@
 import { expect } from 'chai'
 import { ethers } from 'hardhat'
+import { BigNumber } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { time } from '@nomicfoundation/hardhat-network-helpers'
 import {
@@ -11,6 +12,7 @@ import {
   FactoryRegistryMock,
   KeeperRegistryMock,
   AutomationRegistrarMock,
+  UpkeepBalanceMonitor,
 } from '../../typechain-types'
 import { getNextEpochUTC } from '../utils'
 import { AutomationRegistrarMockAbi } from '../abi'
@@ -20,6 +22,7 @@ const { AddressZero, HashZero } = ethers.constants
 
 describe('GaugeUpkeepManager Unit Tests', function () {
   let gaugeUpkeepManager: GaugeUpkeepManager
+  let upkeepBalanceMonitor: UpkeepBalanceMonitor
   let cronUpkeep: CronUpkeep
   let cronUpkeepFactory: CronUpkeepFactory
   let linkToken: IERC20
@@ -79,6 +82,22 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       await ethers.getContractFactory('KeeperRegistryMock')
     keeperRegistryMock = await keeperRegistryMockFactory.deploy()
 
+    // deploy upkeep balance monitor
+    const upkeepBalanceMonitorFactory = await ethers.getContractFactory(
+      'UpkeepBalanceMonitor',
+    )
+    upkeepBalanceMonitor = await upkeepBalanceMonitorFactory.deploy(
+      linkToken.address,
+      keeperRegistryMock.address,
+      {
+        maxBatchSize: 10,
+        minPercentage: 120,
+        targetPercentage: 300,
+        maxTopUpAmount: ethers.utils.parseEther('10'),
+        maxIterations: 10,
+      },
+    )
+
     // deploy cron library
     const cronLibraryFactory = await ethers.getContractFactory(
       '@chainlink/contracts/src/v0.8/automation/libraries/external/Cron.sol:Cron',
@@ -103,6 +122,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       linkToken.address,
       keeperRegistryMock.address,
       automationRegistrarMock.address,
+      upkeepBalanceMonitor.address,
       cronUpkeepFactory.address,
       veloVoterMock.address,
       upkeepFundAmount,
@@ -110,6 +130,11 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       [fakeCrosschainFactoryAddress],
     )
     gaugeUpkeepManager.setTrustedForwarder(accounts[0].address, true)
+
+    // set gauge upkeep manager as watch list manager in balance monitor
+    await upkeepBalanceMonitor.grantWatchlistManagerRole(
+      gaugeUpkeepManager.address,
+    )
 
     // fund gauge upkeep manager with link token
     await linkToken.transfer(
@@ -183,12 +208,8 @@ describe('GaugeUpkeepManager Unit Tests', function () {
         .withArgs(fakeGaugeAddress, 1)
 
       const upkeepId = await gaugeUpkeepManager.gaugeUpkeepId(fakeGaugeAddress)
-      const activeUpkeepId = await gaugeUpkeepManager.activeUpkeepIds(0)
-      const activeUpkeepsCount = await gaugeUpkeepManager.activeUpkeepsCount()
 
       expect(upkeepId).to.equal(1)
-      expect(activeUpkeepId).to.equal(1)
-      expect(activeUpkeepsCount).to.equal(1)
 
       // get cron upkeep address and attach to contract
       const receipt = await tx.wait()
@@ -201,6 +222,14 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       cronUpkeep = await ethers.getContractAt('CronUpkeep', cronUpkeepAddress)
 
       expect(cronUpkeep.address).to.be.properAddress
+    })
+
+    it('should add registered upkeeps to the watch list', async () => {
+      await gaugeUpkeepManager.performUpkeep(registerPerformData)
+
+      const watchList = await upkeepBalanceMonitor.getWatchList()
+
+      expect(watchList).to.deep.include(BigNumber.from(upkeepId))
     })
 
     it('should not allow non-trusted forwarder to register upkeep', async () => {
@@ -290,10 +319,8 @@ describe('GaugeUpkeepManager Unit Tests', function () {
         .withArgs(fakeGaugeAddress, 1)
 
       const upkeepId = await gaugeUpkeepManager.gaugeUpkeepId(fakeGaugeAddress)
-      const activeUpkeepsCount = await gaugeUpkeepManager.activeUpkeepsCount()
 
       expect(upkeepId).to.equal(0)
-      expect(activeUpkeepsCount).to.equal(0)
     })
 
     it('should not allow non-trusted forwarder to cancel upkeep', async () => {
@@ -359,12 +386,8 @@ describe('GaugeUpkeepManager Unit Tests', function () {
         .withArgs(fakeGaugeAddress, 1)
 
       const upkeepId = await gaugeUpkeepManager.gaugeUpkeepId(fakeGaugeAddress)
-      const activeUpkeepId = await gaugeUpkeepManager.activeUpkeepIds(0)
-      const activeUpkeepsCount = await gaugeUpkeepManager.activeUpkeepsCount()
 
       expect(upkeepId).to.equal(1)
-      expect(activeUpkeepId).to.equal(1)
-      expect(activeUpkeepsCount).to.equal(1)
     })
 
     it('should not allow non-trusted forwarder to revive upkeep', async () => {
@@ -431,6 +454,18 @@ describe('GaugeUpkeepManager Unit Tests', function () {
         .be.true
     })
 
+    it('should set a new upkeep balance monitor', async () => {
+      const newUpkeepBalanceMonitor = accounts[1]
+
+      await gaugeUpkeepManager.setUpkeepBalanceMonitor(
+        newUpkeepBalanceMonitor.address,
+      )
+
+      expect(await gaugeUpkeepManager.upkeepBalanceMonitor()).to.equal(
+        newUpkeepBalanceMonitor.address,
+      )
+    })
+
     it('should register gauge upkeeps in bulk', async () => {
       const gaugeAddresses = [
         accounts[1].address,
@@ -447,10 +482,6 @@ describe('GaugeUpkeepManager Unit Tests', function () {
         .withArgs(gaugeAddresses[1], 2)
         .to.emit(gaugeUpkeepManager, 'GaugeUpkeepRegistered')
         .withArgs(gaugeAddresses[2], 3)
-
-      const upkeepsCount = await gaugeUpkeepManager.activeUpkeepsCount()
-
-      expect(upkeepsCount).to.equal(3)
     })
 
     it('should deregister gauge upkeeps in bulk', async () => {
@@ -471,10 +502,6 @@ describe('GaugeUpkeepManager Unit Tests', function () {
         .withArgs(gaugeAddresses[1], 2)
         .to.emit(gaugeUpkeepManager, 'GaugeUpkeepCancelled')
         .withArgs(gaugeAddresses[2], 3)
-
-      const upkeepsCount = await gaugeUpkeepManager.activeUpkeepsCount()
-
-      expect(upkeepsCount).to.equal(0)
     })
   })
 })

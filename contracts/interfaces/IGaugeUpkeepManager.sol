@@ -8,6 +8,7 @@ interface IGaugeUpkeepManager {
     event NewUpkeepGasLimitSet(uint32 newUpkeepGasLimit);
     event NewUpkeepFundAmountSet(uint96 newUpkeepFundAmount);
     event TrustedForwarderSet(address indexed trustedForwarder, bool isTrusted);
+    event UpkeepBalanceMonitorSet(address indexed upkeepBalanceMonitor);
     event LinkBalanceWithdrawn(address indexed receiver, uint256 amount);
 
     error InvalidPerformAction();
@@ -33,6 +34,9 @@ interface IGaugeUpkeepManager {
 
     /// @notice Automation registrar address
     function automationRegistrar() external view returns (address);
+
+    /// @notice Upkeep balance monitor address
+    function upkeepBalanceMonitor() external view returns (address);
 
     /// @notice Cron upkeep factory address
     function cronUpkeepFactory() external view returns (address);
@@ -64,15 +68,6 @@ interface IGaugeUpkeepManager {
     /// @return Upkeep ID
     function gaugeUpkeepId(address _gauge) external view returns (uint256);
 
-    /// @notice Get an upkeep ID from the list of active upkeeps
-    /// @param _index Active upkeep IDs array index
-    /// @return Upkeep ID
-    function activeUpkeepIds(uint256 _index) external view returns (uint256);
-
-    /// @notice Get the total number of active gauge upkeeps
-    /// @return Active upkeeps array length
-    function activeUpkeepsCount() external view returns (uint256);
-
     /// @notice Withdraw remaining upkeep LINK balance to contract balance
     /// @param _upkeepId Gauge upkeep ID owned by the contract
     /// @dev Upkeep must be cancelled before withdrawing
@@ -93,6 +88,10 @@ interface IGaugeUpkeepManager {
     /// @param _trustedForwarder Upkeep trusted forwarder address
     /// @param _isTrusted True to enable trusted forwarder, false to disable
     function setTrustedForwarder(address _trustedForwarder, bool _isTrusted) external;
+
+    /// @notice Set the upkeep balance monitor address
+    /// @param _upkeepBalanceMonitor Upkeep balance monitor contract address
+    function setUpkeepBalanceMonitor(address _upkeepBalanceMonitor) external;
 
     /// @notice Register gauge upkeeps
     /// @param _gauges Array of gauge addresses
