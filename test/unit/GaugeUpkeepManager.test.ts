@@ -2,29 +2,22 @@ import { expect } from 'chai'
 import { ethers } from 'hardhat'
 import { BigNumber } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
-import { time } from '@nomicfoundation/hardhat-network-helpers'
 import {
   IERC20,
   VoterMock,
-  CronUpkeep,
-  CronUpkeepFactory,
   GaugeUpkeepManager,
   FactoryRegistryMock,
   KeeperRegistryMock,
   AutomationRegistrarMock,
   UpkeepBalanceMonitor,
 } from '../../typechain-types'
-import { getNextEpochUTC } from '../utils'
-import { AutomationRegistrarMockAbi } from '../abi'
 import { PerformAction } from '../constants'
 
-const { AddressZero, HashZero } = ethers.constants
+const { HashZero } = ethers.constants
 
 describe('GaugeUpkeepManager Unit Tests', function () {
   let gaugeUpkeepManager: GaugeUpkeepManager
   let upkeepBalanceMonitor: UpkeepBalanceMonitor
-  let cronUpkeep: CronUpkeep
-  let cronUpkeepFactory: CronUpkeepFactory
   let linkToken: IERC20
   let keeperRegistryMock: KeeperRegistryMock
   let automationRegistrarMock: AutomationRegistrarMock
@@ -34,10 +27,12 @@ describe('GaugeUpkeepManager Unit Tests', function () {
   let fakeCrosschainFactoryAddress: string
   let fakeNonCrosschainFactoryAddress: string
   let registerPerformData: string
-  let cancelPerformData: string
+  let deregisterPerformData: string
   let accounts: SignerWithAddress[]
 
   const upkeepFundAmount = ethers.utils.parseEther('0.1')
+  const gaugesPerUpkeepLimit = 100
+  const upkeepCancelBuffer = 20
   const upkeepGasLimit = 500000
   const upkeepId = 1
 
@@ -98,23 +93,6 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       },
     )
 
-    // deploy cron library
-    const cronLibraryFactory = await ethers.getContractFactory(
-      '@chainlink/contracts/src/v0.8/automation/libraries/external/Cron.sol:Cron',
-    )
-    const cronLibrary = await cronLibraryFactory.deploy()
-
-    // deploy cron upkeep factory
-    const CronUpkeepFactory = await ethers.getContractFactory(
-      'CronUpkeepFactory',
-      {
-        libraries: {
-          Cron: cronLibrary.address,
-        },
-      },
-    )
-    cronUpkeepFactory = await CronUpkeepFactory.deploy()
-
     // deploy gauge upkeep manager
     const gaugeUpkeepManagerFactory =
       await ethers.getContractFactory('GaugeUpkeepManager')
@@ -123,7 +101,6 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       keeperRegistryMock.address,
       automationRegistrarMock.address,
       upkeepBalanceMonitor.address,
-      cronUpkeepFactory.address,
       veloVoterMock.address,
       upkeepFundAmount,
       upkeepGasLimit,
@@ -147,11 +124,11 @@ describe('GaugeUpkeepManager Unit Tests', function () {
     fakeGaugeAddress = accounts[1].address
     registerPerformData = abiCoder.encode(
       ['uint8', 'address'],
-      [PerformAction.RegisterUpkeep, fakeGaugeAddress],
+      [PerformAction.RegisterGauge, fakeGaugeAddress],
     )
-    cancelPerformData = abiCoder.encode(
+    deregisterPerformData = abiCoder.encode(
       ['uint8', 'address'],
-      [PerformAction.CancelUpkeep, fakeGaugeAddress],
+      [PerformAction.DeregisterGauge, fakeGaugeAddress],
     )
   })
 
@@ -164,9 +141,6 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       expect(await gaugeUpkeepManager.automationRegistrar()).to.equal(
         automationRegistrarMock.address,
       )
-      expect(await gaugeUpkeepManager.cronUpkeepFactory()).to.equal(
-        cronUpkeepFactory.address,
-      )
       expect(await gaugeUpkeepManager.voter()).to.equal(veloVoterMock.address)
       expect(await gaugeUpkeepManager.newUpkeepFundAmount()).to.equal(
         upkeepFundAmount,
@@ -178,7 +152,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
   })
 
   describe('Register gauge upkeep', function () {
-    it('should trigger a new upkeep registration', async () => {
+    it('should trigger a new gauge registration', async () => {
       const createGaugeTx = await veloVoterMock.createGauge(fakeGaugeAddress)
       const createGaugeReceipt = await createGaugeTx.wait()
       const createGaugeLog = createGaugeReceipt.logs[0]
@@ -200,28 +174,47 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       expect(performData).to.equal(registerPerformData)
     })
 
-    it('should register a new cron upkeep', async () => {
+    it('should register a new gauge', async () => {
       const tx = await gaugeUpkeepManager.performUpkeep(registerPerformData)
 
-      expect(tx)
-        .to.emit(gaugeUpkeepManager, 'GaugeUpkeepRegistered')
-        .withArgs(fakeGaugeAddress, 1)
+      await expect(tx)
+        .to.emit(gaugeUpkeepManager, 'GaugeRegistered')
+        .withArgs(fakeGaugeAddress)
 
-      const upkeepId = await gaugeUpkeepManager.gaugeUpkeepId(fakeGaugeAddress)
-
-      expect(upkeepId).to.equal(1)
-
-      // get cron upkeep address and attach to contract
-      const receipt = await tx.wait()
-      const upkeepRegisteredLog = receipt.logs.find(
-        (log) => log.address === automationRegistrarMock.address,
+      expect(await gaugeUpkeepManager.gaugeList(0, 1)).to.include(
+        fakeGaugeAddress,
       )
-      const iface = new ethers.utils.Interface(AutomationRegistrarMockAbi)
-      const decodedLog = iface.parseLog(upkeepRegisteredLog!)
-      const cronUpkeepAddress = decodedLog?.args[0][2]
-      cronUpkeep = await ethers.getContractAt('CronUpkeep', cronUpkeepAddress)
+    })
 
-      expect(cronUpkeep.address).to.be.properAddress
+    it('should register a new gauge upkeep', async () => {
+      const tx = await gaugeUpkeepManager.performUpkeep(registerPerformData)
+
+      await expect(tx).to.emit(gaugeUpkeepManager, 'GaugeUpkeepRegistered')
+
+      expect(await gaugeUpkeepManager.upkeepIds(0)).to.equal(1)
+      expect(await gaugeUpkeepManager.upkeepCount()).to.equal(1)
+    })
+
+    it('should not register a new upkeep until the gauges per upkeep limit is reached', async () => {
+      const bulkFakeGaugeAddresses = Array.from(
+        { length: gaugesPerUpkeepLimit },
+        () => ethers.Wallet.createRandom().address,
+      )
+      await gaugeUpkeepManager.registerGauges(bulkFakeGaugeAddresses)
+
+      // should not register more than the gauges per upkeep limit
+      expect(await gaugeUpkeepManager.upkeepCount()).to.equal(1)
+      expect(await gaugeUpkeepManager.gaugeCount()).to.equal(
+        gaugesPerUpkeepLimit,
+      )
+
+      // should register a new upkeep after the gauges per upkeep limit is reached
+      await gaugeUpkeepManager.registerGauges([fakeGaugeAddress])
+
+      expect(await gaugeUpkeepManager.upkeepCount()).to.equal(2)
+      expect(await gaugeUpkeepManager.gaugeCount()).to.equal(
+        gaugesPerUpkeepLimit + 1,
+      )
     })
 
     it('should add registered upkeeps to the watch list', async () => {
@@ -264,29 +257,6 @@ describe('GaugeUpkeepManager Unit Tests', function () {
     })
   })
 
-  describe('Perform gauge upkeep', function () {
-    it('should not trigger a cron upkeep when not scheduled', async () => {
-      const [upkeepNeeded, performData] = await cronUpkeep
-        .connect(AddressZero)
-        .callStatic.checkUpkeep(HashZero)
-
-      expect(upkeepNeeded).to.be.false
-      expect(performData).to.equal('0x')
-    })
-
-    it('should trigger a cron upkeep when scheduled', async () => {
-      const timestamp = getNextEpochUTC().getTime() / 1000
-      await time.increaseTo(timestamp)
-
-      const [upkeepNeeded, performData] = await cronUpkeep
-        .connect(AddressZero)
-        .callStatic.checkUpkeep(HashZero)
-
-      expect(upkeepNeeded).to.be.true
-      expect(performData).to.not.equal('0x')
-    })
-  })
-
   describe('Cancel gauge upkeep', function () {
     it('should trigger upkeep cancellation', async () => {
       await gaugeUpkeepManager.performUpkeep(registerPerformData)
@@ -308,19 +278,72 @@ describe('GaugeUpkeepManager Unit Tests', function () {
         await gaugeUpkeepManager.callStatic.checkLog(log, HashZero)
 
       expect(upkeepNeeded).to.be.true
-      expect(performData).to.equal(cancelPerformData)
+      expect(performData).to.equal(deregisterPerformData)
     })
 
-    it('should cancel a cron upkeep', async () => {
+    it('should deregister a gauge', async () => {
       await gaugeUpkeepManager.performUpkeep(registerPerformData)
-      const tx = await gaugeUpkeepManager.performUpkeep(cancelPerformData)
+      const tx = await gaugeUpkeepManager.performUpkeep(deregisterPerformData)
+
+      await expect(tx)
+        .to.emit(gaugeUpkeepManager, 'GaugeDeregistered')
+        .withArgs(fakeGaugeAddress)
+
+      expect(await gaugeUpkeepManager.gaugeList(0, 1)).to.not.include(
+        fakeGaugeAddress,
+      )
+      expect(await gaugeUpkeepManager.gaugeCount()).to.equal(0)
+    })
+
+    it('should cancel a gauge upkeep', async () => {
+      await gaugeUpkeepManager.performUpkeep(registerPerformData)
+      const tx = await gaugeUpkeepManager.performUpkeep(deregisterPerformData)
+
       await expect(tx)
         .to.emit(gaugeUpkeepManager, 'GaugeUpkeepCancelled')
-        .withArgs(fakeGaugeAddress, 1)
+        .withArgs(upkeepId)
 
-      const upkeepId = await gaugeUpkeepManager.gaugeUpkeepId(fakeGaugeAddress)
+      await expect(gaugeUpkeepManager.upkeepIds(0)).to.be.reverted
 
-      expect(upkeepId).to.equal(0)
+      expect(await gaugeUpkeepManager.upkeepCount()).to.equal(0)
+    })
+
+    it('should not cancel upkeep before the buffer is reached', async () => {
+      const bulkFakeGaugeAddresses = Array.from(
+        { length: gaugesPerUpkeepLimit + 1 },
+        () => ethers.Wallet.createRandom().address,
+      )
+      await gaugeUpkeepManager.registerGauges(bulkFakeGaugeAddresses)
+      expect(await gaugeUpkeepManager.upkeepCount()).to.equal(2)
+
+      // upkeep should not be cancelled until the buffer is reached
+      await gaugeUpkeepManager.deregisterGauges(
+        bulkFakeGaugeAddresses.slice(0, upkeepCancelBuffer),
+      )
+      expect(await gaugeUpkeepManager.upkeepCount()).to.equal(2)
+
+      // upkeep should be cancelled after the buffer is reached
+      await expect(
+        gaugeUpkeepManager.deregisterGauges(
+          bulkFakeGaugeAddresses.slice(
+            upkeepCancelBuffer,
+            upkeepCancelBuffer + 1,
+          ),
+        ),
+      ).to.emit(gaugeUpkeepManager, 'GaugeUpkeepCancelled')
+      expect(await gaugeUpkeepManager.upkeepCount()).to.equal(1)
+      expect(await gaugeUpkeepManager.gaugeCount()).to.equal(
+        gaugesPerUpkeepLimit - upkeepCancelBuffer,
+      )
+    })
+
+    it('should remove cancelled upkeeps from the watch list', async () => {
+      await gaugeUpkeepManager.performUpkeep(registerPerformData)
+      await gaugeUpkeepManager.performUpkeep(deregisterPerformData)
+
+      const watchList = await upkeepBalanceMonitor.getWatchList()
+
+      expect(watchList).to.not.include(BigNumber.from(upkeepId))
     })
 
     it('should not allow non-trusted forwarder to cancel upkeep', async () => {
@@ -328,7 +351,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       await expect(
         gaugeUpkeepManager
           .connect(accounts[1])
-          .performUpkeep(cancelPerformData),
+          .performUpkeep(deregisterPerformData),
       ).to.be.revertedWithCustomError(gaugeUpkeepManager, 'UnauthorizedSender')
     })
   })
@@ -336,7 +359,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
   describe('Withdraw gauge upkeep', function () {
     it('should withdraw a cron upkeep', async () => {
       await gaugeUpkeepManager.performUpkeep(registerPerformData)
-      await gaugeUpkeepManager.performUpkeep(cancelPerformData)
+      await gaugeUpkeepManager.performUpkeep(deregisterPerformData)
 
       const tx = await gaugeUpkeepManager.withdrawUpkeep(upkeepId)
 
@@ -347,9 +370,9 @@ describe('GaugeUpkeepManager Unit Tests', function () {
   })
 
   describe('Revive gauge upkeep', function () {
-    it('should trigger upkeep revival', async () => {
+    it('should trigger gauge revival', async () => {
       await gaugeUpkeepManager.performUpkeep(registerPerformData)
-      await gaugeUpkeepManager.performUpkeep(cancelPerformData)
+      await gaugeUpkeepManager.performUpkeep(deregisterPerformData)
 
       const reviveGaugeTx = await veloVoterMock.reviveGauge(fakeGaugeAddress)
       const reviveGaugeReceipt = await reviveGaugeTx.wait()
@@ -372,38 +395,9 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       expect(performData).to.equal(registerPerformData)
     })
 
-    it('should revive a cron upkeep', async () => {
+    it('should not trigger gauge revival for crosschain gauges', async () => {
       await gaugeUpkeepManager.performUpkeep(registerPerformData)
-      await gaugeUpkeepManager.performUpkeep(cancelPerformData)
-
-      const reviveGaugeTx = await veloVoterMock.reviveGauge(fakeGaugeAddress)
-      await reviveGaugeTx.wait()
-
-      const tx = await gaugeUpkeepManager.performUpkeep(registerPerformData)
-
-      expect(tx)
-        .to.emit(gaugeUpkeepManager, 'GaugeUpkeepRegistered')
-        .withArgs(fakeGaugeAddress, 1)
-
-      const upkeepId = await gaugeUpkeepManager.gaugeUpkeepId(fakeGaugeAddress)
-
-      expect(upkeepId).to.equal(1)
-    })
-
-    it('should not allow non-trusted forwarder to revive upkeep', async () => {
-      await gaugeUpkeepManager.performUpkeep(registerPerformData)
-      await gaugeUpkeepManager.performUpkeep(cancelPerformData)
-
-      await expect(
-        gaugeUpkeepManager
-          .connect(accounts[1])
-          .performUpkeep(registerPerformData),
-      ).to.be.revertedWithCustomError(gaugeUpkeepManager, 'UnauthorizedSender')
-    })
-
-    it('should not trigger upkeep revival for crosschain gauges', async () => {
-      await gaugeUpkeepManager.performUpkeep(registerPerformData)
-      await gaugeUpkeepManager.performUpkeep(cancelPerformData)
+      await gaugeUpkeepManager.performUpkeep(deregisterPerformData)
       await factoryRegistryMock.setGaugeFactory(fakeCrosschainFactoryAddress)
 
       const reviveGaugeTx = await veloVoterMock.reviveGauge(fakeGaugeAddress)
@@ -473,15 +467,16 @@ describe('GaugeUpkeepManager Unit Tests', function () {
         accounts[3].address,
       ]
 
-      const tx = await gaugeUpkeepManager.registerGaugeUpkeeps(gaugeAddresses)
+      const tx = await gaugeUpkeepManager.registerGauges(gaugeAddresses)
 
-      expect(tx)
-        .to.emit(gaugeUpkeepManager, 'GaugeUpkeepRegistered')
-        .withArgs(gaugeAddresses[0], 1)
-        .to.emit(gaugeUpkeepManager, 'GaugeUpkeepRegistered')
-        .withArgs(gaugeAddresses[1], 2)
-        .to.emit(gaugeUpkeepManager, 'GaugeUpkeepRegistered')
-        .withArgs(gaugeAddresses[2], 3)
+      await expect(tx).to.emit(gaugeUpkeepManager, 'GaugeUpkeepRegistered')
+      await expect(tx)
+        .to.emit(gaugeUpkeepManager, 'GaugeRegistered')
+        .withArgs(gaugeAddresses[0])
+        .to.emit(gaugeUpkeepManager, 'GaugeRegistered')
+        .withArgs(gaugeAddresses[1])
+        .to.emit(gaugeUpkeepManager, 'GaugeRegistered')
+        .withArgs(gaugeAddresses[2])
     })
 
     it('should deregister gauge upkeeps in bulk', async () => {
@@ -491,17 +486,38 @@ describe('GaugeUpkeepManager Unit Tests', function () {
         accounts[3].address,
       ]
 
-      await gaugeUpkeepManager.registerGaugeUpkeeps(gaugeAddresses)
+      await gaugeUpkeepManager.registerGauges(gaugeAddresses)
 
-      const tx = await gaugeUpkeepManager.deregisterGaugeUpkeeps(gaugeAddresses)
+      const tx = await gaugeUpkeepManager.deregisterGauges(gaugeAddresses)
 
-      expect(tx)
-        .to.emit(gaugeUpkeepManager, 'GaugeUpkeepCancelled')
-        .withArgs(gaugeAddresses[0], 1)
-        .to.emit(gaugeUpkeepManager, 'GaugeUpkeepCancelled')
-        .withArgs(gaugeAddresses[1], 2)
-        .to.emit(gaugeUpkeepManager, 'GaugeUpkeepCancelled')
-        .withArgs(gaugeAddresses[2], 3)
+      await expect(tx)
+        .to.emit(gaugeUpkeepManager, 'GaugeDeregistered')
+        .withArgs(gaugeAddresses[0])
+        .to.emit(gaugeUpkeepManager, 'GaugeDeregistered')
+        .withArgs(gaugeAddresses[1])
+        .to.emit(gaugeUpkeepManager, 'GaugeDeregistered')
+        .withArgs(gaugeAddresses[2])
+    })
+  })
+
+  describe('Misc', function () {
+    it('should return the gauge count', async () => {
+      await gaugeUpkeepManager.performUpkeep(registerPerformData)
+
+      expect(await gaugeUpkeepManager.gaugeCount()).to.equal(1)
+    })
+
+    it('should return a range of gauges', async () => {
+      const bulkFakeGaugeAddresses = Array.from(
+        { length: 5 },
+        () => ethers.Wallet.createRandom().address,
+      )
+      await gaugeUpkeepManager.registerGauges(bulkFakeGaugeAddresses)
+
+      const gauges = await gaugeUpkeepManager.gaugeList(0, 5)
+
+      expect(gauges).to.have.lengthOf(5)
+      expect(gauges).to.include.members(bulkFakeGaugeAddresses)
     })
   })
 })

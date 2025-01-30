@@ -38,8 +38,10 @@ contract VoterMock {
         emit GaugeRevived(_gauge);
     }
 
-    function distribute(address _gauge) external {
-        emit Distributed(_gauge);
+    function distribute(address[] calldata _gauges) external {
+        for (uint256 i = 0; i < _gauges.length; i++) {
+            emit Distributed(_gauges[i]);
+        }
     }
 
     function isGauge(address) external view returns (bool) {

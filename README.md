@@ -6,10 +6,10 @@ This repository contains the scripts designed to automate the Velodrome ecosyste
 
 - **GaugeUpkeepManager**: This contract is responsible for registering and deregistering scheduled distribute call upkeeps for a gauge. It is registered as an upkeep itself with the following triggers:
   - Log triggers (from the `Voter` contract)
-    - `GaugeCreated`: Registers a new cron upkeep for the gauge when it is created.
-    - `GaugeKilled`: Deregisters the upkeep for the gauge when it is killed.
-    - `GaugeRevived`: Registers a new upkeep for the gauge when it is revived.
-- **CronUpkeepFactory**: This contract is responsible for creating cron upkeeps for the `GaugeUpkeepManager` contract.
+    - `GaugeCreated`: Registers a new gauge in the upkeep manager when it is created.
+    - `GaugeKilled`: Deregisters an existing gauge from the upkeep manager when it is killed.
+    - `GaugeRevived`: Registers a gauge in the upkeep manager when it is revived.
+- **GaugeUpkeep**: This contract is the actual upkeep that calls the `distribute` function on gauges. It iterates over a range of gauge IDs and is triggered on an interval.
 - **UpkeepBalanceMonitor**: This is a utility contract that watches the balances of all active gauge upkeeps and triggers top-up transactions when the balance falls below a certain threshold.
 
 ## Installation
@@ -56,7 +56,7 @@ pnpm run test:fork
 
 ### Gauge Upkeep Manager
 
-1. Deploy `GaugeUpkeepManager` and `CronUpkeepFactory` contracts by running:
+1. Deploy the `GaugeUpkeepManager` contract by running:
 
 ```bash
 npx hardhat run scripts/deploy_upkeep_manager.ts --network <network>
