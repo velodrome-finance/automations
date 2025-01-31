@@ -21,8 +21,9 @@ describe('GaugeUpkeep Unit Tests', function () {
 
   const batchSize = 5
   const startIndex = 0
-  const endIndex = 10
-  const gaugeCount = endIndex - startIndex
+  const endIndex = 100
+  const gaugeCount = 10
+  const epochLengthInSeconds = 604800
   const iterationsCount = gaugeCount / batchSize
 
   beforeEach(async function () {
@@ -95,6 +96,22 @@ describe('GaugeUpkeep Unit Tests', function () {
     })
 
     it('should perform upkeep', async function () {
+      for (let i = 0; i < iterationsCount; i++) {
+        await expect(gaugeUpkeep.performUpkeep(HashZero))
+          .to.emit(gaugeUpkeep, 'GaugeUpkeepPerformed')
+          .withArgs(i * batchSize, i * batchSize + batchSize)
+      }
+    })
+
+    it('should perform upkeep on an interval', async function () {
+      for (let i = 0; i < iterationsCount; i++) {
+        await expect(gaugeUpkeep.performUpkeep(HashZero))
+          .to.emit(gaugeUpkeep, 'GaugeUpkeepPerformed')
+          .withArgs(i * batchSize, i * batchSize + batchSize)
+      }
+
+      await time.increase(epochLengthInSeconds)
+
       for (let i = 0; i < iterationsCount; i++) {
         await expect(gaugeUpkeep.performUpkeep(HashZero))
           .to.emit(gaugeUpkeep, 'GaugeUpkeepPerformed')

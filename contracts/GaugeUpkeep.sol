@@ -34,11 +34,20 @@ contract GaugeUpkeep is IGaugeUpkeep {
 
     /// @inheritdoc IGaugeUpkeep
     function checkUpkeep(bytes calldata) external view override returns (bool _upkeepNeeded, bytes memory) {
-        _upkeepNeeded = _shouldPerformUpkeep();
+        _upkeepNeeded = _shouldPerformUpkeep(block.timestamp, currentIndex, _adjustedEndIndex());
     }
 
-    function _shouldPerformUpkeep() internal view returns (bool) {
-        return _newEpochFlip(block.timestamp) && currentIndex < endIndex;
+    function _shouldPerformUpkeep(
+        uint256 _timestamp,
+        uint256 _currentIndex,
+        uint256 _endIndex
+    ) internal view returns (bool) {
+        return _newEpochFlip(_timestamp) && _currentIndex < _endIndex;
+    }
+
+    function _adjustedEndIndex() internal view returns (uint256) {
+        uint256 gaugeCount = IGaugeUpkeepManager(gaugeUpkeepManager).gaugeCount();
+        return gaugeCount < endIndex ? gaugeCount : endIndex;
     }
 
     /// @dev Epoch flips every Thursday at 00:00 UTC
@@ -48,13 +57,16 @@ contract GaugeUpkeep is IGaugeUpkeep {
 
     /// @inheritdoc IGaugeUpkeep
     function performUpkeep(bytes calldata) external override {
-        if (!_shouldPerformUpkeep()) revert UpkeepNotNeeded();
-
         uint256 _currentIndex = currentIndex;
+        uint256 _endIndex = _adjustedEndIndex();
+
+        if (!_shouldPerformUpkeep(block.timestamp, _currentIndex, _endIndex)) {
+            revert UpkeepNotNeeded();
+        }
         uint256 nextIndex = _currentIndex + BATCH_SIZE;
         _distributeBatch(_currentIndex, nextIndex);
 
-        if (nextIndex < endIndex) {
+        if (nextIndex < _endIndex) {
             currentIndex = nextIndex;
         } else {
             currentIndex = startIndex;
