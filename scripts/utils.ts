@@ -69,6 +69,39 @@ export async function registerLogTriggerUpkeep(
   return ethers.BigNumber.from(logUpkeepId)
 }
 
+export async function registerCustomLogicUpkeep(
+  automationRegistrar: AutomationRegistrar2_1,
+  upkeepName: string,
+  targetContract: string,
+  adminAddress: string,
+  fundAmount: string,
+  gasLimit: string,
+) {
+  const registerTx = await automationRegistrar.registerUpkeep({
+    name: upkeepName,
+    encryptedEmail: '0x',
+    upkeepContract: targetContract,
+    gasLimit: gasLimit,
+    adminAddress,
+    triggerType: 0,
+    checkData: '0x',
+    triggerConfig: '0x',
+    offchainConfig: '0x',
+    amount: fundAmount,
+  })
+  const registerReceipt = await registerTx.wait()
+
+  const registrationApprovedLog = findLog(
+    registerReceipt,
+    automationRegistrar.interface.getEventTopic('RegistrationApproved'),
+  )
+  const logUpkeepId = automationRegistrar.interface.parseLog(
+    registrationApprovedLog,
+  ).args.upkeepId
+
+  return ethers.BigNumber.from(logUpkeepId)
+}
+
 export function findLog(receipt: TransactionReceipt, eventSignature: string) {
   const log = receipt.logs.find((log) => log.topics[0] === eventSignature)
   if (!log) {
