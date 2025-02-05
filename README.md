@@ -62,11 +62,13 @@ pnpm run test:fork
 npx hardhat run scripts/deploy_upkeep_manager.ts --network <network>
 ```
 
-2. Transfer LINK tokens to the `GaugeUpkeepManager` contract required for new gauge upkeep registrations. The amount of LINK required is determined by the `NEW_UPKEEP_FUND_AMOUNT` environment variable.
+2. Register log trigger upkeeps for the deployed `GaugeUpkeepManager` contract and set the trusted forwarders:
 
-3. Register one upkeep for each log trigger type (`GaugeCreated`, `GaugeKilled`, `GaugeRevived`) emmited by the `Voter` contract and targeting the `GaugeUpkeepManager` contract. Currently, this is done manually by using the [Automation UI](https://automation.chain.link/). Make sure to set the gas limit to the maximum value (5m) to avoid out-of-gas errors.
+```bash
+npx hardhat run scripts/register_log_upkeeps.ts --network <network>
+```
 
-4. After registering the upkeeps, set the trusted forwarders on the `GaugeUpkeepManager` contract. This is done by calling the `setTrustedForwarder` function with the address of the `Forwarder` contract as parameter. Each log trigger upkeep has a unique forwarder address, so this step must be repeated for each upkeep.
+3. Transfer LINK tokens to the `GaugeUpkeepManager` contract required for new gauge upkeep registrations. The amount of LINK required is determined by the `NEW_UPKEEP_FUND_AMOUNT` environment variable.
 
 ### Upkeep Balance Monitor
 
@@ -76,10 +78,12 @@ npx hardhat run scripts/deploy_upkeep_manager.ts --network <network>
 npx hardhat run scripts/deploy_balance_monitor.ts --network <network>
 ```
 
-1. Transfer LINK tokens to the `UpkeepBalanceMonitor` contract which will be used to top-up the gauge upkeeps.
+2. Register custom logic trigger for the deployed `UpkeepBalanceMonitor` contract and set the trusted forwarders:
 
-2. Register the `UpkeepBalanceMonitor` as a custom logic upkeep. Currently, this is done manually by using the [Automation UI](https://automation.chain.link/). The gas limit is determined by the `MAX_BATCH_SIZE` environment variable.
+```bash
+npx hardhat run scripts/register_monitor_upkeep.ts --network <network>
+```
 
-3. After registering the upkeep, set the trusted forwarder on the `UpkeepBalanceMonitor` contract. This is done by calling the `setTrustedForwarder` function with the address of the `Forwarder` contract as parameter.
+3. Transfer LINK tokens to the `UpkeepBalanceMonitor` contract which will be used to top-up the gauge upkeeps.
 
 4. Additionally, to enable the `GaugeUpkeepManager` to add and remove upkeeps from the watchlist as they are registered or canceled, it must be granted permission by calling `grantWatchlistManagerRole` on the `UpkeepBalanceMonitor` contract.
