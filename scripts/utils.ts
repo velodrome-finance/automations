@@ -44,29 +44,18 @@ export async function registerLogTriggerUpkeep(
       ethers.constants.HashZero,
     ],
   )
-  const registerTx = await automationRegistrar.registerUpkeep({
+  return registerUpkeep(automationRegistrar, {
     name: upkeepName,
     encryptedEmail: '0x',
     upkeepContract: targetContract,
     gasLimit: gasLimit,
     adminAddress,
-    triggerType: 1,
+    triggerType: 1, // Log trigger type
     checkData: '0x',
     triggerConfig,
     offchainConfig: '0x',
     amount: fundAmount,
   })
-  const registerReceipt = await registerTx.wait()
-
-  const registrationApprovedLog = findLog(
-    registerReceipt,
-    automationRegistrar.interface.getEventTopic('RegistrationApproved'),
-  )
-  const logUpkeepId = automationRegistrar.interface.parseLog(
-    registrationApprovedLog,
-  ).args.upkeepId
-
-  return ethers.BigNumber.from(logUpkeepId)
 }
 
 export async function registerCustomLogicUpkeep(
@@ -77,18 +66,36 @@ export async function registerCustomLogicUpkeep(
   fundAmount: string,
   gasLimit: string,
 ) {
-  const registerTx = await automationRegistrar.registerUpkeep({
+  return registerUpkeep(automationRegistrar, {
     name: upkeepName,
     encryptedEmail: '0x',
     upkeepContract: targetContract,
     gasLimit: gasLimit,
     adminAddress,
-    triggerType: 0,
+    triggerType: 0, // Custom logic trigger type
     checkData: '0x',
     triggerConfig: '0x',
     offchainConfig: '0x',
     amount: fundAmount,
   })
+}
+
+async function registerUpkeep(
+  automationRegistrar: AutomationRegistrar2_1,
+  upkeepParams: {
+    name: string
+    encryptedEmail: string
+    upkeepContract: string
+    gasLimit: string
+    adminAddress: string
+    triggerType: number
+    checkData: string
+    triggerConfig: string
+    offchainConfig: string
+    amount: string
+  },
+) {
+  const registerTx = await automationRegistrar.registerUpkeep(upkeepParams)
   const registerReceipt = await registerTx.wait()
 
   const registrationApprovedLog = findLog(
