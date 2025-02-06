@@ -56,7 +56,7 @@ pnpm run test:fork
 
 ### Gauge Upkeep Manager
 
-1. Deploy the `GaugeUpkeepManager` contract by running:
+1. Deploy and configure `GaugeUpkeepManager` contract by running:
 
 ```bash
 npx hardhat run scripts/deploy_upkeep_manager.ts --network <network>
@@ -89,5 +89,3 @@ npx hardhat run scripts/register_monitor_upkeep.ts --network <network>
 **Note:** The account running the script must have enough LINK to pay for the upkeep registration initial funding determined by the `BALANCE_MONITOR_UPKEEP_FUND_AMOUNT` and `BALANCE_MONITOR_UPKEEP_GAS_LIMIT` environment variables.
 
 3. Transfer LINK tokens to the `UpkeepBalanceMonitor` contract which will be used to top-up the gauge upkeeps.
-
-4. Additionally, to enable the `GaugeUpkeepManager` to add and remove upkeeps from the watchlist as they are registered or canceled, it must be granted permission by calling `grantWatchlistManagerRole` on the `UpkeepBalanceMonitor` contract.

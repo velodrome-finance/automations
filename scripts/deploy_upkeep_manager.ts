@@ -60,6 +60,16 @@ async function main() {
   await gaugeUpkeepManager.deployed()
   console.log('GaugeUpkeepManager deployed to:', gaugeUpkeepManager.address)
 
+  // Grant watchlist manager role to GaugeUpkeepManager contract
+  const upkeepBalanceMonitor = await ethers.getContractAt(
+    'UpkeepBalanceMonitor',
+    UPKEEP_BALANCE_MONITOR_ADDRESS!,
+  )
+  await upkeepBalanceMonitor.grantWatchlistManagerRole(
+    gaugeUpkeepManager.address,
+  )
+  console.log('GaugeUpkeepManager granted watchlist manager role')
+
   // Verify GaugeUpkeepManager contract
   await verifyContract(gaugeUpkeepManager.address, [
     LINK_TOKEN_ADDRESS!,
