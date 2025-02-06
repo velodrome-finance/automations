@@ -40,8 +40,6 @@ assert.ok(
   'BALANCE_MONITOR_UPKEEP_GAS_LIMIT is required',
 )
 
-const BALANCE_MONITOR_UPKEEP_TITLE = 'Balance Monitor Upkeep'
-
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
   // line interface.
@@ -73,7 +71,7 @@ async function main() {
     KEEPER_REGISTRY_ADDRESS!,
   )
 
-  // Attach UpkeepBalanceMonitor contract
+  // Get UpkeepBalanceMonitor contract
   const upkeepBalanceMonitor = await ethers.getContractAt(
     'UpkeepBalanceMonitor',
     UPKEEP_BALANCE_MONITOR_ADDRESS!,
@@ -89,7 +87,7 @@ async function main() {
   // Register custom logic upkeep
   const upkeepId = await registerCustomLogicUpkeep(
     automationRegistrar,
-    BALANCE_MONITOR_UPKEEP_TITLE,
+    'Balance Monitor Upkeep',
     upkeepBalanceMonitor.address,
     upkeepAdmin.address,
     BALANCE_MONITOR_UPKEEP_FUND_AMOUNT!,
