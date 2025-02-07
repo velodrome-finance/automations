@@ -357,11 +357,31 @@ describe('GaugeUpkeepManager Unit Tests', function () {
   })
 
   describe('Withdraw gauge upkeep', function () {
-    it('should withdraw a cron upkeep', async () => {
+    it('should get cancelled upkeep ids', async () => {
+      expect(await gaugeUpkeepManager.cancelledUpkeeps(0, 1)).to.be.empty
+
       await gaugeUpkeepManager.performUpkeep(registerPerformData)
       await gaugeUpkeepManager.performUpkeep(deregisterPerformData)
 
-      const tx = await gaugeUpkeepManager.withdrawUpkeep(upkeepId)
+      expect(await gaugeUpkeepManager.cancelledUpkeeps(0, 1)).to.deep.include(
+        BigNumber.from(upkeepId),
+      )
+    })
+
+    it('should get cancelled upkeeps count', async () => {
+      expect(await gaugeUpkeepManager.cancelledUpkeepCount()).to.equal(0)
+
+      await gaugeUpkeepManager.performUpkeep(registerPerformData)
+      await gaugeUpkeepManager.performUpkeep(deregisterPerformData)
+
+      expect(await gaugeUpkeepManager.cancelledUpkeepCount()).to.equal(1)
+    })
+
+    it('should withdraw upkeep balance', async () => {
+      await gaugeUpkeepManager.performUpkeep(registerPerformData)
+      await gaugeUpkeepManager.performUpkeep(deregisterPerformData)
+
+      const tx = await gaugeUpkeepManager.withdrawCancelledUpkeeps(0, 1)
 
       await expect(tx)
         .to.emit(gaugeUpkeepManager, 'GaugeUpkeepWithdrawn')

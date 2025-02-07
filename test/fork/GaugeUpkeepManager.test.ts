@@ -497,8 +497,8 @@ describe('GaugeUpkeepManager Script Tests', function () {
     )
     const upkeepDetailsBefore = await keeperRegistry.getUpkeep(gaugeUpkeepId)
 
-    // call withdrawGaugeUpkeep via GaugeUpkeepManager
-    const withdrawTx = await gaugeUpkeepManager.withdrawUpkeep(gaugeUpkeepId)
+    // withdraw upkeep balance via GaugeUpkeepManager
+    const withdrawTx = await gaugeUpkeepManager.withdrawCancelledUpkeeps(0, 1)
     const withdrawReceipt = await withdrawTx.wait()
 
     // check if gauge upkeep is withdrawn
