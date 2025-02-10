@@ -9,18 +9,24 @@ import { ethers } from 'hardhat'
 import * as assert from 'assert'
 import * as dotenv from 'dotenv'
 import { Contract } from 'ethers'
+import { GaugeUpkeepManager } from '../typechain-types'
 
 // Load environment variables
 dotenv.config()
 
 const VOTER_ADDRESS = process.env.VOTER_ADDRESS
 const SUGAR_ADDRESS = process.env.SUGAR_ADDRESS
+const GAUGE_UPKEEP_MANAGER_ADDRESS = process.env.GAUGE_UPKEEP_MANAGER_ADDRESS
 
 const sugarAbi =
   '[{"stateMutability":"nonpayable","type":"constructor","inputs":[{"name":"_voter","type":"address"},{"name":"_registry","type":"address"},{"name":"_convertor","type":"address"},{"name":"_slipstream_helper","type":"address"},{"name":"_alm_factory","type":"address"}],"outputs":[]},{"stateMutability":"view","type":"function","name":"forSwaps","inputs":[{"name":"_limit","type":"uint256"},{"name":"_offset","type":"uint256"}],"outputs":[{"name":"","type":"tuple[]","components":[{"name":"lp","type":"address"},{"name":"type","type":"int24"},{"name":"token0","type":"address"},{"name":"token1","type":"address"},{"name":"factory","type":"address"},{"name":"pool_fee","type":"uint256"}]}]},{"stateMutability":"view","type":"function","name":"tokens","inputs":[{"name":"_limit","type":"uint256"},{"name":"_offset","type":"uint256"},{"name":"_account","type":"address"},{"name":"_addresses","type":"address[]"}],"outputs":[{"name":"","type":"tuple[]","components":[{"name":"token_address","type":"address"},{"name":"symbol","type":"string"},{"name":"decimals","type":"uint8"},{"name":"account_balance","type":"uint256"},{"name":"listed","type":"bool"}]}]},{"stateMutability":"view","type":"function","name":"all","inputs":[{"name":"_limit","type":"uint256"},{"name":"_offset","type":"uint256"}],"outputs":[{"name":"","type":"tuple[]","components":[{"name":"lp","type":"address"},{"name":"symbol","type":"string"},{"name":"decimals","type":"uint8"},{"name":"liquidity","type":"uint256"},{"name":"type","type":"int24"},{"name":"tick","type":"int24"},{"name":"sqrt_ratio","type":"uint160"},{"name":"token0","type":"address"},{"name":"reserve0","type":"uint256"},{"name":"staked0","type":"uint256"},{"name":"token1","type":"address"},{"name":"reserve1","type":"uint256"},{"name":"staked1","type":"uint256"},{"name":"gauge","type":"address"},{"name":"gauge_liquidity","type":"uint256"},{"name":"gauge_alive","type":"bool"},{"name":"fee","type":"address"},{"name":"bribe","type":"address"},{"name":"factory","type":"address"},{"name":"emissions","type":"uint256"},{"name":"emissions_token","type":"address"},{"name":"pool_fee","type":"uint256"},{"name":"unstaked_fee","type":"uint256"},{"name":"token0_fees","type":"uint256"},{"name":"token1_fees","type":"uint256"},{"name":"nfpm","type":"address"},{"name":"alm","type":"address"}]}]},{"stateMutability":"view","type":"function","name":"byIndex","inputs":[{"name":"_index","type":"uint256"}],"outputs":[{"name":"","type":"tuple","components":[{"name":"lp","type":"address"},{"name":"symbol","type":"string"},{"name":"decimals","type":"uint8"},{"name":"liquidity","type":"uint256"},{"name":"type","type":"int24"},{"name":"tick","type":"int24"},{"name":"sqrt_ratio","type":"uint160"},{"name":"token0","type":"address"},{"name":"reserve0","type":"uint256"},{"name":"staked0","type":"uint256"},{"name":"token1","type":"address"},{"name":"reserve1","type":"uint256"},{"name":"staked1","type":"uint256"},{"name":"gauge","type":"address"},{"name":"gauge_liquidity","type":"uint256"},{"name":"gauge_alive","type":"bool"},{"name":"fee","type":"address"},{"name":"bribe","type":"address"},{"name":"factory","type":"address"},{"name":"emissions","type":"uint256"},{"name":"emissions_token","type":"address"},{"name":"pool_fee","type":"uint256"},{"name":"unstaked_fee","type":"uint256"},{"name":"token0_fees","type":"uint256"},{"name":"token1_fees","type":"uint256"},{"name":"nfpm","type":"address"},{"name":"alm","type":"address"}]}]},{"stateMutability":"view","type":"function","name":"positions","inputs":[{"name":"_limit","type":"uint256"},{"name":"_offset","type":"uint256"},{"name":"_account","type":"address"}],"outputs":[{"name":"","type":"tuple[]","components":[{"name":"id","type":"uint256"},{"name":"lp","type":"address"},{"name":"liquidity","type":"uint256"},{"name":"staked","type":"uint256"},{"name":"amount0","type":"uint256"},{"name":"amount1","type":"uint256"},{"name":"staked0","type":"uint256"},{"name":"staked1","type":"uint256"},{"name":"unstaked_earned0","type":"uint256"},{"name":"unstaked_earned1","type":"uint256"},{"name":"emissions_earned","type":"uint256"},{"name":"tick_lower","type":"int24"},{"name":"tick_upper","type":"int24"},{"name":"sqrt_ratio_lower","type":"uint160"},{"name":"sqrt_ratio_upper","type":"uint160"},{"name":"alm","type":"address"}]}]},{"stateMutability":"view","type":"function","name":"positionsByFactory","inputs":[{"name":"_limit","type":"uint256"},{"name":"_offset","type":"uint256"},{"name":"_account","type":"address"},{"name":"_factory","type":"address"}],"outputs":[{"name":"","type":"tuple[]","components":[{"name":"id","type":"uint256"},{"name":"lp","type":"address"},{"name":"liquidity","type":"uint256"},{"name":"staked","type":"uint256"},{"name":"amount0","type":"uint256"},{"name":"amount1","type":"uint256"},{"name":"staked0","type":"uint256"},{"name":"staked1","type":"uint256"},{"name":"unstaked_earned0","type":"uint256"},{"name":"unstaked_earned1","type":"uint256"},{"name":"emissions_earned","type":"uint256"},{"name":"tick_lower","type":"int24"},{"name":"tick_upper","type":"int24"},{"name":"sqrt_ratio_lower","type":"uint160"},{"name":"sqrt_ratio_upper","type":"uint160"},{"name":"alm","type":"address"}]}]},{"stateMutability":"view","type":"function","name":"epochsLatest","inputs":[{"name":"_limit","type":"uint256"},{"name":"_offset","type":"uint256"}],"outputs":[{"name":"","type":"tuple[]","components":[{"name":"ts","type":"uint256"},{"name":"lp","type":"address"},{"name":"votes","type":"uint256"},{"name":"emissions","type":"uint256"},{"name":"bribes","type":"tuple[]","components":[{"name":"token","type":"address"},{"name":"amount","type":"uint256"}]},{"name":"fees","type":"tuple[]","components":[{"name":"token","type":"address"},{"name":"amount","type":"uint256"}]}]}]},{"stateMutability":"view","type":"function","name":"epochsByAddress","inputs":[{"name":"_limit","type":"uint256"},{"name":"_offset","type":"uint256"},{"name":"_address","type":"address"}],"outputs":[{"name":"","type":"tuple[]","components":[{"name":"ts","type":"uint256"},{"name":"lp","type":"address"},{"name":"votes","type":"uint256"},{"name":"emissions","type":"uint256"},{"name":"bribes","type":"tuple[]","components":[{"name":"token","type":"address"},{"name":"amount","type":"uint256"}]},{"name":"fees","type":"tuple[]","components":[{"name":"token","type":"address"},{"name":"amount","type":"uint256"}]}]}]},{"stateMutability":"view","type":"function","name":"rewards","inputs":[{"name":"_limit","type":"uint256"},{"name":"_offset","type":"uint256"},{"name":"_venft_id","type":"uint256"}],"outputs":[{"name":"","type":"tuple[]","components":[{"name":"venft_id","type":"uint256"},{"name":"lp","type":"address"},{"name":"amount","type":"uint256"},{"name":"token","type":"address"},{"name":"fee","type":"address"},{"name":"bribe","type":"address"}]}]},{"stateMutability":"view","type":"function","name":"rewardsByAddress","inputs":[{"name":"_venft_id","type":"uint256"},{"name":"_pool","type":"address"}],"outputs":[{"name":"","type":"tuple[]","components":[{"name":"venft_id","type":"uint256"},{"name":"lp","type":"address"},{"name":"amount","type":"uint256"},{"name":"token","type":"address"},{"name":"fee","type":"address"},{"name":"bribe","type":"address"}]}]},{"stateMutability":"view","type":"function","name":"MAX_FACTORIES","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"stateMutability":"view","type":"function","name":"MAX_POOLS","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"stateMutability":"view","type":"function","name":"MAX_ITERATIONS","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"stateMutability":"view","type":"function","name":"MAX_TOKENS","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"stateMutability":"view","type":"function","name":"MAX_LPS","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"stateMutability":"view","type":"function","name":"MAX_EPOCHS","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"stateMutability":"view","type":"function","name":"MAX_REWARDS","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"stateMutability":"view","type":"function","name":"MAX_POSITIONS","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"stateMutability":"view","type":"function","name":"WEEK","inputs":[],"outputs":[{"name":"","type":"uint256"}]},{"stateMutability":"view","type":"function","name":"voter","inputs":[],"outputs":[{"name":"","type":"address"}]},{"stateMutability":"view","type":"function","name":"registry","inputs":[],"outputs":[{"name":"","type":"address"}]},{"stateMutability":"view","type":"function","name":"convertor","inputs":[],"outputs":[{"name":"","type":"address"}]},{"stateMutability":"view","type":"function","name":"cl_helper","inputs":[],"outputs":[{"name":"","type":"address"}]},{"stateMutability":"view","type":"function","name":"alm_factory","inputs":[],"outputs":[{"name":"","type":"address"}]}]'
 
 assert.ok(VOTER_ADDRESS, 'VOTER_ADDRESS is required')
 assert.ok(SUGAR_ADDRESS, 'SUGAR_ADDRESS is required')
+assert.ok(
+  GAUGE_UPKEEP_MANAGER_ADDRESS,
+  'GAUGE_UPKEEP_MANAGER_ADDRESS is required',
+)
 
 export async function getPools(lpSugar: Contract, chunkSize = 75) {
   const allPools: any[] = []
@@ -85,6 +91,58 @@ function logGauges(gauges: string[]) {
   })
 }
 
+async function registerGauges(
+  gaugeUpkeepManager: GaugeUpkeepManager,
+  gauges: string[],
+  batchSize = 25,
+) {
+  const gaugeCount = await gaugeUpkeepManager.gaugeCount()
+  const gaugeList = await gaugeUpkeepManager.gaugeList(0, gaugeCount)
+  const gaugesToRegister: string[] = gauges.filter(
+    (gauge) => !gaugeList.includes(gauge),
+  )
+  const upkeepIds: string[] = []
+  for (let i = 0; i < gaugesToRegister.length; i += batchSize) {
+    const batch = gaugesToRegister.slice(i, i + batchSize)
+    console.log(`Registering gauges ${i} to ${i + batchSize}`, batch)
+    const tx = await gaugeUpkeepManager.registerGauges(batch)
+    console.log('Transaction hash:', tx.hash)
+    const receipt = await tx.wait()
+    const upkeepRegisteredEvents = receipt.events?.filter(
+      (event) =>
+        event.topics[0] ===
+        gaugeUpkeepManager.interface.getEventTopic('GaugeUpkeepRegistered'),
+    )
+    const newUpkeepIds =
+      upkeepRegisteredEvents?.map(
+        (event) =>
+          gaugeUpkeepManager.interface.parseLog(event).args.upkeepId as string,
+      ) || []
+    console.log('New upkeep IDs:', newUpkeepIds)
+    upkeepIds.push(...newUpkeepIds)
+  }
+  return upkeepIds
+}
+
+function logUpkeeps(upkeepIds: string[]) {
+  // Define the target directory and file path
+  const directoryPath = 'logs'
+  const filePath = path.join(directoryPath, 'upkeeps.json')
+  if (!fs.existsSync(directoryPath)) {
+    fs.mkdirSync(directoryPath) // Create the directory if it doesn't exist
+  }
+
+  // Write the JSON content to the file
+  const jsonContent = JSON.stringify(upkeepIds, null, 2)
+  fs.writeFile(filePath, jsonContent, 'utf8', (err) => {
+    if (err) {
+      console.error('Error writing to file', err)
+      return
+    }
+    console.log(`Logs successfully written to ${filePath}.`)
+  })
+}
+
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
   // line interface.
@@ -98,10 +156,15 @@ async function main() {
     JSON.parse(sugarAbi),
     SUGAR_ADDRESS!,
   )
+  const gaugeUpkeepManager: GaugeUpkeepManager = await ethers.getContractAt(
+    'GaugeUpkeepManager',
+    GAUGE_UPKEEP_MANAGER_ADDRESS!,
+  )
   const pools: string[] = await getPools(lpSugar)
   const gauges: string[] = await getGauges(voter, pools)
   logGauges(gauges)
-  // TODO: Register gauges in batches, log upkeeps to separate file
+  const upkeepIds: string[] = await registerGauges(gaugeUpkeepManager, gauges)
+  logUpkeeps(upkeepIds)
 }
 
 // We recommend this pattern to be able to use async/await everywhere
