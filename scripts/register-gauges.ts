@@ -68,6 +68,8 @@ async function getGauges(voter: Contract, pools: string[]): Promise<string[]> {
         gauges.push(gauge)
       }
     }
+    // sleep for 3 seconds to avoid rate limiting
+    await new Promise((resolve) => setTimeout(resolve, 3000))
   }
   return gauges
 }
