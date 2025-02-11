@@ -60,7 +60,7 @@ export async function getPools(lpSugar: Contract, chunkSize = 75) {
 
 async function getGauges(voter: Contract, pools: string[]): Promise<string[]> {
   let gauges: string[] = []
-  for (const pool of pools.slice(0, 15)) {
+  for (const pool of pools) {
     console.log('Fetching gauges for pool', pool)
     const gauge = await voter.gauges(pool)
     console.log('Gauge found:', gauge)
