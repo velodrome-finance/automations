@@ -114,9 +114,8 @@ async function registerGauges(
         gaugeUpkeepManager.interface.getEventTopic('GaugeUpkeepRegistered'),
     )
     const newUpkeepIds =
-      upkeepRegisteredEvents?.map(
-        (event) =>
-          gaugeUpkeepManager.interface.parseLog(event).args.upkeepId as string,
+      upkeepRegisteredEvents?.map((event) =>
+        gaugeUpkeepManager.interface.parseLog(event).args.upkeepId.toString(),
       ) || []
     console.log('New upkeep IDs:', newUpkeepIds)
     upkeepIds.push(...newUpkeepIds)
