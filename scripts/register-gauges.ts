@@ -61,11 +61,14 @@ export async function getPools(lpSugar: Contract, chunkSize = 75) {
 async function getGauges(voter: Contract, pools: string[]): Promise<string[]> {
   let gauges: string[] = []
   for (const pool of pools.slice(0, 15)) {
+    console.log('Fetching gauges for pool', pool)
     const gauge = await voter.gauges(pool)
+    console.log('Gauge found:', gauge)
     if (gauge != ethers.constants.AddressZero) {
       const isAlive = await voter.isAlive(gauge)
       if (isAlive) {
         gauges.push(gauge)
+        console.log('Gauge is alive:', gauge)
       }
     }
     // sleep for 3 seconds to avoid rate limiting
@@ -161,9 +164,12 @@ async function main() {
     'GaugeUpkeepManager',
     GAUGE_UPKEEP_MANAGER_ADDRESS!,
   )
+  console.log('Fetching pools...')
   const pools: string[] = await getPools(lpSugar)
+  console.log('Fetching gauges...')
   const gauges: string[] = await getGauges(voter, pools)
   logGauges(gauges)
+  console.log('Registering gauges...')
   const upkeepIds: string[] = await registerGauges(gaugeUpkeepManager, gauges)
   logUpkeeps(upkeepIds)
 }
