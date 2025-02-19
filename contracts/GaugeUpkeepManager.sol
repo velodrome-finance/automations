@@ -136,20 +136,15 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         return _upkeepCount * GAUGES_PER_UPKEEP;
     }
 
-    function _getNextUpkeepEndIndex(uint256 _upkeepCount) internal pure returns (uint256) {
-        return (_upkeepCount + 1) * GAUGES_PER_UPKEEP;
-    }
-
     /// @dev Assumes that the gauge is not already registered
     function _registerGauge(address _gauge) internal {
         uint256 _gaugeCount = _gaugeList.length();
         _gaugeList.add(_gauge);
         if (_gaugeCount % GAUGES_PER_UPKEEP == 0) {
-            uint256 _upkeepCount = upkeepCount;
-            address gaugeUpkeep = _createGaugeUpkeep(
-                _getNextUpkeepStartIndex(_upkeepCount),
-                _getNextUpkeepEndIndex(_upkeepCount)
-            );
+            uint256 startIndex = _getNextUpkeepStartIndex(upkeepCount);
+            uint256 endIndex = startIndex + GAUGES_PER_UPKEEP;
+            address gaugeUpkeep = address(new GaugeUpkeep(voter, address(this), startIndex, endIndex));
+            emit GaugeUpkeepCreated(gaugeUpkeep, startIndex, endIndex);
             _registerGaugeUpkeep(gaugeUpkeep);
         }
         emit GaugeRegistered(_gauge);
@@ -165,11 +160,6 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
             _cancelGaugeUpkeep(upkeepIds[_currentUpkeep]);
         }
         emit GaugeDeregistered(_gauge);
-    }
-
-    function _createGaugeUpkeep(uint256 _startIndex, uint256 _endIndex) internal returns (address gaugeUpkeep) {
-        gaugeUpkeep = address(new GaugeUpkeep(voter, address(this), _startIndex, _endIndex));
-        emit GaugeUpkeepCreated(gaugeUpkeep, _startIndex, _endIndex);
     }
 
     function _registerGaugeUpkeep(address _gaugeUpkeep) internal returns (uint256 upkeepId) {
