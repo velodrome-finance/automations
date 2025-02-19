@@ -139,11 +139,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         uint256 _gaugeCount = _gaugeList.length();
         _gaugeList.add(_gauge);
         if (_gaugeCount % GAUGES_PER_UPKEEP == 0) {
-            uint256 startIndex = _getNextUpkeepStartIndex(upkeepIds.length);
-            uint256 endIndex = startIndex + GAUGES_PER_UPKEEP;
-            address gaugeUpkeep = address(new GaugeUpkeep(voter, address(this), startIndex, endIndex));
-            emit GaugeUpkeepCreated(gaugeUpkeep, startIndex, endIndex);
-            _registerGaugeUpkeep(gaugeUpkeep);
+            _registerGaugeUpkeep();
         }
         emit GaugeRegistered(_gauge);
     }
@@ -160,11 +156,15 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         emit GaugeDeregistered(_gauge);
     }
 
-    function _registerGaugeUpkeep(address _gaugeUpkeep) internal {
+    function _registerGaugeUpkeep() internal {
+        uint256 startIndex = _getNextUpkeepStartIndex(upkeepIds.length);
+        uint256 endIndex = startIndex + GAUGES_PER_UPKEEP;
+        address gaugeUpkeep = address(new GaugeUpkeep(voter, address(this), startIndex, endIndex));
+        emit GaugeUpkeepCreated(gaugeUpkeep, startIndex, endIndex);
         IAutomationRegistrar.RegistrationParams memory params = IAutomationRegistrar.RegistrationParams({
             name: UPKEEP_NAME,
             encryptedEmail: "",
-            upkeepContract: _gaugeUpkeep,
+            upkeepContract: gaugeUpkeep,
             gasLimit: newUpkeepGasLimit,
             adminAddress: address(this),
             triggerType: CONDITIONAL_TRIGGER_TYPE,
@@ -176,7 +176,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         uint256 upkeepId = _registerUpkeep(params);
         upkeepIds.push(upkeepId);
         _addToWatchList(upkeepId);
-        emit GaugeUpkeepRegistered(_gaugeUpkeep, upkeepId);
+        emit GaugeUpkeepRegistered(gaugeUpkeep, upkeepId);
     }
 
     function _registerUpkeep(IAutomationRegistrar.RegistrationParams memory _params) internal returns (uint256) {
