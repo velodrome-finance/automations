@@ -164,7 +164,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         IAutomationRegistrar.RegistrationParams memory params = IAutomationRegistrar.RegistrationParams({
             name: UPKEEP_NAME,
             encryptedEmail: "",
-            upkeepContract: address(_gaugeUpkeep),
+            upkeepContract: _gaugeUpkeep,
             gasLimit: newUpkeepGasLimit,
             adminAddress: address(this),
             triggerType: CONDITIONAL_TRIGGER_TYPE,
