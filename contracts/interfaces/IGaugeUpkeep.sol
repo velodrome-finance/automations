@@ -24,10 +24,10 @@ interface IGaugeUpkeep {
     /// @notice Timestamp of the last epoch flip gauges were distributed
     function lastEpochFlip() external view returns (uint256);
 
-    /// @notice Cheks if epoch flip has occured and if there are more gauges to distribute
-    /// @param _upkeepNeeded signals if upkeep is needed
+    /// @notice Checks if epoch flip has occurred and if there are more gauges to distribute to
+    /// @return _upkeepNeeded signals if upkeep is needed
     function checkUpkeep(bytes calldata) external view returns (bool _upkeepNeeded, bytes memory);
 
-    /// @notice Distributes gauges for a batch of gauges
+    /// @notice Executes distributes for a batch of gauges
     function performUpkeep(bytes calldata) external;
 }
