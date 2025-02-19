@@ -43,8 +43,6 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
 
     /// @inheritdoc IGaugeUpkeepManager
     uint256[] public override upkeepIds;
-    /// @inheritdoc IGaugeUpkeepManager
-    uint256 public override upkeepCount;
 
     EnumerableSet.AddressSet private _gaugeList;
 
@@ -141,7 +139,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         uint256 _gaugeCount = _gaugeList.length();
         _gaugeList.add(_gauge);
         if (_gaugeCount % GAUGES_PER_UPKEEP == 0) {
-            uint256 startIndex = _getNextUpkeepStartIndex(upkeepCount);
+            uint256 startIndex = _getNextUpkeepStartIndex(upkeepIds.length);
             uint256 endIndex = startIndex + GAUGES_PER_UPKEEP;
             address gaugeUpkeep = address(new GaugeUpkeep(voter, address(this), startIndex, endIndex));
             emit GaugeUpkeepCreated(gaugeUpkeep, startIndex, endIndex);
@@ -154,7 +152,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     function _deregisterGauge(address _gauge) internal {
         _gaugeList.remove(_gauge);
         uint256 _gaugeCount = _gaugeList.length();
-        uint256 _currentUpkeep = upkeepCount - 1;
+        uint256 _currentUpkeep = upkeepIds.length - 1;
         uint256 currentUpkeepStartIndex = _getNextUpkeepStartIndex(_currentUpkeep);
         if (_gaugeCount + UPKEEP_CANCEL_BUFFER <= currentUpkeepStartIndex || _gaugeCount == 0) {
             _cancelGaugeUpkeep(upkeepIds[_currentUpkeep]);
@@ -177,7 +175,6 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         });
         upkeepId = _registerUpkeep(params);
         upkeepIds.push(upkeepId);
-        upkeepCount++;
         _addToWatchList(upkeepId);
         emit GaugeUpkeepRegistered(_gaugeUpkeep, upkeepId);
     }
@@ -193,7 +190,6 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     }
 
     function _cancelGaugeUpkeep(uint256 _upkeepId) internal {
-        upkeepCount--;
         upkeepIds.pop();
         _removeFromWatchList(_upkeepId);
         IKeeperRegistryMaster(keeperRegistry).cancelUpkeep(_upkeepId);
@@ -331,5 +327,9 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         for (uint256 i = 0; i < size; i++) {
             gauges[i] = _gaugeList.at(_startIndex + i);
         }
+    }
+
+    function upkeepCount() external view override returns (uint256) {
+        return upkeepIds.length;
     }
 }
