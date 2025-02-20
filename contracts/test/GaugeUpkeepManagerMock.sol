@@ -20,11 +20,8 @@ contract GaugeUpkeepManagerMock {
 
     function gaugeList(uint256 _startIndex, uint256 _endIndex) external view returns (address[] memory gauges) {
         uint256 length = _gaugeList.length();
-        if (_startIndex >= length) {
-            return new address[](0);
-        }
-        uint256 end = _endIndex > length ? length : _endIndex;
-        uint256 size = end - _startIndex;
+        _endIndex = _endIndex > length ? length : _endIndex;
+        uint256 size = _endIndex - _startIndex;
         gauges = new address[](size);
         for (uint256 i = 0; i < size; i++) {
             gauges[i] = _gaugeList.at(_startIndex + i);
