@@ -334,8 +334,12 @@ describe('GaugeUpkeepManager Script Tests', function () {
       gaugeUpkeepAddress,
     )
 
+    // get latest block timestamp
+    const latestBlockTimestamp = await time.latest()
+    const latestDate = new Date(latestBlockTimestamp * 1000)
+
     // gauge upkeep should not be needed before epoch time
-    const beforeEpochFlip = getNextEpochUTC().getTime() / 1000 - 100
+    const beforeEpochFlip = getNextEpochUTC(latestDate).getTime() / 1000 - 100
     await time.increaseTo(beforeEpochFlip)
 
     const [gaugeUpkeepNeeded, gaugeUpkeepPerformData] =
@@ -345,7 +349,7 @@ describe('GaugeUpkeepManager Script Tests', function () {
     expect(gaugeUpkeepPerformData).to.equal('0x')
 
     // gauge upkeep should be needed after epoch time
-    const afterEpochFlip = getNextEpochUTC().getTime() / 1000
+    const afterEpochFlip = getNextEpochUTC(latestDate).getTime() / 1000
     await time.increaseTo(afterEpochFlip)
 
     const [gaugeUpkeepNeededAfter, gaugeUpkeepPerformDataAfter] =
