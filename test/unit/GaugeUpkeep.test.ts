@@ -156,5 +156,38 @@ describe('GaugeUpkeep Unit Tests', function () {
       expect(distributedGauges.length).to.equal(gaugeCount)
       expect(distributedGauges).to.have.members(gaugeList)
     })
+
+    it('should perform upkeep correctly when batch is not full', async function () {
+      gaugeList.push(ethers.Wallet.createRandom().address)
+      await gaugeUpkeepManagerMock.setGaugeList(gaugeList)
+
+      let newGaugeCount = gaugeList.length
+      let newIterationsCount = Math.ceil(newGaugeCount / batchSize)
+
+      const distributedGauges: string[] = []
+      for (let i = 0; i < newIterationsCount; i++) {
+        const startIdx = i * batchSize
+        let endIdx = i * batchSize + batchSize
+        endIdx = endIdx > gaugeCount ? newGaugeCount : endIdx
+
+        const tx = await gaugeUpkeep.performUpkeep(HashZero)
+        await expect(tx)
+          .to.emit(gaugeUpkeep, 'GaugeUpkeepPerformed')
+          .withArgs(startIdx, endIdx)
+
+        const receipt = await tx.wait()
+        const distributeLogs = receipt.logs.filter(
+          (log) =>
+            log.topics[0] === voterMock.interface.getEventTopic('Distributed'),
+        )
+        distributedGauges.push(
+          ...distributeLogs.map((log) =>
+            defaultAbiCoder.decode(['address'], log.topics[1]).toString(),
+          ),
+        )
+      }
+      expect(distributedGauges.length).to.equal(newGaugeCount)
+      expect(distributedGauges).to.have.members(gaugeList)
+    })
   })
 })

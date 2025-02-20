@@ -55,10 +55,11 @@ contract GaugeUpkeep is IGaugeUpkeep {
         uint256 _currentIndex = currentIndex;
         uint256 _endIndex = _adjustedEndIndex();
 
-        if (!_checkUpkeep(_currentIndex, _endIndex)) {
-            revert UpkeepNotNeeded();
-        }
+        if (!_checkUpkeep(_currentIndex, _endIndex)) revert UpkeepNotNeeded();
+
         uint256 nextIndex = _currentIndex + BATCH_SIZE;
+        nextIndex = nextIndex > _endIndex ? _endIndex : nextIndex;
+
         _distributeBatch(_currentIndex, nextIndex);
 
         if (nextIndex < _endIndex) {
