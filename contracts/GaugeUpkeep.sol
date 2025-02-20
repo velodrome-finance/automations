@@ -42,7 +42,7 @@ contract GaugeUpkeep is IGaugeUpkeep {
     }
 
     function _lastEpochFlip() internal view returns (uint256) {
-        return (block.timestamp / 7 days) * 7 days;
+        return (block.timestamp / WEEK) * WEEK;
     }
 
     function _adjustedEndIndex() internal view returns (uint256) {
