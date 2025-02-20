@@ -180,7 +180,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     }
 
     function _registerUpkeep(IAutomationRegistrar.RegistrationParams memory _params) internal returns (uint256) {
-        IERC20(linkToken).approve(automationRegistrar, _params.amount);
+        IERC20(linkToken).safeIncreaseAllowance(automationRegistrar, _params.amount);
         uint256 upkeepID = IAutomationRegistrar(automationRegistrar).registerUpkeep(_params);
         if (upkeepID != 0) {
             return upkeepID;
