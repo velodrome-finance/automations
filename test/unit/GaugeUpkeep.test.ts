@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { ethers } from 'hardhat'
+import { ethers, network } from 'hardhat'
 import { time } from '@nomicfoundation/hardhat-network-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import {
@@ -50,11 +50,26 @@ describe('GaugeUpkeep Unit Tests', function () {
     )
     await gaugeUpkeepManagerMock.setGaugeList(gaugeList)
 
+    // impersonate gauge upkeep manager
+    await network.provider.request({
+      method: 'hardhat_impersonateAccount',
+      params: [gaugeUpkeepManagerMock.address],
+    })
+    const impersonatedSigner = ethers.provider.getSigner(
+      gaugeUpkeepManagerMock.address,
+    )
+    await network.provider.send('hardhat_setBalance', [
+      gaugeUpkeepManagerMock.address,
+      '0xffffffffffffffff',
+    ])
+
     // deploy gauge upkeep
-    const gaugeUpkeepFactory = await ethers.getContractFactory('GaugeUpkeep')
+    const gaugeUpkeepFactory = await ethers.getContractFactory(
+      'GaugeUpkeep',
+      impersonatedSigner,
+    )
     gaugeUpkeep = await gaugeUpkeepFactory.deploy(
       voterMock.address,
-      gaugeUpkeepManagerMock.address,
       startIndex,
       endIndex,
     )

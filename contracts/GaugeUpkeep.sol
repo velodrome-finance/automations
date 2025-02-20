@@ -23,9 +23,9 @@ contract GaugeUpkeep is IGaugeUpkeep {
     uint32 private constant BATCH_SIZE = 5;
     uint256 private constant WEEK = 7 days;
 
-    constructor(address _voter, address _gaugeUpkeepManager, uint256 _startIndex, uint256 _endIndex) {
+    constructor(address _voter, uint256 _startIndex, uint256 _endIndex) {
         voter = _voter;
-        gaugeUpkeepManager = _gaugeUpkeepManager;
+        gaugeUpkeepManager = msg.sender;
         startIndex = _startIndex;
         endIndex = _endIndex;
         currentIndex = _startIndex;

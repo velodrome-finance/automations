@@ -159,7 +159,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
     function _registerGaugeUpkeep() internal {
         uint256 startIndex = _getNextUpkeepStartIndex(upkeepIds.length);
         uint256 endIndex = startIndex + GAUGES_PER_UPKEEP;
-        address gaugeUpkeep = address(new GaugeUpkeep(voter, address(this), startIndex, endIndex));
+        address gaugeUpkeep = address(new GaugeUpkeep(voter, startIndex, endIndex));
         emit GaugeUpkeepCreated(gaugeUpkeep, startIndex, endIndex);
         IAutomationRegistrar.RegistrationParams memory params = IAutomationRegistrar.RegistrationParams({
             name: UPKEEP_NAME,
