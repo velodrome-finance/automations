@@ -21,8 +21,7 @@ contract GaugeUpkeep is IGaugeUpkeep {
     uint256 public override lastEpochFlip;
 
     uint32 private constant BATCH_SIZE = 5;
-    uint256 private constant EPOCH_LENGTH = 7 days;
-    uint256 private constant THURSDAY_INDEX = 0;
+    uint256 private constant WEEK = 7 days;
 
     constructor(address _voter, address _gaugeUpkeepManager, uint256 _startIndex, uint256 _endIndex) {
         voter = _voter;
@@ -30,19 +29,20 @@ contract GaugeUpkeep is IGaugeUpkeep {
         startIndex = _startIndex;
         endIndex = _endIndex;
         currentIndex = _startIndex;
+        lastEpochFlip = _lastEpochFlip();
     }
 
     /// @inheritdoc IGaugeUpkeep
     function checkUpkeep(bytes calldata) external view override returns (bool _upkeepNeeded, bytes memory) {
-        _upkeepNeeded = _shouldPerformUpkeep(block.timestamp, currentIndex, _adjustedEndIndex());
+        _upkeepNeeded = _checkUpkeep(currentIndex, _adjustedEndIndex());
     }
 
-    function _shouldPerformUpkeep(
-        uint256 _timestamp,
-        uint256 _currentIndex,
-        uint256 _endIndex
-    ) internal view returns (bool) {
-        return _newEpochFlip(_timestamp) && _currentIndex < _endIndex;
+    function _checkUpkeep(uint256 _currentIndex, uint256 _endIndex) internal view returns (bool) {
+        return lastEpochFlip + WEEK <= block.timestamp && _currentIndex < _endIndex;
+    }
+
+    function _lastEpochFlip() internal view returns (uint256) {
+        return (block.timestamp / 7 days) * 7 days;
     }
 
     function _adjustedEndIndex() internal view returns (uint256) {
@@ -50,17 +50,12 @@ contract GaugeUpkeep is IGaugeUpkeep {
         return gaugeCount < endIndex ? gaugeCount : endIndex;
     }
 
-    /// @dev Epoch flips every Thursday at 00:00 UTC
-    function _newEpochFlip(uint256 _timestamp) internal view returns (bool) {
-        return (_timestamp / 1 days) % 7 == THURSDAY_INDEX && lastEpochFlip + EPOCH_LENGTH <= _timestamp;
-    }
-
     /// @inheritdoc IGaugeUpkeep
     function performUpkeep(bytes calldata) external override {
         uint256 _currentIndex = currentIndex;
         uint256 _endIndex = _adjustedEndIndex();
 
-        if (!_shouldPerformUpkeep(block.timestamp, _currentIndex, _endIndex)) {
+        if (!_checkUpkeep(_currentIndex, _endIndex)) {
             revert UpkeepNotNeeded();
         }
         uint256 nextIndex = _currentIndex + BATCH_SIZE;
@@ -70,7 +65,7 @@ contract GaugeUpkeep is IGaugeUpkeep {
             currentIndex = nextIndex;
         } else {
             currentIndex = startIndex;
-            lastEpochFlip = (block.timestamp / 1 days) * 1 days;
+            lastEpochFlip = _lastEpochFlip();
         }
         emit GaugeUpkeepPerformed(_currentIndex, nextIndex);
     }

@@ -82,8 +82,10 @@ describe('GaugeUpkeep Unit Tests', function () {
   })
 
   describe('After epoch flip', function () {
-    before(async function () {
-      const afterEpochFlip = getNextEpochUTC().getTime() / 1000
+    beforeEach(async function () {
+      const latestBlockTimestamp = await time.latest()
+      const latestDate = new Date(latestBlockTimestamp * 1000)
+      const afterEpochFlip = getNextEpochUTC(latestDate).getTime() / 1000
       await time.increaseTo(afterEpochFlip)
     })
 
