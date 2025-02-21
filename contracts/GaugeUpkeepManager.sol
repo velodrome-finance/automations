@@ -83,6 +83,108 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         factoryRegistry = IVoter(_voter).factoryRegistry();
     }
 
+    /// @notice Perform the upkeep action according to the performData passed from checkUpkeep/checkLog
+    /// @param _performData the data which was passed back from the checkData simulation
+    /// @dev This function is called by the automation network to perform the upkeep action
+    function performUpkeep(bytes calldata _performData) external override {
+        if (!trustedForwarder[msg.sender]) {
+            revert UnauthorizedSender();
+        }
+        (PerformAction action, address gauge) = abi.decode(_performData, (PerformAction, address));
+        if (action == PerformAction.REGISTER_GAUGE) {
+            _registerGauge(gauge);
+        } else if (action == PerformAction.DEREGISTER_GAUGE) {
+            _deregisterGauge(gauge);
+        } else {
+            revert InvalidPerformAction();
+        }
+    }
+
+    /// @inheritdoc IGaugeUpkeepManager
+    function registerGauges(address[] calldata _gauges) external override onlyOwner {
+        address gauge;
+        address gaugeFactory;
+        uint256 length = _gauges.length;
+        for (uint256 i = 0; i < length; i++) {
+            gauge = _gauges[i];
+            if (_gaugeList.contains(gauge)) {
+                revert GaugeUpkeepExists(gauge);
+            }
+            if (!IVoter(voter).isGauge(gauge)) {
+                revert NotGauge(gauge);
+            }
+            gaugeFactory = _getGaugeFactoryFromGauge(gauge);
+            if (_isCrosschainGaugeFactory(gaugeFactory)) {
+                revert CrosschainGaugeNotAllowed(gauge);
+            }
+        }
+        for (uint256 i = 0; i < length; i++) {
+            _registerGauge(_gauges[i]);
+        }
+    }
+
+    /// @inheritdoc IGaugeUpkeepManager
+    function deregisterGauges(address[] calldata _gauges) external override onlyOwner {
+        address gauge;
+        uint256 length = _gauges.length;
+        for (uint256 i = 0; i < length; i++) {
+            gauge = _gauges[i];
+            if (!_gaugeList.contains(gauge)) {
+                revert GaugeUpkeepNotFound(gauge);
+            }
+        }
+        for (uint256 i = 0; i < length; i++) {
+            _deregisterGauge(_gauges[i]);
+        }
+    }
+
+    /// @inheritdoc IGaugeUpkeepManager
+    function withdrawUpkeep(uint256 _upkeepId) external override onlyOwner {
+        IKeeperRegistryMaster(keeperRegistry).withdrawFunds(_upkeepId, address(this));
+        emit GaugeUpkeepWithdrawn(_upkeepId);
+    }
+
+    /// @inheritdoc IGaugeUpkeepManager
+    function withdrawLinkBalance() external override onlyOwner {
+        address receiver = owner();
+        uint256 balance = IERC20(linkToken).balanceOf(address(this));
+        if (balance == 0) {
+            revert NoLinkBalance();
+        }
+        IERC20(linkToken).safeTransfer(receiver, balance);
+        emit LinkBalanceWithdrawn(receiver, balance);
+    }
+
+    /// @inheritdoc IGaugeUpkeepManager
+    function setNewUpkeepGasLimit(uint32 _newUpkeepGasLimit) external override onlyOwner {
+        newUpkeepGasLimit = _newUpkeepGasLimit;
+        emit NewUpkeepGasLimitSet(_newUpkeepGasLimit);
+    }
+
+    /// @inheritdoc IGaugeUpkeepManager
+    function setNewUpkeepFundAmount(uint96 _newUpkeepFundAmount) external override onlyOwner {
+        newUpkeepFundAmount = _newUpkeepFundAmount;
+        emit NewUpkeepFundAmountSet(_newUpkeepFundAmount);
+    }
+
+    /// @inheritdoc IGaugeUpkeepManager
+    function setTrustedForwarder(address _trustedForwarder, bool _isTrusted) external override onlyOwner {
+        if (_trustedForwarder == address(0)) {
+            revert AddressZeroNotAllowed();
+        }
+        trustedForwarder[_trustedForwarder] = _isTrusted;
+        emit TrustedForwarderSet(_trustedForwarder, _isTrusted);
+    }
+
+    /// @inheritdoc IGaugeUpkeepManager
+    function setUpkeepBalanceMonitor(address _upkeepBalanceMonitor) external override onlyOwner {
+        if (_upkeepBalanceMonitor == address(0)) {
+            revert AddressZeroNotAllowed();
+        }
+        upkeepBalanceMonitor = _upkeepBalanceMonitor;
+        emit UpkeepBalanceMonitorSet(_upkeepBalanceMonitor);
+    }
+
     /// @notice Called by the automation DON when a new log is emitted by the target contract
     /// @param _log the raw log data matching the filter that this contract has registered as a trigger
     /// @dev This function is called by the automation DON to check if any action is needed
@@ -113,25 +215,28 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         }
     }
 
-    /// @notice Perform the upkeep action according to the performData passed from checkUpkeep/checkLog
-    /// @param _performData the data which was passed back from the checkData simulation
-    /// @dev This function is called by the automation network to perform the upkeep action
-    function performUpkeep(bytes calldata _performData) external override {
-        if (!trustedForwarder[msg.sender]) {
-            revert UnauthorizedSender();
-        }
-        (PerformAction action, address gauge) = abi.decode(_performData, (PerformAction, address));
-        if (action == PerformAction.REGISTER_GAUGE) {
-            _registerGauge(gauge);
-        } else if (action == PerformAction.DEREGISTER_GAUGE) {
-            _deregisterGauge(gauge);
-        } else {
-            revert InvalidPerformAction();
+    /// @inheritdoc IGaugeUpkeepManager
+    function gaugeList(
+        uint256 _startIndex,
+        uint256 _endIndex
+    ) external view override returns (address[] memory gauges) {
+        uint256 length = _gaugeList.length();
+        _endIndex = _endIndex > length ? length : _endIndex;
+        uint256 size = _endIndex - _startIndex;
+        gauges = new address[](size);
+        for (uint256 i = 0; i < size; i++) {
+            gauges[i] = _gaugeList.at(_startIndex + i);
         }
     }
 
-    function _getNextUpkeepStartIndex(uint256 _upkeepCount) internal pure returns (uint256) {
-        return _upkeepCount * GAUGES_PER_UPKEEP;
+    /// @inheritdoc IGaugeUpkeepManager
+    function gaugeCount() external view override returns (uint256) {
+        return _gaugeList.length();
+    }
+
+    /// @inheritdoc IGaugeUpkeepManager
+    function upkeepCount() external view override returns (uint256) {
+        return upkeepIds.length;
     }
 
     /// @dev Assumes that the gauge is not already registered
@@ -195,12 +300,8 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         emit GaugeUpkeepCancelled(_upkeepId);
     }
 
-    function _extractGaugeFromCreatedLog(Log memory _log) internal pure returns (address gauge) {
-        (, , , gauge, ) = abi.decode(_log.data, (address, address, address, address, address));
-    }
-
-    function _bytes32ToAddress(bytes32 _address) internal pure returns (address) {
-        return address(uint160(uint256(_address)));
+    function _getNextUpkeepStartIndex(uint256 _upkeepCount) internal pure returns (uint256) {
+        return _upkeepCount * GAUGES_PER_UPKEEP;
     }
 
     function _getGaugeFactoryFromGauge(address _gauge) internal view returns (address gaugeFactory) {
@@ -209,116 +310,15 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         (, gaugeFactory) = IFactoryRegistry(factoryRegistry).factoriesToPoolFactory(poolFactory);
     }
 
+    function _extractGaugeFromCreatedLog(Log memory _log) internal pure returns (address gauge) {
+        (, , , gauge, ) = abi.decode(_log.data, (address, address, address, address, address));
+    }
+
     function _isCrosschainGaugeFactory(address _gaugeFactory) internal view returns (bool) {
         return crosschainGaugeFactory[_gaugeFactory];
     }
 
-    /// @inheritdoc IGaugeUpkeepManager
-    function withdrawUpkeep(uint256 _upkeepId) external override onlyOwner {
-        IKeeperRegistryMaster(keeperRegistry).withdrawFunds(_upkeepId, address(this));
-        emit GaugeUpkeepWithdrawn(_upkeepId);
-    }
-
-    /// @inheritdoc IGaugeUpkeepManager
-    function withdrawLinkBalance() external override onlyOwner {
-        address receiver = owner();
-        uint256 balance = IERC20(linkToken).balanceOf(address(this));
-        if (balance == 0) {
-            revert NoLinkBalance();
-        }
-        IERC20(linkToken).safeTransfer(receiver, balance);
-        emit LinkBalanceWithdrawn(receiver, balance);
-    }
-
-    /// @inheritdoc IGaugeUpkeepManager
-    function setNewUpkeepGasLimit(uint32 _newUpkeepGasLimit) external override onlyOwner {
-        newUpkeepGasLimit = _newUpkeepGasLimit;
-        emit NewUpkeepGasLimitSet(_newUpkeepGasLimit);
-    }
-
-    /// @inheritdoc IGaugeUpkeepManager
-    function setNewUpkeepFundAmount(uint96 _newUpkeepFundAmount) external override onlyOwner {
-        newUpkeepFundAmount = _newUpkeepFundAmount;
-        emit NewUpkeepFundAmountSet(_newUpkeepFundAmount);
-    }
-
-    /// @inheritdoc IGaugeUpkeepManager
-    function setTrustedForwarder(address _trustedForwarder, bool _isTrusted) external override onlyOwner {
-        if (_trustedForwarder == address(0)) {
-            revert AddressZeroNotAllowed();
-        }
-        trustedForwarder[_trustedForwarder] = _isTrusted;
-        emit TrustedForwarderSet(_trustedForwarder, _isTrusted);
-    }
-
-    /// @inheritdoc IGaugeUpkeepManager
-    function setUpkeepBalanceMonitor(address _upkeepBalanceMonitor) external override onlyOwner {
-        if (_upkeepBalanceMonitor == address(0)) {
-            revert AddressZeroNotAllowed();
-        }
-        upkeepBalanceMonitor = _upkeepBalanceMonitor;
-        emit UpkeepBalanceMonitorSet(_upkeepBalanceMonitor);
-    }
-
-    /// @inheritdoc IGaugeUpkeepManager
-    function registerGauges(address[] calldata _gauges) external override onlyOwner {
-        address gauge;
-        address gaugeFactory;
-        uint256 length = _gauges.length;
-        for (uint256 i = 0; i < length; i++) {
-            gauge = _gauges[i];
-            if (_gaugeList.contains(gauge)) {
-                revert GaugeUpkeepExists(gauge);
-            }
-            if (!IVoter(voter).isGauge(gauge)) {
-                revert NotGauge(gauge);
-            }
-            gaugeFactory = _getGaugeFactoryFromGauge(gauge);
-            if (_isCrosschainGaugeFactory(gaugeFactory)) {
-                revert CrosschainGaugeNotAllowed(gauge);
-            }
-        }
-        for (uint256 i = 0; i < length; i++) {
-            _registerGauge(_gauges[i]);
-        }
-    }
-
-    /// @inheritdoc IGaugeUpkeepManager
-    function deregisterGauges(address[] calldata _gauges) external override onlyOwner {
-        address gauge;
-        uint256 length = _gauges.length;
-        for (uint256 i = 0; i < length; i++) {
-            gauge = _gauges[i];
-            if (!_gaugeList.contains(gauge)) {
-                revert GaugeUpkeepNotFound(gauge);
-            }
-        }
-        for (uint256 i = 0; i < length; i++) {
-            _deregisterGauge(_gauges[i]);
-        }
-    }
-
-    /// @inheritdoc IGaugeUpkeepManager
-    function gaugeCount() external view override returns (uint256) {
-        return _gaugeList.length();
-    }
-
-    /// @inheritdoc IGaugeUpkeepManager
-    function gaugeList(
-        uint256 _startIndex,
-        uint256 _endIndex
-    ) external view override returns (address[] memory gauges) {
-        uint256 length = _gaugeList.length();
-        _endIndex = _endIndex > length ? length : _endIndex;
-        uint256 size = _endIndex - _startIndex;
-        gauges = new address[](size);
-        for (uint256 i = 0; i < size; i++) {
-            gauges[i] = _gaugeList.at(_startIndex + i);
-        }
-    }
-
-    /// @inheritdoc IGaugeUpkeepManager
-    function upkeepCount() external view override returns (uint256) {
-        return upkeepIds.length;
+    function _bytes32ToAddress(bytes32 _address) internal pure returns (address) {
+        return address(uint160(uint256(_address)));
     }
 }

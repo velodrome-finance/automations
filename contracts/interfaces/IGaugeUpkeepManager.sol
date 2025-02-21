@@ -72,6 +72,14 @@ interface IGaugeUpkeepManager {
     /// @return Upkeep ID
     function upkeepIds(uint256 _index) external view returns (uint256);
 
+    /// @notice Register gauges in bulk
+    /// @param _gauges Array of gauge addresses
+    function registerGauges(address[] calldata _gauges) external;
+
+    /// @notice Deregister gauges in bulk
+    /// @param _gauges Array of gauge addresses
+    function deregisterGauges(address[] calldata _gauges) external;
+
     /// @notice Withdraw remaining upkeep LINK balance to contract balance
     /// @param _upkeepId Gauge upkeep ID owned by the contract
     /// @dev Upkeep must be cancelled before withdrawing
@@ -97,23 +105,15 @@ interface IGaugeUpkeepManager {
     /// @param _upkeepBalanceMonitor Upkeep balance monitor contract address
     function setUpkeepBalanceMonitor(address _upkeepBalanceMonitor) external;
 
-    /// @notice Register gauges in bulk
-    /// @param _gauges Array of gauge addresses
-    function registerGauges(address[] calldata _gauges) external;
-
-    /// @notice Deregister gauges in bulk
-    /// @param _gauges Array of gauge addresses
-    function deregisterGauges(address[] calldata _gauges) external;
-
-    /// @notice Gets the number of gauges registered with the contract
-    /// @return Number of gauges
-    function gaugeCount() external view returns (uint256);
-
     /// @notice Gets a range of gauge addresses
     /// @param _startIndex Start index of the gauge list
     /// @param _endIndex End index of the gauge list
     /// @return Array of gauge addresses
     function gaugeList(uint256 _startIndex, uint256 _endIndex) external view returns (address[] memory);
+
+    /// @notice Gets the number of gauges registered with the contract
+    /// @return Number of gauges
+    function gaugeCount() external view returns (uint256);
 
     /// @notice Gets the number of registered gauge upkeeps
     /// @return Number of gauge upkeeps
