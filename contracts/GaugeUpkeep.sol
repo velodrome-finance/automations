@@ -33,24 +33,6 @@ contract GaugeUpkeep is IGaugeUpkeep {
     }
 
     /// @inheritdoc IGaugeUpkeep
-    function checkUpkeep(bytes calldata) external view override returns (bool _upkeepNeeded, bytes memory) {
-        _upkeepNeeded = _checkUpkeep(currentIndex, _adjustedEndIndex());
-    }
-
-    function _checkUpkeep(uint256 _currentIndex, uint256 _endIndex) internal view returns (bool) {
-        return lastEpochFlip + WEEK <= block.timestamp && _currentIndex < _endIndex;
-    }
-
-    function _lastEpochFlip() internal view returns (uint256) {
-        return (block.timestamp / WEEK) * WEEK;
-    }
-
-    function _adjustedEndIndex() internal view returns (uint256) {
-        uint256 gaugeCount = IGaugeUpkeepManager(gaugeUpkeepManager).gaugeCount();
-        return gaugeCount < endIndex ? gaugeCount : endIndex;
-    }
-
-    /// @inheritdoc IGaugeUpkeep
     function performUpkeep(bytes calldata) external override {
         uint256 _currentIndex = currentIndex;
         uint256 _endIndex = _adjustedEndIndex();
@@ -71,8 +53,26 @@ contract GaugeUpkeep is IGaugeUpkeep {
         emit GaugeUpkeepPerformed(_currentIndex, nextIndex);
     }
 
+    /// @inheritdoc IGaugeUpkeep
+    function checkUpkeep(bytes calldata) external view override returns (bool _upkeepNeeded, bytes memory) {
+        _upkeepNeeded = _checkUpkeep(currentIndex, _adjustedEndIndex());
+    }
+
     function _distributeBatch(uint256 _startIndex, uint256 _endIndex) internal {
         address[] memory gauges = IGaugeUpkeepManager(gaugeUpkeepManager).gaugeList(_startIndex, _endIndex);
         IVoter(voter).distribute(gauges);
+    }
+
+    function _checkUpkeep(uint256 _currentIndex, uint256 _endIndex) internal view returns (bool) {
+        return lastEpochFlip + WEEK <= block.timestamp && _currentIndex < _endIndex;
+    }
+
+    function _lastEpochFlip() internal view returns (uint256) {
+        return (block.timestamp / WEEK) * WEEK;
+    }
+
+    function _adjustedEndIndex() internal view returns (uint256) {
+        uint256 gaugeCount = IGaugeUpkeepManager(gaugeUpkeepManager).gaugeCount();
+        return gaugeCount < endIndex ? gaugeCount : endIndex;
     }
 }
