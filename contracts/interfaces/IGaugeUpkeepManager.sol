@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
+import {Log} from "@chainlink/contracts/src/v0.8/automation/interfaces/ILogAutomation.sol";
+
 interface IGaugeUpkeepManager {
     event GaugeRegistered(address indexed gauge);
     event GaugeDeregistered(address indexed gauge);
@@ -72,6 +74,11 @@ interface IGaugeUpkeepManager {
     /// @return Upkeep ID
     function upkeepIds(uint256 _index) external view returns (uint256);
 
+    /// @notice Perform the upkeep action according to the performData passed from checkUpkeep/checkLog
+    /// @param _performData the data which was passed back from the checkData simulation
+    /// @dev This function is called by the automation network to perform the upkeep action
+    function performUpkeep(bytes calldata _performData) external;
+
     /// @notice Register gauges in bulk
     /// @param _gauges Array of gauge addresses
     function registerGauges(address[] calldata _gauges) external;
@@ -104,6 +111,16 @@ interface IGaugeUpkeepManager {
     /// @notice Set the upkeep balance monitor address
     /// @param _upkeepBalanceMonitor Upkeep balance monitor contract address
     function setUpkeepBalanceMonitor(address _upkeepBalanceMonitor) external;
+
+    /// @notice Called by the automation DON when a new log is emitted by the target contract
+    /// @param _log the raw log data matching the filter that this contract has registered as a trigger
+    /// @dev This function is called by the automation DON to check if any action is needed
+    /// @return _upkeepNeeded True if any action is needed according to the log
+    /// @return _performData Encoded action and data passed to performUpkeep if upkeepNeeded is true
+    function checkLog(
+        Log calldata _log,
+        bytes memory
+    ) external view returns (bool _upkeepNeeded, bytes memory _performData);
 
     /// @notice Gets a range of gauge addresses
     /// @param _startIndex Start index of the gauge list

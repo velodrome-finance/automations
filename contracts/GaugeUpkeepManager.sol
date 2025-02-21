@@ -5,7 +5,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {ILogAutomation, Log} from "@chainlink/contracts/src/v0.8/automation/interfaces/ILogAutomation.sol";
+import {Log} from "@chainlink/contracts/src/v0.8/automation/interfaces/ILogAutomation.sol";
 import {IKeeperRegistryMaster} from "@chainlink/contracts/src/v0.8/automation/interfaces/v2_1/IKeeperRegistryMaster.sol";
 import {IVoter} from "../vendor/velodrome-contracts/contracts/interfaces/IVoter.sol";
 import {IPool} from "../vendor/velodrome-contracts/contracts/interfaces/IPool.sol";
@@ -15,7 +15,7 @@ import {IGaugeUpkeepManager} from "./interfaces/IGaugeUpkeepManager.sol";
 import {IUpkeepBalanceMonitor} from "./interfaces/IUpkeepBalanceMonitor.sol";
 import {GaugeUpkeep} from "./GaugeUpkeep.sol";
 
-contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
+contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -83,9 +83,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         factoryRegistry = IVoter(_voter).factoryRegistry();
     }
 
-    /// @notice Perform the upkeep action according to the performData passed from checkUpkeep/checkLog
-    /// @param _performData the data which was passed back from the checkData simulation
-    /// @dev This function is called by the automation network to perform the upkeep action
+    /// @inheritdoc IGaugeUpkeepManager
     function performUpkeep(bytes calldata _performData) external override {
         if (!trustedForwarder[msg.sender]) {
             revert UnauthorizedSender();
@@ -185,11 +183,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         emit UpkeepBalanceMonitorSet(_upkeepBalanceMonitor);
     }
 
-    /// @notice Called by the automation DON when a new log is emitted by the target contract
-    /// @param _log the raw log data matching the filter that this contract has registered as a trigger
-    /// @dev This function is called by the automation DON to check if any action is needed
-    /// @return upkeepNeeded True if any action is needed according to the log
-    /// @return performData Encoded action and data passed to performUpkeep if upkeepNeeded is true
+    /// @inheritdoc IGaugeUpkeepManager
     function checkLog(
         Log calldata _log,
         bytes memory
