@@ -20,7 +20,7 @@ contract GaugeUpkeep is IGaugeUpkeep {
     /// @inheritdoc IGaugeUpkeep
     uint256 public override lastEpochFlip;
 
-    uint32 private constant BATCH_SIZE = 5;
+    uint256 private constant BATCH_SIZE = 5;
     uint256 private constant WEEK = 7 days;
 
     constructor(address _voter, uint256 _startIndex, uint256 _endIndex) {

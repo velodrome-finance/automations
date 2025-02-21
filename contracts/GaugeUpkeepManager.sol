@@ -46,8 +46,8 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
 
     EnumerableSet.AddressSet private _gaugeList;
 
-    uint32 private constant GAUGES_PER_UPKEEP = 100;
-    uint32 private constant UPKEEP_CANCEL_BUFFER = 20;
+    uint256 private constant GAUGES_PER_UPKEEP = 100;
+    uint256 private constant UPKEEP_CANCEL_BUFFER = 20;
     uint8 private constant CONDITIONAL_TRIGGER_TYPE = 0;
     string private constant UPKEEP_NAME = "Gauge upkeep";
 
