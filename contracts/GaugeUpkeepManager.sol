@@ -160,7 +160,6 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         uint256 startIndex = _getNextUpkeepStartIndex(upkeepIds.length);
         uint256 endIndex = startIndex + GAUGES_PER_UPKEEP;
         address gaugeUpkeep = address(new GaugeUpkeep(voter, startIndex, endIndex));
-        emit GaugeUpkeepCreated(gaugeUpkeep, startIndex, endIndex);
         IAutomationRegistrar.RegistrationParams memory params = IAutomationRegistrar.RegistrationParams({
             name: UPKEEP_NAME,
             encryptedEmail: "",
@@ -176,7 +175,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         uint256 upkeepId = _registerUpkeep(params);
         upkeepIds.push(upkeepId);
         IUpkeepBalanceMonitor(upkeepBalanceMonitor).addToWatchList(upkeepId);
-        emit GaugeUpkeepRegistered(gaugeUpkeep, upkeepId);
+        emit GaugeUpkeepRegistered(gaugeUpkeep, upkeepId, startIndex, endIndex);
     }
 
     function _registerUpkeep(IAutomationRegistrar.RegistrationParams memory _params) internal returns (uint256) {

@@ -4,8 +4,12 @@ pragma solidity 0.8.6;
 interface IGaugeUpkeepManager {
     event GaugeRegistered(address indexed gauge);
     event GaugeDeregistered(address indexed gauge);
-    event GaugeUpkeepCreated(address indexed gauge, uint256 indexed startIndex, uint256 indexed endIndex);
-    event GaugeUpkeepRegistered(address indexed gaugeUpkeep, uint256 indexed upkeepId);
+    event GaugeUpkeepRegistered(
+        address indexed gaugeUpkeep,
+        uint256 indexed upkeepId,
+        uint256 indexed startIndex,
+        uint256 endIndex
+    );
     event GaugeUpkeepCancelled(uint256 indexed upkeepId);
     event GaugeUpkeepWithdrawn(uint256 indexed upkeepId);
     event NewUpkeepGasLimitSet(uint32 newUpkeepGasLimit);
