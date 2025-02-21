@@ -74,8 +74,8 @@ interface IGaugeUpkeepManager {
     /// @return Upkeep ID
     function upkeepIds(uint256 _index) external view returns (uint256);
 
-    /// @notice Perform the upkeep action according to the performData passed from checkUpkeep/checkLog
-    /// @param _performData the data which was passed back from the checkData simulation
+    /// @notice Perform the upkeep action according to the performData passed from checkLog
+    /// @param _performData the data which was passed back from the checkLog simulation
     /// @dev This function is called by the automation network to perform the upkeep action
     function performUpkeep(bytes calldata _performData) external;
 
