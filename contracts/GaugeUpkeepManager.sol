@@ -318,6 +318,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, ILogAutomation, Ownable {
         }
     }
 
+    /// @inheritdoc IGaugeUpkeepManager
     function upkeepCount() external view override returns (uint256) {
         return upkeepIds.length;
     }
