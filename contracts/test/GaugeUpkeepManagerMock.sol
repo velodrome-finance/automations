@@ -14,6 +14,12 @@ contract GaugeUpkeepManagerMock {
         }
     }
 
+    function removeGaugeList() external {
+        while (_gaugeList.length() > 0) {
+            _gaugeList.remove(_gaugeList.at(_gaugeList.length() - 1));
+        }
+    }
+
     function gaugeCount() external view returns (uint256) {
         return _gaugeList.length();
     }
