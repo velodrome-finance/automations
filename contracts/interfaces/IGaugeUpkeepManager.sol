@@ -137,13 +137,13 @@ interface IGaugeUpkeepManager {
     /// @return Number of gauge upkeeps
     function upkeepCount() external view returns (uint256);
 
-    /// @notice Gets the number of cancelled upkeeps pending withdrawal
-    /// @return Number of cancelled upkeeps
-    function cancelledUpkeepCount() external view returns (uint256);
-
     /// @notice Gets a range of cancelled upkeeps pending withdrawal
     /// @param _startIndex Start index of the cancelled upkeeps array
     /// @param _endIndex End index of the cancelled upkeeps array
     /// @return Array of cancelled upkeep IDs
     function cancelledUpkeeps(uint256 _startIndex, uint256 _endIndex) external view returns (uint256[] memory);
+
+    /// @notice Gets the number of cancelled upkeeps pending withdrawal
+    /// @return Number of cancelled upkeeps
+    function cancelledUpkeepCount() external view returns (uint256);
 }
