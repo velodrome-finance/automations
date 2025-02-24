@@ -141,12 +141,12 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
     /// @inheritdoc IGaugeUpkeepManager
     function withdrawCancelledUpkeeps(uint256 _startIndex, uint256 _endIndex) external override onlyOwner {
         uint256 length = _cancelledUpkeepIds.length();
-        if (_startIndex >= length) {
+        _endIndex = _endIndex > length ? length : _endIndex;
+        if (_startIndex >= _endIndex) {
             revert InvalidIndex();
         }
         uint256 upkeepId;
-        uint256 end = _endIndex > length ? length : _endIndex;
-        for (uint256 i = _startIndex; i < end; i++) {
+        for (uint256 i = _startIndex; i < _endIndex; i++) {
             upkeepId = _cancelledUpkeepIds.at(i);
             _cancelledUpkeepIds.remove(upkeepId);
             _withdrawUpkeep(upkeepId);
