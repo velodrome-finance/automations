@@ -293,6 +293,9 @@ describe('GaugeUpkeepManager Unit Tests', function () {
         fakeGaugeAddress,
       )
       expect(await gaugeUpkeepManager.gaugeCount()).to.equal(0)
+      expect(await gaugeUpkeepManager.cancelledUpkeeps(0, 1)).deep.include(
+        BigNumber.from(upkeepId),
+      )
     })
 
     it('should cancel a gauge upkeep', async () => {
