@@ -146,8 +146,8 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
             revert InvalidIndex();
         }
         uint256 upkeepId;
-        for (uint256 i = _startIndex; i < _endIndex; i++) {
-            upkeepId = _cancelledUpkeepIds.at(i);
+        for (uint256 i = _endIndex; i > _startIndex; i--) {
+            upkeepId = _cancelledUpkeepIds.at(i - 1);
             _cancelledUpkeepIds.remove(upkeepId);
             _withdrawUpkeep(upkeepId);
         }

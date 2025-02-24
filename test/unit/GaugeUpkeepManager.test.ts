@@ -386,7 +386,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       expect(await gaugeUpkeepManager.cancelledUpkeepCount()).to.equal(1)
     })
 
-    it('should withdraw upkeep balance', async () => {
+    it('should withdraw cancelled upkeep balance', async () => {
       await gaugeUpkeepManager.performUpkeep(registerPerformData)
       await gaugeUpkeepManager.performUpkeep(deregisterPerformData)
 
@@ -395,6 +395,34 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       await expect(tx)
         .to.emit(gaugeUpkeepManager, 'GaugeUpkeepWithdrawn')
         .withArgs(upkeepId)
+    })
+
+    it('should withdraw multiple cancelled upkeeps', async () => {
+      const upkeepCount = 2
+      const fakeGaugeAddresses = Array.from(
+        { length: gaugesPerUpkeepLimit * upkeepCount },
+        () => ethers.Wallet.createRandom().address,
+      )
+      await gaugeUpkeepManager.registerGauges(fakeGaugeAddresses)
+      await gaugeUpkeepManager.deregisterGauges(fakeGaugeAddresses)
+
+      expect(await gaugeUpkeepManager.cancelledUpkeepCount()).to.equal(
+        upkeepCount,
+      )
+
+      const tx = await gaugeUpkeepManager.withdrawCancelledUpkeeps(
+        0,
+        upkeepCount,
+      )
+      const receipt = await tx.wait()
+      const gaugeUpkeepWithdrawnLogs = receipt.logs.filter(
+        (log) =>
+          log.topics[0] ===
+          gaugeUpkeepManager.interface.getEventTopic('GaugeUpkeepWithdrawn'),
+      )
+
+      expect(gaugeUpkeepWithdrawnLogs.length).to.equal(upkeepCount)
+      expect(await gaugeUpkeepManager.cancelledUpkeepCount()).to.equal(0)
     })
   })
 
