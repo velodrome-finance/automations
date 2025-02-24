@@ -486,6 +486,11 @@ describe('GaugeUpkeepManager Script Tests', function () {
 
     expect(cancelledUpkeepId).to.equal(gaugeUpkeepId)
     expect(upkeepDetailsAfter.maxValidBlocknumber).to.not.equal(MAX_UINT32)
+
+    // check if upkeep is included in cancelledUpkeeps set
+    expect(await gaugeUpkeepManager.cancelledUpkeeps(0, 1)).to.deep.include(
+      cancelledUpkeepId,
+    )
   })
 
   it('Gauge upkeep withdrawal flow', async () => {

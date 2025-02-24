@@ -346,6 +346,15 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       expect(watchList).to.not.include(BigNumber.from(upkeepId))
     })
 
+    it('should add cancelled upkeeps to the cancelled upkeeps list', async () => {
+      await gaugeUpkeepManager.performUpkeep(registerPerformData)
+      await gaugeUpkeepManager.performUpkeep(deregisterPerformData)
+
+      expect(await gaugeUpkeepManager.cancelledUpkeeps(0, 1)).to.deep.include(
+        BigNumber.from(upkeepId),
+      )
+    })
+
     it('should not allow non-trusted forwarder to cancel upkeep', async () => {
       await gaugeUpkeepManager.performUpkeep(registerPerformData)
       await expect(
