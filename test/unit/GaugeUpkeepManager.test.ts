@@ -34,7 +34,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
   const gaugesPerUpkeepLimit = 100
   const upkeepCancelBuffer = 20
   const upkeepGasLimit = 500000
-  const upkeepId = 1
+  const upkeepId = BigNumber.from(1)
 
   beforeEach(async function () {
     accounts = await ethers.getSigners()
@@ -222,7 +222,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
 
       const watchList = await upkeepBalanceMonitor.getWatchList()
 
-      expect(watchList).to.deep.include(BigNumber.from(upkeepId))
+      expect(watchList).to.deep.include(upkeepId)
     })
 
     it('should not allow non-trusted forwarder to register upkeep', async () => {
@@ -294,7 +294,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       )
       expect(await gaugeUpkeepManager.gaugeCount()).to.equal(0)
       expect(await gaugeUpkeepManager.cancelledUpkeeps(0, 1)).deep.include(
-        BigNumber.from(upkeepId),
+        upkeepId,
       )
     })
 
@@ -346,7 +346,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
 
       const watchList = await upkeepBalanceMonitor.getWatchList()
 
-      expect(watchList).to.not.include(BigNumber.from(upkeepId))
+      expect(watchList).to.not.include(upkeepId)
     })
 
     it('should not allow non-trusted forwarder to cancel upkeep', async () => {
@@ -367,7 +367,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       await gaugeUpkeepManager.performUpkeep(deregisterPerformData)
 
       expect(await gaugeUpkeepManager.cancelledUpkeeps(0, 1)).to.deep.include(
-        BigNumber.from(upkeepId),
+        upkeepId,
       )
     })
 
