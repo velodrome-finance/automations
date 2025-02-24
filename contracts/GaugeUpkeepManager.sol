@@ -250,11 +250,8 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         uint256 _endIndex
     ) external view override returns (uint256[] memory cancelledUpkeepIds) {
         uint256 length = _cancelledUpkeepIds.length();
-        if (_startIndex >= length) {
-            return new uint256[](0);
-        }
-        uint256 end = _endIndex > length ? length : _endIndex;
-        uint256 size = end - _startIndex;
+        _endIndex = _endIndex > length ? length : _endIndex;
+        uint256 size = _endIndex - _startIndex;
         cancelledUpkeepIds = new uint256[](size);
         for (uint256 i = 0; i < size; i++) {
             cancelledUpkeepIds[i] = _cancelledUpkeepIds.at(_startIndex + i);
