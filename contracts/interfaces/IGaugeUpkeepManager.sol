@@ -116,7 +116,7 @@ interface IGaugeUpkeepManager {
 
     /// @notice Set an excluded gauge factory address
     /// @param _gaugeFactory Gauge factory address
-    /// @param _isExcluded True to exclude the gauge factory
+    /// @param _isExcluded Whether the gauge factory should be excluded or not
     function setExcludedGaugeFactory(address _gaugeFactory, bool _isExcluded) external;
 
     /// @notice Called by the automation DON when a new log is emitted by the target contract
