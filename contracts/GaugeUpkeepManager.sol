@@ -235,6 +235,9 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
 
     /// @dev Assumes that the gauge is not already registered
     function _registerGauge(address _gauge) internal {
+        if (!IVoter(voter).isAlive(_gauge)) {
+            revert GaugeNotAlive(_gauge);
+        }
         uint256 _gaugeCount = _gaugeList.length();
         _gaugeList.add(_gauge);
         if (_gaugeCount % GAUGES_PER_UPKEEP == 0) {

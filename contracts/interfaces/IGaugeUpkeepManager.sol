@@ -26,6 +26,7 @@ interface IGaugeUpkeepManager {
     error AddressZeroNotAllowed();
     error NoLinkBalance();
     error NotGauge(address gauge);
+    error GaugeNotAlive(address gauge);
     error CrosschainGaugeNotAllowed(address gauge);
     error GaugeUpkeepExists(address gauge);
     error GaugeUpkeepNotFound(address gauge);
