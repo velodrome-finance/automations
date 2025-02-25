@@ -18,6 +18,7 @@ interface IGaugeUpkeepManager {
     event NewUpkeepFundAmountSet(uint96 newUpkeepFundAmount);
     event TrustedForwarderSet(address indexed trustedForwarder, bool isTrusted);
     event UpkeepBalanceMonitorSet(address indexed upkeepBalanceMonitor);
+    event ExcludedGaugeFactorySet(address indexed gaugeFactory, bool isExcluded);
     event LinkBalanceWithdrawn(address indexed receiver, uint256 amount);
 
     error InvalidPerformAction();
@@ -112,6 +113,11 @@ interface IGaugeUpkeepManager {
     /// @notice Set the upkeep balance monitor address
     /// @param _upkeepBalanceMonitor Upkeep balance monitor contract address
     function setUpkeepBalanceMonitor(address _upkeepBalanceMonitor) external;
+
+    /// @notice Set an excluded gauge factory address
+    /// @param _gaugeFactory Gauge factory address
+    /// @param _isExcluded True to exclude the gauge factory
+    function setExcludedGaugeFactory(address _gaugeFactory, bool _isExcluded) external;
 
     /// @notice Called by the automation DON when a new log is emitted by the target contract
     /// @param _log the raw log data matching the filter that this contract has registered as a trigger

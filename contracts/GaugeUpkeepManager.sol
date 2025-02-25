@@ -184,6 +184,12 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
     }
 
     /// @inheritdoc IGaugeUpkeepManager
+    function setExcludedGaugeFactory(address _gaugeFactory, bool _isExcluded) external override onlyOwner {
+        excludedGaugeFactory[_gaugeFactory] = _isExcluded;
+        emit ExcludedGaugeFactorySet(_gaugeFactory, _isExcluded);
+    }
+
+    /// @inheritdoc IGaugeUpkeepManager
     function checkLog(
         Log calldata _log,
         bytes memory

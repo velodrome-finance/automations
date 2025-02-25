@@ -460,6 +460,21 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       )
     })
 
+    it('should set excluded factory address', async () => {
+      const newFactoryAddress = ethers.Wallet.createRandom().address
+      await gaugeUpkeepManager.setExcludedGaugeFactory(newFactoryAddress, true)
+
+      expect(
+        await gaugeUpkeepManager.excludedGaugeFactory(newFactoryAddress),
+      ).to.equal(true)
+
+      await gaugeUpkeepManager.setExcludedGaugeFactory(newFactoryAddress, false)
+
+      expect(
+        await gaugeUpkeepManager.excludedGaugeFactory(newFactoryAddress),
+      ).to.equal(false)
+    })
+
     it('should register gauge upkeeps in bulk', async () => {
       const gaugeAddresses = [
         accounts[1].address,
