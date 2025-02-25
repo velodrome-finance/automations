@@ -44,27 +44,6 @@ async function main() {
   // manually to make sure everything is compiled
   // await hre.run('compile');
 
-  // Deploy CronLibrary contract
-  const cronLibraryFactory = await ethers.getContractFactory(
-    '@chainlink/contracts/src/v0.8/automation/libraries/external/Cron.sol:Cron',
-  )
-  const cronLibrary = await cronLibraryFactory.deploy()
-  await cronLibrary.deployed()
-  console.log('CronLibrary deployed to:', cronLibrary.address)
-
-  // Deploy CronUpkeepFactory contract
-  const CronUpkeepFactory = await ethers.getContractFactory(
-    'CronUpkeepFactory',
-    {
-      libraries: {
-        Cron: cronLibrary.address,
-      },
-    },
-  )
-  const cronUpkeepFactory = await CronUpkeepFactory.deploy()
-  await cronUpkeepFactory.deployed()
-  console.log('CronUpkeepFactory deployed to:', cronUpkeepFactory.address)
-
   // Deploy GaugeUpkeepManager contract
   const gaugeUpkeepManagerFactory =
     await ethers.getContractFactory('GaugeUpkeepManager')
@@ -73,7 +52,6 @@ async function main() {
     KEEPER_REGISTRY_ADDRESS!,
     AUTOMATION_REGISTRAR_ADDRESS!,
     UPKEEP_BALANCE_MONITOR_ADDRESS!,
-    cronUpkeepFactory.address,
     VOTER_ADDRESS!,
     NEW_UPKEEP_FUND_AMOUNT!,
     NEW_UPKEEP_GAS_LIMIT!,
@@ -82,21 +60,12 @@ async function main() {
   await gaugeUpkeepManager.deployed()
   console.log('GaugeUpkeepManager deployed to:', gaugeUpkeepManager.address)
 
-  // Verify CronLibrary contract
-  await verifyContract(cronLibrary.address)
-
-  // Verify CronUpkeepFactory contract
-  await verifyContract(cronUpkeepFactory.address, [], {
-    Cron: cronLibrary.address,
-  })
-
   // Verify GaugeUpkeepManager contract
   await verifyContract(gaugeUpkeepManager.address, [
     LINK_TOKEN_ADDRESS!,
     KEEPER_REGISTRY_ADDRESS!,
     AUTOMATION_REGISTRAR_ADDRESS!,
     UPKEEP_BALANCE_MONITOR_ADDRESS!,
-    cronUpkeepFactory.address,
     VOTER_ADDRESS!,
     NEW_UPKEEP_FUND_AMOUNT!,
     NEW_UPKEEP_GAS_LIMIT!,

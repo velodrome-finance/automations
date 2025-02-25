@@ -1,9 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
+import {Log} from "@chainlink/contracts/src/v0.8/automation/interfaces/ILogAutomation.sol";
+
 interface IGaugeUpkeepManager {
-    event GaugeUpkeepRegistered(address indexed gauge, uint256 indexed upkeepId);
-    event GaugeUpkeepCancelled(address indexed gauge, uint256 indexed upkeepId);
+    event GaugeRegistered(address indexed gauge);
+    event GaugeDeregistered(address indexed gauge);
+    event GaugeUpkeepRegistered(
+        address indexed gaugeUpkeep,
+        uint256 indexed upkeepId,
+        uint256 indexed startIndex,
+        uint256 endIndex
+    );
+    event GaugeUpkeepCancelled(uint256 indexed upkeepId);
     event GaugeUpkeepWithdrawn(uint256 indexed upkeepId);
     event NewUpkeepGasLimitSet(uint32 newUpkeepGasLimit);
     event NewUpkeepFundAmountSet(uint96 newUpkeepFundAmount);
@@ -22,8 +31,8 @@ interface IGaugeUpkeepManager {
     error GaugeUpkeepNotFound(address gauge);
 
     enum PerformAction {
-        REGISTER_UPKEEP,
-        CANCEL_UPKEEP
+        REGISTER_GAUGE,
+        DEREGISTER_GAUGE
     }
 
     /// @notice LINK token address
@@ -37,9 +46,6 @@ interface IGaugeUpkeepManager {
 
     /// @notice Upkeep balance monitor address
     function upkeepBalanceMonitor() external view returns (address);
-
-    /// @notice Cron upkeep factory address
-    function cronUpkeepFactory() external view returns (address);
 
     /// @notice Voter address
     function voter() external view returns (address);
@@ -63,10 +69,23 @@ interface IGaugeUpkeepManager {
     /// @return True if the gauge factory is a crosschain factory
     function crosschainGaugeFactory(address _gaugeFactory) external view returns (bool);
 
-    /// @notice Upkeep ID for a gauge
-    /// @param _gauge Gauge address
+    /// @notice Gets an item from the registered upkeeps
+    /// @param _index Index of the upkeep IDs array
     /// @return Upkeep ID
-    function gaugeUpkeepId(address _gauge) external view returns (uint256);
+    function upkeepIds(uint256 _index) external view returns (uint256);
+
+    /// @notice Perform the upkeep action according to the performData passed from checkLog
+    /// @param _performData the data which was passed back from the checkLog simulation
+    /// @dev This function is called by the automation network to perform the upkeep action
+    function performUpkeep(bytes calldata _performData) external;
+
+    /// @notice Register gauges in bulk
+    /// @param _gauges Array of gauge addresses
+    function registerGauges(address[] calldata _gauges) external;
+
+    /// @notice Deregister gauges in bulk
+    /// @param _gauges Array of gauge addresses
+    function deregisterGauges(address[] calldata _gauges) external;
 
     /// @notice Withdraw remaining upkeep LINK balance to contract balance
     /// @param _upkeepId Gauge upkeep ID owned by the contract
@@ -93,13 +112,27 @@ interface IGaugeUpkeepManager {
     /// @param _upkeepBalanceMonitor Upkeep balance monitor contract address
     function setUpkeepBalanceMonitor(address _upkeepBalanceMonitor) external;
 
-    /// @notice Register gauge upkeeps
-    /// @param _gauges Array of gauge addresses
-    /// @return Array of registered upkeep IDs
-    function registerGaugeUpkeeps(address[] calldata _gauges) external returns (uint256[] memory);
+    /// @notice Called by the automation DON when a new log is emitted by the target contract
+    /// @param _log the raw log data matching the filter that this contract has registered as a trigger
+    /// @dev This function is called by the automation DON to check if any action is needed
+    /// @return _upkeepNeeded True if any action is needed according to the log
+    /// @return _performData Encoded action and data passed to performUpkeep if upkeepNeeded is true
+    function checkLog(
+        Log calldata _log,
+        bytes memory
+    ) external view returns (bool _upkeepNeeded, bytes memory _performData);
 
-    /// @notice Deregister gauge upkeeps
-    /// @param _gauges Array of gauge addresses
-    /// @return Array of deregistered upkeep IDs
-    function deregisterGaugeUpkeeps(address[] calldata _gauges) external returns (uint256[] memory);
+    /// @notice Gets a range of gauge addresses
+    /// @param _startIndex Start index of the gauge list
+    /// @param _endIndex End index of the gauge list
+    /// @return Array of gauge addresses
+    function gaugeList(uint256 _startIndex, uint256 _endIndex) external view returns (address[] memory);
+
+    /// @notice Gets the number of gauges registered with the contract
+    /// @return Number of gauges
+    function gaugeCount() external view returns (uint256);
+
+    /// @notice Gets the number of registered gauge upkeeps
+    /// @return Number of gauge upkeeps
+    function upkeepCount() external view returns (uint256);
 }

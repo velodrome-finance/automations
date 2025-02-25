@@ -17,11 +17,7 @@ import {
   IERC20,
   UpkeepBalanceMonitor,
 } from '../../typechain-types'
-import {
-  CronUpkeepFactoryAbi,
-  CronUpkeepAbi,
-  EmergencyCouncilAbi,
-} from '../abi'
+import { EmergencyCouncilAbi } from '../abi'
 import {
   AUTOMATION_REGISTRAR_ADDRESS,
   KEEPER_REGISTRY_ADDRESS,
@@ -115,7 +111,7 @@ describe('GaugeUpkeepManager Script Tests', function () {
   let reviveGaugeLogUpkeepId: BigNumber
   let gaugeUpkeepId: BigNumber
   let gaugeAddress: string
-  let cronUpkeepAddress: string
+  let gaugeUpkeepAddress: string
 
   const newUpkeepGasLimit = 1e6
   const newUpkeepFundAmount = ethers.utils.parseEther('1')
@@ -153,21 +149,6 @@ describe('GaugeUpkeepManager Script Tests', function () {
         maxIterations: 10,
       },
     )
-    // setup cron library
-    const cronLibraryFactory = await ethers.getContractFactory(
-      '@chainlink/contracts/src/v0.8/automation/libraries/external/Cron.sol:Cron',
-    )
-    const cronLibrary = await cronLibraryFactory.deploy()
-    // setup cron upkeep factory
-    const CronUpkeepFactory = await ethers.getContractFactory(
-      'CronUpkeepFactory',
-      {
-        libraries: {
-          Cron: cronLibrary.address,
-        },
-      },
-    )
-    const cronUpkeepFactory = await CronUpkeepFactory.deploy()
     // setup gauge upkeep manager
     const gaugeUpkeepManagerFactory =
       await ethers.getContractFactory('GaugeUpkeepManager')
@@ -176,7 +157,6 @@ describe('GaugeUpkeepManager Script Tests', function () {
       keeperRegistry.address,
       automationRegistrar.address,
       upkeepBalanceMonitor.address,
-      cronUpkeepFactory.address,
       voter.address,
       newUpkeepFundAmount,
       newUpkeepGasLimit,
@@ -308,7 +288,7 @@ describe('GaugeUpkeepManager Script Tests', function () {
     expect(checkLogResult.performData).to.equal(
       ethers.utils.defaultAbiCoder.encode(
         ['uint8', 'address'],
-        [PerformAction.RegisterUpkeep, gaugeAddress],
+        [PerformAction.RegisterGauge, gaugeAddress],
       ),
     )
 
@@ -319,55 +299,66 @@ describe('GaugeUpkeepManager Script Tests', function () {
       checkLogResult.performData,
     )
 
+    // check if gauge is registered
+    const gaugeRegisteredLog = findLog(
+      performReceipt,
+      gaugeUpkeepManager.interface.getEventTopic('GaugeRegistered'),
+    )
+    const { gauge: registeredGauge } =
+      gaugeUpkeepManager.interface.parseLog(gaugeRegisteredLog).args
+
+    expect(registeredGauge).to.equal(gaugeAddress)
+    expect(await gaugeUpkeepManager.gaugeList(0, 1)).to.include(gaugeAddress)
+
     // check if gauge upkeep is registered
     const gaugeUpkeepCreatedLog = findLog(
       performReceipt,
       gaugeUpkeepManager.interface.getEventTopic('GaugeUpkeepRegistered'),
     )
-    const { gauge, upkeepId } = gaugeUpkeepManager.interface.parseLog(
+    const { gaugeUpkeep, upkeepId } = gaugeUpkeepManager.interface.parseLog(
       gaugeUpkeepCreatedLog,
     ).args
-    gaugeUpkeepId = await gaugeUpkeepManager.gaugeUpkeepId(gaugeAddress)
 
-    expect(gauge).to.equal(gaugeAddress)
-    expect(gaugeUpkeepId).to.equal(upkeepId)
+    expect(gaugeUpkeep).to.be.properAddress
+    expect(await gaugeUpkeepManager.upkeepIds(0)).to.equal(upkeepId)
 
-    // get cron upkeep address from event
-    const cronUpkeepFactoryIface = new ethers.utils.Interface(
-      CronUpkeepFactoryAbi,
-    )
-    const cronUpkeepCreatedLog = findLog(
-      performReceipt,
-      cronUpkeepFactoryIface.getEventTopic('NewCronUpkeepCreated'),
-    )
-    cronUpkeepAddress =
-      cronUpkeepFactoryIface.parseLog(cronUpkeepCreatedLog).args.upkeep
+    // set gauge upkeep address and id
+    gaugeUpkeepAddress = gaugeUpkeep
+    gaugeUpkeepId = upkeepId
   })
 
   it('Gauge upkeep execution flow', async () => {
-    // gauge upkeep should not be needed before epoch time
+    // attach to gauge upkeep contract
     const gaugeUpkeep = await ethers.getContractAt(
-      'CronUpkeep',
-      cronUpkeepAddress,
+      'GaugeUpkeep',
+      gaugeUpkeepAddress,
     )
-    const [gaugeUpkeepNeeded, gaugeUpkeepPerformData] = await gaugeUpkeep
-      .connect(AddressZero)
-      .callStatic.checkUpkeep(HashZero)
+
+    // get latest block timestamp
+    const latestBlockTimestamp = await time.latest()
+    const latestDate = new Date(latestBlockTimestamp * 1000)
+
+    // gauge upkeep should not be needed before epoch time
+    const beforeEpochFlip = getNextEpochUTC(latestDate).getTime() / 1000 - 100
+    await time.increaseTo(beforeEpochFlip)
+
+    const [gaugeUpkeepNeeded, gaugeUpkeepPerformData] =
+      await gaugeUpkeep.callStatic.checkUpkeep(HashZero)
 
     expect(gaugeUpkeepNeeded).to.be.false
     expect(gaugeUpkeepPerformData).to.equal('0x')
 
     // gauge upkeep should be needed after epoch time
-    const timestamp = getNextEpochUTC().getTime() / 1000
-    await time.increaseTo(timestamp)
+    const afterEpochFlip = getNextEpochUTC(latestDate).getTime() / 1000
+    await time.increaseTo(afterEpochFlip)
 
     const [gaugeUpkeepNeededAfter, gaugeUpkeepPerformDataAfter] =
-      await gaugeUpkeep.connect(AddressZero).callStatic.checkUpkeep(HashZero)
+      await gaugeUpkeep.callStatic.checkUpkeep(HashZero)
 
     expect(gaugeUpkeepNeededAfter).to.be.true
-    expect(gaugeUpkeepPerformDataAfter).to.not.equal('0x')
+    expect(gaugeUpkeepPerformDataAfter).to.equal('0x')
 
-    // perform gauge cron upkeep via KeeperRegistry
+    // perform gauge upkeep via KeeperRegistry
     const { receipt: performReceipt } = await simulatePerformUpkeep(
       keeperRegistry,
       gaugeUpkeepId,
@@ -375,16 +366,11 @@ describe('GaugeUpkeepManager Script Tests', function () {
     )
 
     // check if gauge upkeep is successfully executed
-    const cronUpkeepIface = new ethers.utils.Interface(CronUpkeepAbi)
-    const cronJobExecutedLog = findLog(
+    const upkeepPerformedLog = findLog(
       performReceipt,
-      cronUpkeepIface.getEventTopic('CronJobExecuted'),
+      gaugeUpkeep.interface.getEventTopic('GaugeUpkeepPerformed'),
     )
-    const { success } = cronUpkeepIface.parseLog(cronJobExecutedLog!).args
-
-    expect(success).to.be.true
-
-    // todo: check if distribute is called on gauge
+    expect(upkeepPerformedLog).to.exist
   })
 
   it('Gauge upkeep balance top-up flow', async function () {
@@ -461,7 +447,7 @@ describe('GaugeUpkeepManager Script Tests', function () {
     expect(checkLogResult.performData).to.equal(
       ethers.utils.defaultAbiCoder.encode(
         ['uint8', 'address'],
-        [PerformAction.CancelUpkeep, gaugeAddress],
+        [PerformAction.DeregisterGauge, gaugeAddress],
       ),
     )
 
@@ -476,20 +462,29 @@ describe('GaugeUpkeepManager Script Tests', function () {
       checkLogResult.performData,
     )
 
+    // check if gauge is removed
+    const gaugeDeregisteredLog = findLog(
+      performReceipt,
+      gaugeUpkeepManager.interface.getEventTopic('GaugeDeregistered'),
+    )
+    const { gauge: deregisteredGauge } =
+      gaugeUpkeepManager.interface.parseLog(gaugeDeregisteredLog).args
+
+    expect(deregisteredGauge).to.equal(gaugeAddress)
+    expect(await gaugeUpkeepManager.gaugeList(0, 1)).to.not.include(
+      gaugeAddress,
+    )
+
     // check if gauge upkeep is cancelled
     const gaugeUpkeepCancelledLog = findLog(
       performReceipt,
       gaugeUpkeepManager.interface.getEventTopic('GaugeUpkeepCancelled'),
     )
-    const { gauge: cancelledGauge, upkeepId: cancelledUpkeepId } =
+    const { upkeepId: cancelledUpkeepId } =
       gaugeUpkeepManager.interface.parseLog(gaugeUpkeepCancelledLog).args
-    const gaugeUpkeepIdAfter =
-      await gaugeUpkeepManager.gaugeUpkeepId(gaugeAddress)
     const upkeepDetailsAfter = await keeperRegistry.getUpkeep(gaugeUpkeepId)
 
-    expect(cancelledGauge).to.equal(gaugeAddress)
     expect(cancelledUpkeepId).to.equal(gaugeUpkeepId)
-    expect(gaugeUpkeepIdAfter).to.equal(0)
     expect(upkeepDetailsAfter.maxValidBlocknumber).to.not.equal(MAX_UINT32)
   })
 
@@ -577,7 +572,7 @@ describe('GaugeUpkeepManager Script Tests', function () {
     expect(checkLogResult.performData).to.equal(
       ethers.utils.defaultAbiCoder.encode(
         ['uint8', 'address'],
-        [PerformAction.RegisterUpkeep, gaugeAddress],
+        [PerformAction.RegisterGauge, gaugeAddress],
       ),
     )
 
@@ -588,18 +583,28 @@ describe('GaugeUpkeepManager Script Tests', function () {
       checkLogResult.performData,
     )
 
+    // check if gauge is registered again
+    const gaugeRegisteredLog = findLog(
+      performReceipt,
+      gaugeUpkeepManager.interface.getEventTopic('GaugeRegistered'),
+    )
+    const { gauge: registeredGauge } =
+      gaugeUpkeepManager.interface.parseLog(gaugeRegisteredLog).args
+
+    expect(registeredGauge).to.equal(gaugeAddress)
+    expect(await gaugeUpkeepManager.gaugeList(0, 1)).to.include(gaugeAddress)
+
     // check if gauge upkeep is registered again
     const gaugeUpkeepCreatedLog = findLog(
       performReceipt,
       gaugeUpkeepManager.interface.getEventTopic('GaugeUpkeepRegistered'),
     )
-    const { gauge, upkeepId } = gaugeUpkeepManager.interface.parseLog(
+    const { gaugeUpkeep, upkeepId } = gaugeUpkeepManager.interface.parseLog(
       gaugeUpkeepCreatedLog,
     ).args
-    gaugeUpkeepId = await gaugeUpkeepManager.gaugeUpkeepId(gaugeAddress)
 
-    expect(gauge).to.equal(gaugeAddress)
-    expect(gaugeUpkeepId).to.equal(upkeepId)
+    expect(gaugeUpkeep).to.be.properAddress
+    expect(await gaugeUpkeepManager.upkeepIds(0)).to.equal(upkeepId)
   })
 
   it('Withdraw contract LINK balance', async () => {

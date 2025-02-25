@@ -3,6 +3,8 @@ pragma solidity 0.8.6;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/security/Pausable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {IAutomationRegistryConsumer} from "@chainlink/contracts/src/v0.8/automation/interfaces/IAutomationRegistryConsumer.sol";
@@ -10,6 +12,7 @@ import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interface
 import {IUpkeepBalanceMonitor} from "./interfaces/IUpkeepBalanceMonitor.sol";
 
 contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, AccessControl, Pausable {
+    using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.UintSet;
 
     /// @inheritdoc IUpkeepBalanceMonitor
@@ -127,7 +130,7 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, AccessControl, 
     /// @inheritdoc IUpkeepBalanceMonitor
     function withdraw(uint256 _amount, address _payee) external override onlyOwner {
         if (_payee == address(0)) revert AddressZeroNotAllowed();
-        LinkTokenInterface(linkToken).transfer(_payee, _amount);
+        IERC20(linkToken).safeTransfer(_payee, _amount);
         emit FundsWithdrawn(_amount, _payee);
     }
 
