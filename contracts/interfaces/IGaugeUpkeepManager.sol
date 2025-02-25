@@ -27,7 +27,7 @@ interface IGaugeUpkeepManager {
     error NoLinkBalance();
     error NotGauge(address gauge);
     error GaugeNotAlive(address gauge);
-    error CrosschainGaugeNotAllowed(address gauge);
+    error GaugeNotAllowed(address gauge);
     error GaugeUpkeepExists(address gauge);
     error GaugeUpkeepNotFound(address gauge);
 
@@ -65,10 +65,10 @@ interface IGaugeUpkeepManager {
     /// @return True if set as trusted forwarder, false otherwise
     function trustedForwarder(address _forwarder) external view returns (bool);
 
-    /// @notice Whether a gauge factory is a crosschain factory
+    /// @notice Whether a gauge factory is excluded
     /// @param _gaugeFactory Gauge factory address
-    /// @return True if the gauge factory is a crosschain factory
-    function crosschainGaugeFactory(address _gaugeFactory) external view returns (bool);
+    /// @return True if the gauge factory is excluded
+    function excludedGaugeFactory(address _gaugeFactory) external view returns (bool);
 
     /// @notice Gets an item from the registered upkeeps
     /// @param _index Index of the upkeep IDs array
