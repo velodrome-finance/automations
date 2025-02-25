@@ -76,9 +76,24 @@ function logGauges(gauges: string[]) {
   if (!fs.existsSync(directoryPath)) {
     fs.mkdirSync(directoryPath) // Create the directory if it doesn't exist
   }
-
+  let existingGauges: string[] = []
+  if (fs.existsSync(filePath)) {
+    try {
+      const content = fs.readFileSync(filePath, 'utf8')
+      existingGauges = JSON.parse(content)
+    } catch (err) {
+      console.error('Error reading existing gauges file:', err)
+    }
+  }
+  // Filter out gauges that are already logged
+  const newGauges = gauges.filter((gauge) => !existingGauges.includes(gauge))
+  if (newGauges.length === 0) {
+    console.log('No new gauges to append.')
+    return
+  }
+  const combinedGauges = [...existingGauges, ...newGauges]
+  const jsonContent = JSON.stringify(combinedGauges, null, 2)
   // Write the JSON content to the file
-  const jsonContent = JSON.stringify(gauges, null, 2)
   fs.writeFile(filePath, jsonContent, 'utf8', (err) => {
     if (err) {
       console.error('Error writing to file', err)
