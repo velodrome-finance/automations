@@ -224,7 +224,7 @@ describe('GaugeUpkeep Unit Tests', function () {
       ).to.be.revertedWithCustomError(gaugeUpkeep, 'UpkeepNotNeeded')
     })
 
-    it('should not perform upkeep if otuside of the range', async function () {
+    it('should not perform upkeep if outside of the range', async function () {
       const newStartIndex = gaugeCount
       const newEndIndex = gaugeCount * 2
       const newGaugeUpkeep = await gaugeUpkeepFactory.deploy(
