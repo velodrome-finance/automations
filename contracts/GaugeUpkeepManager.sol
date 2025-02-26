@@ -40,7 +40,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
     /// @inheritdoc IGaugeUpkeepManager
     mapping(address => bool) public override trustedForwarder;
     /// @inheritdoc IGaugeUpkeepManager
-    mapping(address => bool) public override crosschainGaugeFactory;
+    mapping(address => bool) public override excludedGaugeFactory;
 
     /// @inheritdoc IGaugeUpkeepManager
     uint256[] public override upkeepIds;
@@ -68,7 +68,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         address _voter,
         uint96 _newUpkeepFundAmount,
         uint32 _newUpkeepGasLimit,
-        address[] memory _crosschainGaugeFactories
+        address[] memory _excludedGaugeFactories
     ) {
         linkToken = _linkToken;
         keeperRegistry = _keeperRegistry;
@@ -78,9 +78,9 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         newUpkeepFundAmount = _newUpkeepFundAmount;
         newUpkeepGasLimit = _newUpkeepGasLimit;
 
-        // Initialize crosschain gauge factories
-        for (uint256 i = 0; i < _crosschainGaugeFactories.length; i++) {
-            crosschainGaugeFactory[_crosschainGaugeFactories[i]] = true;
+        // Initialize excluded gauge factories
+        for (uint256 i = 0; i < _excludedGaugeFactories.length; i++) {
+            excludedGaugeFactory[_excludedGaugeFactories[i]] = true;
         }
         factoryRegistry = IVoter(_voter).factoryRegistry();
     }
@@ -114,8 +114,8 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
                 revert NotGauge(gauge);
             }
             gaugeFactory = _getGaugeFactoryFromGauge(gauge);
-            if (_isCrosschainGaugeFactory(gaugeFactory)) {
-                revert CrosschainGaugeNotAllowed(gauge);
+            if (_isExcludedGaugeFactory(gaugeFactory)) {
+                revert GaugeNotAllowed(gauge);
             }
         }
         for (uint256 i = 0; i < length; i++) {
@@ -195,6 +195,15 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
     }
 
     /// @inheritdoc IGaugeUpkeepManager
+    function setExcludedGaugeFactory(address _gaugeFactory, bool _isExcluded) external override onlyOwner {
+        if (_gaugeFactory == address(0)) {
+            revert AddressZeroNotAllowed();
+        }
+        excludedGaugeFactory[_gaugeFactory] = _isExcluded;
+        emit ExcludedGaugeFactorySet(_gaugeFactory, _isExcluded);
+    }
+
+    /// @inheritdoc IGaugeUpkeepManager
     function checkLog(
         Log calldata _log,
         bytes memory
@@ -203,7 +212,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         if (eventSignature == GAUGE_CREATED_SIGNATURE) {
             address gaugeFactory = _bytes32ToAddress(_log.topics[3]);
             address gauge = _extractGaugeFromCreatedLog(_log);
-            if (!_gaugeList.contains(gauge) && !_isCrosschainGaugeFactory(gaugeFactory)) {
+            if (!_gaugeList.contains(gauge) && !_isExcludedGaugeFactory(gaugeFactory)) {
                 return (true, abi.encode(PerformAction.REGISTER_GAUGE, gauge));
             }
         } else if (eventSignature == GAUGE_KILLED_SIGNATURE) {
@@ -214,7 +223,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         } else if (eventSignature == GAUGE_REVIVED_SIGNATURE) {
             address gauge = _bytes32ToAddress(_log.topics[1]);
             address gaugeFactory = _getGaugeFactoryFromGauge(gauge);
-            if (!_gaugeList.contains(gauge) && !_isCrosschainGaugeFactory(gaugeFactory)) {
+            if (!_gaugeList.contains(gauge) && !_isExcludedGaugeFactory(gaugeFactory)) {
                 return (true, abi.encode(PerformAction.REGISTER_GAUGE, gauge));
             }
         }
@@ -265,6 +274,9 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
 
     /// @dev Assumes that the gauge is not already registered
     function _registerGauge(address _gauge) internal {
+        if (!IVoter(voter).isAlive(_gauge)) {
+            revert GaugeNotAlive(_gauge);
+        }
         uint256 _gaugeCount = _gaugeList.length();
         _gaugeList.add(_gauge);
         if (_gaugeCount % GAUGES_PER_UPKEEP == 0) {
@@ -344,8 +356,8 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         (, , , gauge, ) = abi.decode(_log.data, (address, address, address, address, address));
     }
 
-    function _isCrosschainGaugeFactory(address _gaugeFactory) internal view returns (bool) {
-        return crosschainGaugeFactory[_gaugeFactory];
+    function _isExcludedGaugeFactory(address _gaugeFactory) internal view returns (bool) {
+        return excludedGaugeFactory[_gaugeFactory];
     }
 
     function _bytes32ToAddress(bytes32 _address) internal pure returns (address) {

@@ -48,6 +48,10 @@ contract VoterMock {
         return true;
     }
 
+    function isAlive(address) external view returns (bool) {
+        return true;
+    }
+
     function poolForGauge(address) external view returns (address) {
         return pool;
     }

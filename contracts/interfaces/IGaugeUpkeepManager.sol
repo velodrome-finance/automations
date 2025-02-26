@@ -18,6 +18,7 @@ interface IGaugeUpkeepManager {
     event NewUpkeepFundAmountSet(uint96 newUpkeepFundAmount);
     event TrustedForwarderSet(address indexed trustedForwarder, bool isTrusted);
     event UpkeepBalanceMonitorSet(address indexed upkeepBalanceMonitor);
+    event ExcludedGaugeFactorySet(address indexed gaugeFactory, bool isExcluded);
     event LinkBalanceWithdrawn(address indexed receiver, uint256 amount);
 
     error InvalidPerformAction();
@@ -26,7 +27,8 @@ interface IGaugeUpkeepManager {
     error AddressZeroNotAllowed();
     error NoLinkBalance();
     error NotGauge(address gauge);
-    error CrosschainGaugeNotAllowed(address gauge);
+    error GaugeNotAlive(address gauge);
+    error GaugeNotAllowed(address gauge);
     error GaugeUpkeepExists(address gauge);
     error GaugeUpkeepNotFound(address gauge);
     error InvalidIndex();
@@ -65,10 +67,10 @@ interface IGaugeUpkeepManager {
     /// @return True if set as trusted forwarder, false otherwise
     function trustedForwarder(address _forwarder) external view returns (bool);
 
-    /// @notice Whether a gauge factory is a crosschain factory
+    /// @notice Whether a gauge factory is excluded
     /// @param _gaugeFactory Gauge factory address
-    /// @return True if the gauge factory is a crosschain factory
-    function crosschainGaugeFactory(address _gaugeFactory) external view returns (bool);
+    /// @return True if the gauge factory is excluded
+    function excludedGaugeFactory(address _gaugeFactory) external view returns (bool);
 
     /// @notice Gets an item from the registered upkeeps
     /// @param _index Index of the upkeep IDs array
@@ -112,6 +114,11 @@ interface IGaugeUpkeepManager {
     /// @notice Set the upkeep balance monitor address
     /// @param _upkeepBalanceMonitor Upkeep balance monitor contract address
     function setUpkeepBalanceMonitor(address _upkeepBalanceMonitor) external;
+
+    /// @notice Set an excluded gauge factory address
+    /// @param _gaugeFactory Gauge factory address
+    /// @param _isExcluded Whether the gauge factory should be excluded or not
+    function setExcludedGaugeFactory(address _gaugeFactory, bool _isExcluded) external;
 
     /// @notice Called by the automation DON when a new log is emitted by the target contract
     /// @param _log the raw log data matching the filter that this contract has registered as a trigger
