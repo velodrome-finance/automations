@@ -23,7 +23,7 @@ import {
   KEEPER_REGISTRY_ADDRESS,
   LINK_TOKEN_ADDRESS,
   VOTER_ADDRESS,
-  CROSSCHAIN_GAUGE_FACTORIES,
+  EXCLUDED_GAUGE_FACTORIES,
   POOL_FACTORY_ADDRESS,
   POOL_ADDRESS,
   LINK_HOLDER_ADDRESS,
@@ -160,7 +160,7 @@ describe('GaugeUpkeepManager Script Tests', function () {
       voter.address,
       newUpkeepFundAmount,
       newUpkeepGasLimit,
-      CROSSCHAIN_GAUGE_FACTORIES,
+      EXCLUDED_GAUGE_FACTORIES,
     )
     // set gauge upkeep manager as watch list manager in balance monitor
     await upkeepBalanceMonitor.grantWatchlistManagerRole(
