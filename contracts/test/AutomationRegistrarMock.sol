@@ -2,6 +2,8 @@
 pragma solidity 0.8.6;
 
 contract AutomationRegistrarMock {
+    uint256 upkeepId;
+
     struct RegistrationParams {
         string name;
         bytes encryptedEmail;
@@ -19,6 +21,6 @@ contract AutomationRegistrarMock {
 
     function registerUpkeep(RegistrationParams calldata _requestParams) external returns (uint256) {
         emit UpkeepRegistered(_requestParams);
-        return 1;
+        return ++upkeepId;
     }
 }

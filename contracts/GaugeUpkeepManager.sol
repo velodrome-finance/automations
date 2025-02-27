@@ -18,6 +18,7 @@ import {GaugeUpkeep} from "./GaugeUpkeep.sol";
 contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
+    using EnumerableSet for EnumerableSet.UintSet;
 
     /// @inheritdoc IGaugeUpkeepManager
     address public immutable override linkToken;
@@ -45,6 +46,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
     uint256[] public override upkeepIds;
 
     EnumerableSet.AddressSet private _gaugeList;
+    EnumerableSet.UintSet private _cancelledUpkeepIds;
 
     uint256 private constant GAUGES_PER_UPKEEP = 100;
     uint256 private constant UPKEEP_CANCEL_BUFFER = 20;
@@ -137,9 +139,15 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
     }
 
     /// @inheritdoc IGaugeUpkeepManager
-    function withdrawUpkeep(uint256 _upkeepId) external override onlyOwner {
-        IKeeperRegistryMaster(keeperRegistry).withdrawFunds(_upkeepId, address(this));
-        emit GaugeUpkeepWithdrawn(_upkeepId);
+    function withdrawCancelledUpkeeps(uint256 _startIndex, uint256 _endIndex) external override onlyOwner {
+        uint256 length = _cancelledUpkeepIds.length();
+        _endIndex = _endIndex > length ? length : _endIndex;
+        if (_startIndex >= _endIndex) {
+            revert InvalidIndex();
+        }
+        for (uint256 i = _endIndex; i > _startIndex; i--) {
+            _withdrawUpkeep(_cancelledUpkeepIds.at(i - 1));
+        }
     }
 
     /// @inheritdoc IGaugeUpkeepManager
@@ -242,6 +250,25 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         return upkeepIds.length;
     }
 
+    /// @inheritdoc IGaugeUpkeepManager
+    function cancelledUpkeeps(
+        uint256 _startIndex,
+        uint256 _endIndex
+    ) external view override returns (uint256[] memory cancelledUpkeepIds) {
+        uint256 length = _cancelledUpkeepIds.length();
+        _endIndex = _endIndex > length ? length : _endIndex;
+        uint256 size = _endIndex - _startIndex;
+        cancelledUpkeepIds = new uint256[](size);
+        for (uint256 i = 0; i < size; i++) {
+            cancelledUpkeepIds[i] = _cancelledUpkeepIds.at(_startIndex + i);
+        }
+    }
+
+    /// @inheritdoc IGaugeUpkeepManager
+    function cancelledUpkeepCount() external view override returns (uint256) {
+        return _cancelledUpkeepIds.length();
+    }
+
     /// @dev Assumes that the gauge is not already registered
     function _registerGauge(address _gauge) internal {
         if (!IVoter(voter).isAlive(_gauge)) {
@@ -301,9 +328,16 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
 
     function _cancelGaugeUpkeep(uint256 _upkeepId) internal {
         upkeepIds.pop();
+        _cancelledUpkeepIds.add(_upkeepId);
         IUpkeepBalanceMonitor(upkeepBalanceMonitor).removeFromWatchList(_upkeepId);
         IKeeperRegistryMaster(keeperRegistry).cancelUpkeep(_upkeepId);
         emit GaugeUpkeepCancelled(_upkeepId);
+    }
+
+    function _withdrawUpkeep(uint256 _upkeepId) internal {
+        _cancelledUpkeepIds.remove(_upkeepId);
+        IKeeperRegistryMaster(keeperRegistry).withdrawFunds(_upkeepId, address(this));
+        emit GaugeUpkeepWithdrawn(_upkeepId);
     }
 
     function _getNextUpkeepStartIndex(uint256 _upkeepCount) internal pure returns (uint256) {

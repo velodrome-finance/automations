@@ -31,6 +31,7 @@ interface IGaugeUpkeepManager {
     error GaugeNotAllowed(address gauge);
     error GaugeUpkeepExists(address gauge);
     error GaugeUpkeepNotFound(address gauge);
+    error InvalidIndex();
 
     enum PerformAction {
         REGISTER_GAUGE,
@@ -89,10 +90,10 @@ interface IGaugeUpkeepManager {
     /// @param _gauges Array of gauge addresses
     function deregisterGauges(address[] calldata _gauges) external;
 
-    /// @notice Withdraw remaining upkeep LINK balance to contract balance
-    /// @param _upkeepId Gauge upkeep ID owned by the contract
-    /// @dev Upkeep must be cancelled before withdrawing
-    function withdrawUpkeep(uint256 _upkeepId) external;
+    /// @notice Withdraw remaining upkeep LINK balance from cancelled upkeeps to contract balance
+    /// @param _startIndex Start index from the cancelled upkeeps array
+    /// @param _endIndex End index from the cancelled upkeeps array
+    function withdrawCancelledUpkeeps(uint256 _startIndex, uint256 _endIndex) external;
 
     /// @notice Transfer contract LINK balance to owner
     function withdrawLinkBalance() external;
@@ -142,4 +143,14 @@ interface IGaugeUpkeepManager {
     /// @notice Gets the number of registered gauge upkeeps
     /// @return Number of gauge upkeeps
     function upkeepCount() external view returns (uint256);
+
+    /// @notice Gets a range of cancelled upkeeps pending withdrawal
+    /// @param _startIndex Start index of the cancelled upkeeps array
+    /// @param _endIndex End index of the cancelled upkeeps array
+    /// @return Array of cancelled upkeep IDs
+    function cancelledUpkeeps(uint256 _startIndex, uint256 _endIndex) external view returns (uint256[] memory);
+
+    /// @notice Gets the number of cancelled upkeeps pending withdrawal
+    /// @return Number of cancelled upkeeps
+    function cancelledUpkeepCount() external view returns (uint256);
 }
