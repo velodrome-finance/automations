@@ -145,11 +145,8 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         if (_startIndex >= _endIndex) {
             revert InvalidIndex();
         }
-        uint256 upkeepId;
         for (uint256 i = _endIndex; i > _startIndex; i--) {
-            upkeepId = _cancelledUpkeepIds.at(i - 1);
-            _cancelledUpkeepIds.remove(upkeepId);
-            _withdrawUpkeep(upkeepId);
+            _withdrawUpkeep(_cancelledUpkeepIds.at(i - 1));
         }
     }
 
@@ -338,6 +335,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
     }
 
     function _withdrawUpkeep(uint256 _upkeepId) internal {
+        _cancelledUpkeepIds.remove(_upkeepId);
         IKeeperRegistryMaster(keeperRegistry).withdrawFunds(_upkeepId, address(this));
         emit GaugeUpkeepWithdrawn(_upkeepId);
     }
