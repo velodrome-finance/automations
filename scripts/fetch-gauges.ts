@@ -20,12 +20,13 @@ const SUGAR_ADDRESS = process.env.SUGAR_ADDRESS
 assert.ok(VOTER_ADDRESS, 'VOTER_ADDRESS is required')
 assert.ok(SUGAR_ADDRESS, 'SUGAR_ADDRESS is required')
 
+const MAX_POOLS = 8000
+
 export async function getPools(lpSugar: Contract, chunkSize = 75) {
   const allPools: any[] = []
   const promises: Promise<void>[] = []
-  const maxPools: number = Number(await lpSugar.MAX_ITERATIONS())
-  for (let startIndex = 0; startIndex < maxPools; startIndex += chunkSize) {
-    const endIndex = Math.min(startIndex + chunkSize, maxPools)
+  for (let startIndex = 0; startIndex < MAX_POOLS; startIndex += chunkSize) {
+    const endIndex = Math.min(startIndex + chunkSize, MAX_POOLS)
     promises.push(
       // eslint-disable-next-line no-async-promise-executor
       new Promise(async (resolve, reject) => {
