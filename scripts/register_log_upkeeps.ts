@@ -77,8 +77,17 @@ async function main() {
   const totalLinkRequired = ethers.utils
     .parseEther(LOG_UPKEEP_FUND_AMOUNT!)
     .mul(3)
+  const linkBalance = await linkToken.balanceOf(upkeepAdmin.address)
+  if (linkBalance.lt(totalLinkRequired)) {
+    throw new Error(
+      `Insufficient balance. Required: ${totalLinkRequired.toString()} LINK`,
+    )
+  }
   await linkToken.approve(automationRegistrar.address, totalLinkRequired)
-  console.log('Approved LINK token for AutomationRegistrar', totalLinkRequired)
+  console.log(
+    'Approved LINK token for AutomationRegistrar',
+    totalLinkRequired.toString(),
+  )
 
   // Register create gauge log upkeep
   const createGaugeLogUpkeepId = await registerLogTriggerUpkeep(
@@ -128,7 +137,7 @@ async function main() {
     reviveGaugeLogUpkeepId.toString(),
   )
 
-  // Get tursted forwarder addresses of all upkeeps and set them in gauge upkeep manager
+  // Get trusted forwarder addresses for all upkeeps and set them in gauge upkeep manager
   const forwarders = await Promise.all([
     keeperRegistry.getForwarder(createGaugeLogUpkeepId),
     keeperRegistry.getForwarder(killGaugeLogUpkeepId),
