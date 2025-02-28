@@ -54,24 +54,6 @@ pnpm run test:fork
 
 ## Deployment
 
-### Gauge Upkeep Manager
-
-1. Deploy and configure `GaugeUpkeepManager` contract by running:
-
-```bash
-npx hardhat run scripts/deploy_upkeep_manager.ts --network <network>
-```
-
-2. Register log trigger upkeeps for the deployed `GaugeUpkeepManager` contract and set the trusted forwarders:
-
-```bash
-npx hardhat run scripts/register_log_upkeeps.ts --network <network>
-```
-
-**Note:** Make sure the account running the script have enough LINK to pay for each upkeep registrations initial funding determined by the `LOG_UPKEEP_FUND_AMOUNT` and `LOG_UPKEEP_GAS_LIMIT` environment variables.
-
-3. Transfer LINK tokens to the `GaugeUpkeepManager` contract required for new gauge upkeep registrations. The amount of LINK required is determined by the `NEW_UPKEEP_FUND_AMOUNT` environment variable.
-
 ### Upkeep Balance Monitor
 
 1. Deploy the `UpkeepBalanceMonitor` contract by running:
@@ -86,6 +68,24 @@ npx hardhat run scripts/deploy_balance_monitor.ts --network <network>
 npx hardhat run scripts/register_monitor_upkeep.ts --network <network>
 ```
 
-**Note:** The account running the script must have enough LINK to pay for the upkeep registration initial funding determined by the `BALANCE_MONITOR_UPKEEP_FUND_AMOUNT` and `BALANCE_MONITOR_UPKEEP_GAS_LIMIT` environment variables.
+**Note:** The account running the script must have enough LINK to pay for the initial upkeep registration funding determined by the `BALANCE_MONITOR_UPKEEP_FUND_AMOUNT` and `BALANCE_MONITOR_UPKEEP_GAS_LIMIT` environment variables.
 
 3. Transfer LINK tokens to the `UpkeepBalanceMonitor` contract which will be used to top-up the gauge upkeeps.
+
+### Gauge Upkeep Manager
+
+1. Deploy and configure `GaugeUpkeepManager` contract by running:
+
+```bash
+npx hardhat run scripts/deploy_upkeep_manager.ts --network <network>
+```
+
+2. Register log trigger upkeeps for the deployed `GaugeUpkeepManager` contract and set the trusted forwarders:
+
+```bash
+npx hardhat run scripts/register_log_upkeeps.ts --network <network>
+```
+
+**Note:** Make sure the account running the script has enough LINK to pay for the initial funding of each upkeep registration determined by the `LOG_UPKEEP_FUND_AMOUNT` and `LOG_UPKEEP_GAS_LIMIT` environment variables.
+
+3. Transfer LINK tokens to the `GaugeUpkeepManager` contract for new gauge upkeep registrations. The amount of LINK required is determined by the `NEW_UPKEEP_FUND_AMOUNT` environment variable.
