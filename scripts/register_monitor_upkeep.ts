@@ -78,6 +78,12 @@ async function main() {
   )
 
   // Approve LINK token for AutomationRegistrar
+  const linkBalance = await linkToken.balanceOf(upkeepAdmin.address)
+  if (linkBalance.lt(BALANCE_MONITOR_UPKEEP_FUND_AMOUNT!)) {
+    throw new Error(
+      `Insufficient balance. Required: ${BALANCE_MONITOR_UPKEEP_FUND_AMOUNT} LINK`,
+    )
+  }
   await linkToken.approve(
     automationRegistrar.address,
     BALANCE_MONITOR_UPKEEP_FUND_AMOUNT!,
@@ -95,7 +101,7 @@ async function main() {
   )
   console.log('Registered balance monitor upkeep', upkeepId.toString())
 
-  // Get tursted forwarder address of the upkeep and set it in balance monitor
+  // Get trusted forwarder address of the upkeep and set it in balance monitor
   const forwarder = await keeperRegistry.getForwarder(upkeepId)
   await upkeepBalanceMonitor.setTrustedForwarder(forwarder)
   console.log('Set trusted forwarder for balance monitor upkeep')
