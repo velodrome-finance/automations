@@ -87,7 +87,7 @@ function logGauges(gauges: string[]) {
     }
   }
   // Combine existing gauges with new gauges and remove duplicates
-  const combinedGauges = existingGauges.concat(gauges);
+  const combinedGauges = existingGauges.concat(gauges)
   const uniqueGauges = [...new Set(combinedGauges)]
   // Write the JSON content to the file
   const jsonContent = JSON.stringify(uniqueGauges, null, 2)
