@@ -18,6 +18,7 @@ interface IGaugeUpkeepManager {
     event NewUpkeepFundAmountSet(uint96 newUpkeepFundAmount);
     event TrustedForwarderSet(address indexed trustedForwarder, bool isTrusted);
     event UpkeepBalanceMonitorSet(address indexed upkeepBalanceMonitor);
+    event ExcludedGaugeFactorySet(address indexed gaugeFactory, bool isExcluded);
     event LinkBalanceWithdrawn(address indexed receiver, uint256 amount);
 
     error InvalidPerformAction();
@@ -27,9 +28,10 @@ interface IGaugeUpkeepManager {
     error NoLinkBalance();
     error NotGauge(address gauge);
     error GaugeNotAlive(address gauge);
-    error CrosschainGaugeNotAllowed(address gauge);
+    error GaugeNotAllowed(address gauge);
     error GaugeUpkeepExists(address gauge);
     error GaugeUpkeepNotFound(address gauge);
+    error InvalidIndex();
 
     enum PerformAction {
         REGISTER_GAUGE,
@@ -65,10 +67,10 @@ interface IGaugeUpkeepManager {
     /// @return True if set as trusted forwarder, false otherwise
     function trustedForwarder(address _forwarder) external view returns (bool);
 
-    /// @notice Whether a gauge factory is a crosschain factory
+    /// @notice Whether a gauge factory is excluded
     /// @param _gaugeFactory Gauge factory address
-    /// @return True if the gauge factory is a crosschain factory
-    function crosschainGaugeFactory(address _gaugeFactory) external view returns (bool);
+    /// @return True if the gauge factory is excluded
+    function excludedGaugeFactory(address _gaugeFactory) external view returns (bool);
 
     /// @notice Gets an item from the registered upkeeps
     /// @param _index Index of the upkeep IDs array
@@ -88,10 +90,10 @@ interface IGaugeUpkeepManager {
     /// @param _gauges Array of gauge addresses
     function deregisterGauges(address[] calldata _gauges) external;
 
-    /// @notice Withdraw remaining upkeep LINK balance to contract balance
-    /// @param _upkeepId Gauge upkeep ID owned by the contract
-    /// @dev Upkeep must be cancelled before withdrawing
-    function withdrawUpkeep(uint256 _upkeepId) external;
+    /// @notice Withdraw remaining upkeep LINK balance from cancelled upkeeps to contract balance
+    /// @param _startIndex Start index from the cancelled upkeeps array
+    /// @param _endIndex End index from the cancelled upkeeps array
+    function withdrawCancelledUpkeeps(uint256 _startIndex, uint256 _endIndex) external;
 
     /// @notice Transfer contract LINK balance to owner
     function withdrawLinkBalance() external;
@@ -112,6 +114,11 @@ interface IGaugeUpkeepManager {
     /// @notice Set the upkeep balance monitor address
     /// @param _upkeepBalanceMonitor Upkeep balance monitor contract address
     function setUpkeepBalanceMonitor(address _upkeepBalanceMonitor) external;
+
+    /// @notice Set an excluded gauge factory address
+    /// @param _gaugeFactory Gauge factory address
+    /// @param _isExcluded Whether the gauge factory should be excluded or not
+    function setExcludedGaugeFactory(address _gaugeFactory, bool _isExcluded) external;
 
     /// @notice Called by the automation DON when a new log is emitted by the target contract
     /// @param _log the raw log data matching the filter that this contract has registered as a trigger
@@ -136,4 +143,14 @@ interface IGaugeUpkeepManager {
     /// @notice Gets the number of registered gauge upkeeps
     /// @return Number of gauge upkeeps
     function upkeepCount() external view returns (uint256);
+
+    /// @notice Gets a range of cancelled upkeeps pending withdrawal
+    /// @param _startIndex Start index of the cancelled upkeeps array
+    /// @param _endIndex End index of the cancelled upkeeps array
+    /// @return Array of cancelled upkeep IDs
+    function cancelledUpkeeps(uint256 _startIndex, uint256 _endIndex) external view returns (uint256[] memory);
+
+    /// @notice Gets the number of cancelled upkeeps pending withdrawal
+    /// @return Number of cancelled upkeeps
+    function cancelledUpkeepCount() external view returns (uint256);
 }

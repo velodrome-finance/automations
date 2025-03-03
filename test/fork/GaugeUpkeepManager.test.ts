@@ -23,7 +23,7 @@ import {
   KEEPER_REGISTRY_ADDRESS,
   LINK_TOKEN_ADDRESS,
   VOTER_ADDRESS,
-  CROSSCHAIN_GAUGE_FACTORIES,
+  EXCLUDED_GAUGE_FACTORIES,
   POOL_FACTORY_ADDRESS,
   POOL_ADDRESS,
   LINK_HOLDER_ADDRESS,
@@ -160,7 +160,7 @@ describe('GaugeUpkeepManager Script Tests', function () {
       voter.address,
       newUpkeepFundAmount,
       newUpkeepGasLimit,
-      CROSSCHAIN_GAUGE_FACTORIES,
+      EXCLUDED_GAUGE_FACTORIES,
     )
     // set gauge upkeep manager as watch list manager in balance monitor
     await upkeepBalanceMonitor.grantWatchlistManagerRole(
@@ -486,6 +486,11 @@ describe('GaugeUpkeepManager Script Tests', function () {
 
     expect(cancelledUpkeepId).to.equal(gaugeUpkeepId)
     expect(upkeepDetailsAfter.maxValidBlocknumber).to.not.equal(MAX_UINT32)
+
+    // check if upkeep is included in cancelledUpkeeps set
+    expect(await gaugeUpkeepManager.cancelledUpkeeps(0, 1)).to.deep.include(
+      cancelledUpkeepId,
+    )
   })
 
   it('Gauge upkeep withdrawal flow', async () => {
@@ -497,8 +502,8 @@ describe('GaugeUpkeepManager Script Tests', function () {
     )
     const upkeepDetailsBefore = await keeperRegistry.getUpkeep(gaugeUpkeepId)
 
-    // call withdrawGaugeUpkeep via GaugeUpkeepManager
-    const withdrawTx = await gaugeUpkeepManager.withdrawUpkeep(gaugeUpkeepId)
+    // withdraw upkeep balance via GaugeUpkeepManager
+    const withdrawTx = await gaugeUpkeepManager.withdrawCancelledUpkeeps(0, 1)
     const withdrawReceipt = await withdrawTx.wait()
 
     // check if gauge upkeep is withdrawn
