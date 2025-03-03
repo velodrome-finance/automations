@@ -4,6 +4,7 @@
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
 import { ethers } from 'hardhat'
+import { BigNumber } from 'ethers'
 import * as assert from 'assert'
 import * as dotenv from 'dotenv'
 import { registerLogTriggerUpkeep } from './utils'
@@ -74,9 +75,7 @@ async function main() {
   const voter = await ethers.getContractAt('Voter', VOTER_ADDRESS!)
 
   // Approve LINK token for AutomationRegistrar
-  const totalLinkRequired = ethers.utils
-    .parseEther(LOG_UPKEEP_FUND_AMOUNT!)
-    .mul(3)
+  const totalLinkRequired = BigNumber.from(LOG_UPKEEP_FUND_AMOUNT!).mul(3)
   const linkBalance = await linkToken.balanceOf(upkeepAdmin.address)
   if (linkBalance.lt(totalLinkRequired)) {
     throw new Error(
