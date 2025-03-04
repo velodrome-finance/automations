@@ -50,11 +50,27 @@ const config: HardhatUserConfig = {
       accounts:
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
+    base: {
+      url: process.env.BASE_MAINNET_URL || '',
+      accounts:
+        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
   },
   etherscan: {
     apiKey: {
-      optimisticEthereum: process.env.ETHERSCAN_API_KEY || '',
+      optimisticEthereum: process.env.OP_ETHERSCAN_API_KEY || '',
+      base: process.env.BASE_SCAN_API_KEY || '',
     },
+    customChains: [
+      {
+        network: 'base',
+        chainId: 8453,
+        urls: {
+          apiURL: process.env.BASE_SCAN_API_URL || '',
+          browserURL: process.env.BASE_SCAN_BROWSER_URL || '',
+        },
+      },
+    ],
   },
 }
 
