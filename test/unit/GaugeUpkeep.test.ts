@@ -254,5 +254,17 @@ describe('GaugeUpkeep Unit Tests', function () {
       expect(upkeepNeededAfter).to.be.true
       expect(performDataAfter).to.equal('0x')
     })
+
+    it('should continue upkeep after batch fails', async function () {
+      await voterMock.setFailingGauge(gaugeList[0], true)
+
+      await expect(gaugeUpkeep.performUpkeep(HashZero))
+        .to.emit(gaugeUpkeep, 'BatchDistributeFailed')
+        .withArgs(startIndex, batchSize)
+
+      await expect(gaugeUpkeep.performUpkeep(HashZero))
+        .to.emit(gaugeUpkeep, 'GaugeUpkeepPerformed')
+        .withArgs(batchSize, batchSize * 2)
+    })
   })
 })
