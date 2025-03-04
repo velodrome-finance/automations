@@ -3,6 +3,7 @@ pragma solidity 0.8.6;
 
 interface IGaugeUpkeep {
     event GaugeUpkeepPerformed(uint256 indexed currentIndex, uint256 indexed endIndex);
+    event BatchDistributeFailed(uint256 indexed currentIndex, uint256 indexed endIndex);
 
     error UpkeepNotNeeded();
 

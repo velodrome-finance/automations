@@ -60,7 +60,9 @@ contract GaugeUpkeep is IGaugeUpkeep {
 
     function _distributeBatch(uint256 _startIndex, uint256 _endIndex) internal {
         address[] memory gauges = IGaugeUpkeepManager(gaugeUpkeepManager).gaugeList(_startIndex, _endIndex);
-        IVoter(voter).distribute(gauges);
+        try IVoter(voter).distribute(gauges) {} catch {
+            emit BatchDistributeFailed(_startIndex, _endIndex);
+        }
     }
 
     function _checkUpkeep(uint256 _currentIndex, uint256 _endIndex) internal view returns (bool) {
