@@ -23,8 +23,6 @@ contract GaugeUpkeep is IGaugeUpkeep {
     uint256 private constant BATCH_SIZE = 5;
     uint256 private constant WEEK = 7 days;
 
-    uint256 constant TEST_SHIFT = 5 days + 12 hours; // Tuesday 12:00 UTC
-
     constructor(address _voter, uint256 _startIndex, uint256 _endIndex) {
         voter = _voter;
         gaugeUpkeepManager = msg.sender;
@@ -50,7 +48,7 @@ contract GaugeUpkeep is IGaugeUpkeep {
             currentIndex = nextIndex;
         } else {
             currentIndex = startIndex;
-            lastEpochFlip = _lastEpochFlip() + TEST_SHIFT;
+            lastEpochFlip = _lastEpochFlip();
         }
         emit GaugeUpkeepPerformed(_currentIndex, nextIndex);
     }
@@ -68,7 +66,7 @@ contract GaugeUpkeep is IGaugeUpkeep {
     }
 
     function _checkUpkeep(uint256 _currentIndex, uint256 _endIndex) internal view returns (bool) {
-        return lastEpochFlip + TEST_SHIFT <= block.timestamp && _currentIndex < _endIndex;
+        return lastEpochFlip + WEEK <= block.timestamp && _currentIndex < _endIndex;
     }
 
     function _lastEpochFlip() internal view returns (uint256) {
