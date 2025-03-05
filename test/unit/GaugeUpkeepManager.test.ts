@@ -494,6 +494,13 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       )
     })
 
+    it('should set a new batch size', async () => {
+      const newBatchSize = 10
+      await gaugeUpkeepManager.setBatchSize(newBatchSize)
+
+      expect(await gaugeUpkeepManager.batchSize()).to.equal(newBatchSize)
+    })
+
     it('should set a new trusted forwarder', async () => {
       await gaugeUpkeepManager.setTrustedForwarder(accounts[1].address, true)
 
