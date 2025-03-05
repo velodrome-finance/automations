@@ -20,6 +20,7 @@ const VOTER_ADDRESS = process.env.VOTER_ADDRESS
 const EXCLUDED_GAUGE_FACTORIES = process.env.EXCLUDED_GAUGE_FACTORIES
 const NEW_UPKEEP_FUND_AMOUNT = process.env.NEW_UPKEEP_FUND_AMOUNT
 const NEW_UPKEEP_GAS_LIMIT = process.env.NEW_UPKEEP_GAS_LIMIT
+const BATCH_SIZE = process.env.BATCH_SIZE
 
 assert.ok(
   AUTOMATION_REGISTRAR_ADDRESS,
@@ -35,6 +36,7 @@ assert.ok(VOTER_ADDRESS, 'VOTER_ADDRESS is required')
 assert.ok(EXCLUDED_GAUGE_FACTORIES, 'EXCLUDED_GAUGE_FACTORIES is required')
 assert.ok(NEW_UPKEEP_FUND_AMOUNT, 'NEW_UPKEEP_FUND_AMOUNT is required')
 assert.ok(NEW_UPKEEP_GAS_LIMIT, 'NEW_UPKEEP_GAS_LIMIT is required')
+assert.ok(BATCH_SIZE, 'BATCH_SIZE is required')
 
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
@@ -55,6 +57,7 @@ async function main() {
     VOTER_ADDRESS!,
     NEW_UPKEEP_FUND_AMOUNT!,
     NEW_UPKEEP_GAS_LIMIT!,
+    BATCH_SIZE!,
     EXCLUDED_GAUGE_FACTORIES!.split(','),
   )
   await gaugeUpkeepManager.deployed()
@@ -79,6 +82,7 @@ async function main() {
     VOTER_ADDRESS!,
     NEW_UPKEEP_FUND_AMOUNT!,
     NEW_UPKEEP_GAS_LIMIT!,
+    BATCH_SIZE!,
     EXCLUDED_GAUGE_FACTORIES!.split(','),
   ])
 }

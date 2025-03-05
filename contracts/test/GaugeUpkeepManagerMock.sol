@@ -6,12 +6,18 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 contract GaugeUpkeepManagerMock {
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    uint8 public batchSize = 5;
+
     EnumerableSet.AddressSet private _gaugeList;
 
     function setGaugeList(address[] calldata gauges) external {
         for (uint256 i = 0; i < gauges.length; i++) {
             _gaugeList.add(gauges[i]);
         }
+    }
+
+    function setBatchSize(uint8 _batchSize) external {
+        batchSize = _batchSize;
     }
 
     function removeGaugeList() external {

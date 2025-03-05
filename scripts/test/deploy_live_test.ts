@@ -18,6 +18,7 @@ const LINK_TOKEN_ADDRESS = process.env.LINK_TOKEN_ADDRESS
 const EXCLUDED_GAUGE_FACTORIES = process.env.EXCLUDED_GAUGE_FACTORIES
 const NEW_UPKEEP_FUND_AMOUNT = process.env.NEW_UPKEEP_FUND_AMOUNT
 const NEW_UPKEEP_GAS_LIMIT = process.env.NEW_UPKEEP_GAS_LIMIT
+const BATCH_SIZE = process.env.BATCH_SIZE
 const MAX_BATCH_SIZE = process.env.MAX_BATCH_SIZE
 const MIN_PERCENTAGE = process.env.MIN_PERCENTAGE
 const TARGET_PERCENTAGE = process.env.TARGET_PERCENTAGE
@@ -35,6 +36,7 @@ assert.ok(LINK_TOKEN_ADDRESS, 'LINK_TOKEN_ADDRESS is required')
 assert.ok(EXCLUDED_GAUGE_FACTORIES, 'EXCLUDED_GAUGE_FACTORIES is required')
 assert.ok(NEW_UPKEEP_FUND_AMOUNT, 'NEW_UPKEEP_FUND_AMOUNT is required')
 assert.ok(NEW_UPKEEP_GAS_LIMIT, 'NEW_UPKEEP_GAS_LIMIT is required')
+assert.ok(BATCH_SIZE, 'BATCH_SIZE is required')
 assert.ok(MAX_BATCH_SIZE, 'MAX_BATCH_SIZE is required')
 assert.ok(MIN_PERCENTAGE, 'MIN_PERCENTAGE is required')
 assert.ok(TARGET_PERCENTAGE, 'TARGET_PERCENTAGE is required')
@@ -107,6 +109,7 @@ async function main() {
     voterMock.address,
     NEW_UPKEEP_FUND_AMOUNT!,
     NEW_UPKEEP_GAS_LIMIT!,
+    BATCH_SIZE!,
     EXCLUDED_GAUGE_FACTORIES!.split(','),
   )
   await gaugeUpkeepManager.deployed()

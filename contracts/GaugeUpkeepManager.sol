@@ -38,6 +38,8 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
     /// @inheritdoc IGaugeUpkeepManager
     uint32 public override newUpkeepGasLimit;
     /// @inheritdoc IGaugeUpkeepManager
+    uint8 public override batchSize;
+    /// @inheritdoc IGaugeUpkeepManager
     mapping(address => bool) public override trustedForwarder;
     /// @inheritdoc IGaugeUpkeepManager
     mapping(address => bool) public override excludedGaugeFactory;
@@ -68,6 +70,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         address _voter,
         uint96 _newUpkeepFundAmount,
         uint32 _newUpkeepGasLimit,
+        uint8 _batchSize,
         address[] memory _excludedGaugeFactories
     ) {
         linkToken = _linkToken;
@@ -77,6 +80,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         voter = _voter;
         newUpkeepFundAmount = _newUpkeepFundAmount;
         newUpkeepGasLimit = _newUpkeepGasLimit;
+        batchSize = _batchSize;
 
         // Initialize excluded gauge factories
         for (uint256 i = 0; i < _excludedGaugeFactories.length; i++) {
@@ -171,6 +175,13 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
     function setNewUpkeepFundAmount(uint96 _newUpkeepFundAmount) external override onlyOwner {
         newUpkeepFundAmount = _newUpkeepFundAmount;
         emit NewUpkeepFundAmountSet(_newUpkeepFundAmount);
+    }
+
+    /// @inheritdoc IGaugeUpkeepManager
+    function setBatchSize(uint8 _batchSize) external override onlyOwner {
+        if (_batchSize == 0 || _batchSize > GAUGES_PER_UPKEEP) revert InvalidBatchSize();
+        batchSize = _batchSize;
+        emit BatchSizeSet(_batchSize);
     }
 
     /// @inheritdoc IGaugeUpkeepManager

@@ -161,18 +161,25 @@ describe('GaugeUpkeep Unit Tests', function () {
       expect(distributedGauges).to.have.members(gaugeList)
     })
 
-    it('should perform upkeep correctly when batch is not full', async function () {
-      gaugeList.push(ethers.Wallet.createRandom().address)
-      await gaugeUpkeepManagerMock.setGaugeList(gaugeList)
+    it('should perform upkeep correctly if gauge count is not a multiple of batch size', async function () {
+      const newGaugeCount = 13
+      const newGaugeList = Array.from(
+        { length: newGaugeCount },
+        () => ethers.Wallet.createRandom().address,
+      )
+      await gaugeUpkeepManagerMock.removeGaugeList()
+      await gaugeUpkeepManagerMock.setGaugeList(newGaugeList)
 
-      let newGaugeCount = gaugeList.length
-      let newIterationsCount = Math.ceil(newGaugeCount / batchSize)
+      const newBatchSize = 3
+      await gaugeUpkeepManagerMock.setBatchSize(newBatchSize)
+
+      const newIterationsCount = Math.ceil(newGaugeCount / newBatchSize)
 
       const distributedGauges: string[] = []
       for (let i = 0; i < newIterationsCount; i++) {
-        const startIdx = i * batchSize
-        let endIdx = i * batchSize + batchSize
-        endIdx = endIdx > gaugeCount ? newGaugeCount : endIdx
+        const startIdx = i * newBatchSize
+        let endIdx = i * newBatchSize + newBatchSize
+        endIdx = endIdx > newGaugeCount ? newGaugeCount : endIdx
 
         const tx = await gaugeUpkeep.performUpkeep(HashZero)
         await expect(tx)
@@ -191,7 +198,7 @@ describe('GaugeUpkeep Unit Tests', function () {
         )
       }
       expect(distributedGauges.length).to.equal(newGaugeCount)
-      expect(distributedGauges).to.have.members(gaugeList)
+      expect(distributedGauges).to.have.members(newGaugeList)
     })
 
     it('should not perform upkeep if all gauges are distributed', async function () {

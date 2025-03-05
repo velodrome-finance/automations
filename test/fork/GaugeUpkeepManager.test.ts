@@ -113,6 +113,7 @@ describe('GaugeUpkeepManager Script Tests', function () {
   let gaugeAddress: string
   let gaugeUpkeepAddress: string
 
+  const batchSize = 5
   const newUpkeepGasLimit = 1e6
   const newUpkeepFundAmount = ethers.utils.parseEther('1')
 
@@ -160,6 +161,7 @@ describe('GaugeUpkeepManager Script Tests', function () {
       voter.address,
       newUpkeepFundAmount,
       newUpkeepGasLimit,
+      batchSize,
       EXCLUDED_GAUGE_FACTORIES,
     )
     // set gauge upkeep manager as watch list manager in balance monitor
