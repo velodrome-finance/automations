@@ -82,6 +82,7 @@ async function main() {
     VOTER_ADDRESS!,
     NEW_UPKEEP_FUND_AMOUNT!,
     NEW_UPKEEP_GAS_LIMIT!,
+    BATCH_SIZE!,
     EXCLUDED_GAUGE_FACTORIES!.split(','),
   ])
 }
