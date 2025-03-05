@@ -501,6 +501,18 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       expect(await gaugeUpkeepManager.batchSize()).to.equal(newBatchSize)
     })
 
+    it('should revert when setting batch size to 0', async () => {
+      await expect(
+        gaugeUpkeepManager.setBatchSize(0),
+      ).to.be.revertedWithCustomError(gaugeUpkeepManager, 'InvalidBatchSize')
+    })
+
+    it('should revert when setting batch size greater than the gauges per upkeep limit', async () => {
+      await expect(
+        gaugeUpkeepManager.setBatchSize(gaugesPerUpkeepLimit + 1),
+      ).to.be.revertedWithCustomError(gaugeUpkeepManager, 'InvalidBatchSize')
+    })
+
     it('should set a new trusted forwarder', async () => {
       await gaugeUpkeepManager.setTrustedForwarder(accounts[1].address, true)
 
