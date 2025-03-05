@@ -14,6 +14,7 @@ interface IGaugeUpkeepManager {
     );
     event GaugeUpkeepCancelled(uint256 indexed upkeepId);
     event GaugeUpkeepWithdrawn(uint256 indexed upkeepId);
+    event BatchSizeSet(uint8 batchSize);
     event NewUpkeepGasLimitSet(uint32 newUpkeepGasLimit);
     event NewUpkeepFundAmountSet(uint96 newUpkeepFundAmount);
     event TrustedForwarderSet(address indexed trustedForwarder, bool isTrusted);
@@ -31,6 +32,7 @@ interface IGaugeUpkeepManager {
     error GaugeNotAllowed(address gauge);
     error GaugeUpkeepExists(address gauge);
     error GaugeUpkeepNotFound(address gauge);
+    error InvalidBatchSize();
     error InvalidIndex();
 
     enum PerformAction {
@@ -61,6 +63,9 @@ interface IGaugeUpkeepManager {
 
     /// @notice Gas limit for new upkeeps
     function newUpkeepGasLimit() external view returns (uint32);
+
+    /// @notice Number of gauges processed per distribute call
+    function batchSize() external view returns (uint8);
 
     /// @notice Whether an address is a trusted forwarder
     /// @param _forwarder Forwarder address
@@ -105,6 +110,10 @@ interface IGaugeUpkeepManager {
     /// @notice Update the LINK amount to transfer to new gauge upkeeps
     /// @param _newUpkeepFundAmount New upkeep fund amount
     function setNewUpkeepFundAmount(uint96 _newUpkeepFundAmount) external;
+
+    /// @notice Update the number of gauges processed per distribute call
+    /// @param _batchSize New batch size
+    function setBatchSize(uint8 _batchSize) external;
 
     /// @notice Set the automation trusted forwarder address
     /// @param _trustedForwarder Upkeep trusted forwarder address

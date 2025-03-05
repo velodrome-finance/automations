@@ -34,6 +34,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
   const gaugesPerUpkeepLimit = 100
   const upkeepCancelBuffer = 20
   const upkeepGasLimit = 500000
+  const batchSize = 5
   const upkeepId = BigNumber.from(1)
 
   beforeEach(async function () {
@@ -104,6 +105,7 @@ describe('GaugeUpkeepManager Unit Tests', function () {
       veloVoterMock.address,
       upkeepFundAmount,
       upkeepGasLimit,
+      batchSize,
       [fakeExcludedFactoryAddress],
     )
     gaugeUpkeepManager.setTrustedForwarder(accounts[0].address, true)

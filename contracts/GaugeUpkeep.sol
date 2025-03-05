@@ -20,7 +20,6 @@ contract GaugeUpkeep is IGaugeUpkeep {
     /// @inheritdoc IGaugeUpkeep
     uint256 public override lastEpochFlip;
 
-    uint256 private constant BATCH_SIZE = 5;
     uint256 private constant WEEK = 7 days;
 
     constructor(address _voter, uint256 _startIndex, uint256 _endIndex) {
@@ -39,7 +38,7 @@ contract GaugeUpkeep is IGaugeUpkeep {
 
         if (!_checkUpkeep(_currentIndex, _endIndex)) revert UpkeepNotNeeded();
 
-        uint256 nextIndex = _currentIndex + BATCH_SIZE;
+        uint256 nextIndex = _currentIndex + IGaugeUpkeepManager(gaugeUpkeepManager).batchSize();
         nextIndex = nextIndex > _endIndex ? _endIndex : nextIndex;
 
         _distributeBatch(_currentIndex, nextIndex);
