@@ -17,6 +17,8 @@ const VOTER_ADDRESS = process.env.VOTER_ADDRESS
 const KEEPER_REGISTRY_ADDRESS = process.env.KEEPER_REGISTRY_ADDRESS
 const AUTOMATION_REGISTRAR_ADDRESS = process.env.AUTOMATION_REGISTRAR_ADDRESS
 const LINK_TOKEN_ADDRESS = process.env.LINK_TOKEN_ADDRESS
+const UPKEEP_BALANCE_MONITOR_ADDRESS =
+  process.env.UPKEEP_BALANCE_MONITOR_ADDRESS
 const LOG_UPKEEP_FUND_AMOUNT = process.env.LOG_UPKEEP_FUND_AMOUNT
 const LOG_UPKEEP_GAS_LIMIT = process.env.LOG_UPKEEP_GAS_LIMIT
 
@@ -31,6 +33,10 @@ assert.ok(
   'AUTOMATION_REGISTRAR_ADDRESS is required',
 )
 assert.ok(LINK_TOKEN_ADDRESS, 'LINK_TOKEN_ADDRESS is required')
+assert.ok(
+  UPKEEP_BALANCE_MONITOR_ADDRESS,
+  'UPKEEP_BALANCE_MONITOR_ADDRESS is required',
+)
 assert.ok(LOG_UPKEEP_FUND_AMOUNT, 'LOG_UPKEEP_FUND_AMOUNT is required')
 assert.ok(LOG_UPKEEP_GAS_LIMIT, 'LOG_UPKEEP_GAS_LIMIT is required')
 
@@ -73,6 +79,12 @@ async function main() {
 
   // Get Voter contract
   const voter = await ethers.getContractAt('Voter', VOTER_ADDRESS!)
+
+  // Get UpkeepBalanceMonitor contract
+  const upkeepBalanceMonitor = await ethers.getContractAt(
+    'UpkeepBalanceMonitor',
+    UPKEEP_BALANCE_MONITOR_ADDRESS!,
+  )
 
   // Approve LINK token for AutomationRegistrar
   const totalLinkRequired = BigNumber.from(LOG_UPKEEP_FUND_AMOUNT!).mul(3)
@@ -149,6 +161,14 @@ async function main() {
     await gaugeUpkeepManager.setTrustedForwarder(forwarder, true)
   }
   console.log('Set trusted forwarders for all upkeeps')
+
+  // Add upkeeps to upkeep balance monitor
+  await upkeepBalanceMonitor.addMultipleToWatchList([
+    createGaugeLogUpkeepId,
+    killGaugeLogUpkeepId,
+    reviveGaugeLogUpkeepId,
+  ])
+  console.log('Added all upkeeps to upkeep balance monitor')
 }
 
 // We recommend this pattern to be able to use async/await everywhere
