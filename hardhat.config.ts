@@ -80,9 +80,13 @@ const config: HardhatUserConfig = {
 }
 
 if (process.env.FORK_ENABLED === 'true') {
+  let forkChainUrl =
+    process.env.FORK_CHAIN === 'base'
+      ? process.env.BASE_MAINNET_URL
+      : process.env.OP_MAINNET_URL
   config.networks!.hardhat = {
     forking: {
-      url: process.env.OP_MAINNET_URL || '',
+      url: forkChainUrl || '',
       blockNumber: parseInt(process.env.BLOCK_NUMBER || ''),
     },
   }

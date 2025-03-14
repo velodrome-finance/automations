@@ -7,7 +7,7 @@ import { ethers } from 'hardhat'
 import { BigNumber } from 'ethers'
 import * as assert from 'assert'
 import * as dotenv from 'dotenv'
-import { registerLogTriggerUpkeep } from './utils'
+import { registerLogTriggerUpkeep } from '../utils'
 
 // Load environment variables
 dotenv.config()

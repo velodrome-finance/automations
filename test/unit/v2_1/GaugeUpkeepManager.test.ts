@@ -10,8 +10,8 @@ import {
   KeeperRegistryMock,
   AutomationRegistrarMock,
   UpkeepBalanceMonitor,
-} from '../../typechain-types'
-import { PerformAction } from '../constants'
+} from '../../../typechain-types'
+import { PerformAction } from '../../constants'
 
 const { HashZero } = ethers.constants
 

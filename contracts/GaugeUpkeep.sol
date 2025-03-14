@@ -2,7 +2,7 @@
 pragma solidity 0.8.6;
 
 import {IVoter} from "../vendor/velodrome-contracts/contracts/interfaces/IVoter.sol";
-import {IGaugeUpkeepManager} from "./interfaces/IGaugeUpkeepManager.sol";
+import {IGaugeUpkeepManager} from "./interfaces/v2_1/IGaugeUpkeepManager.sol";
 import {IGaugeUpkeep} from "./interfaces/IGaugeUpkeep.sol";
 
 contract GaugeUpkeep is IGaugeUpkeep {

@@ -6,7 +6,7 @@
 import { ethers, run } from 'hardhat'
 import * as assert from 'assert'
 import * as dotenv from 'dotenv'
-import { verifyContract } from './utils'
+import { verifyContract } from '../utils'
 
 // Load environment variables
 dotenv.config()
@@ -47,8 +47,9 @@ async function main() {
   // await hre.run('compile');
 
   // Deploy GaugeUpkeepManager contract
-  const gaugeUpkeepManagerFactory =
-    await ethers.getContractFactory('GaugeUpkeepManager')
+  const gaugeUpkeepManagerFactory = await ethers.getContractFactory(
+    'GaugeUpkeepManagerV2_3',
+  )
   const gaugeUpkeepManager = await gaugeUpkeepManagerFactory.deploy(
     LINK_TOKEN_ADDRESS!,
     KEEPER_REGISTRY_ADDRESS!,

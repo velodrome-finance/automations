@@ -6,7 +6,7 @@
 import { ethers } from 'hardhat'
 import * as assert from 'assert'
 import * as dotenv from 'dotenv'
-import { registerCustomLogicUpkeep } from './utils'
+import { registerCustomLogicUpkeep } from '../utils'
 
 // Load environment variables
 dotenv.config()

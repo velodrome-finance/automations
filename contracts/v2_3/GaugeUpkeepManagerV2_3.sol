@@ -6,45 +6,45 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {Log} from "@chainlink/contracts/src/v0.8/automation/interfaces/ILogAutomation.sol";
-import {IKeeperRegistryMaster} from "@chainlink/contracts/src/v0.8/automation/interfaces/v2_1/IKeeperRegistryMaster.sol";
-import {IVoter} from "../vendor/velodrome-contracts/contracts/interfaces/IVoter.sol";
-import {IPool} from "../vendor/velodrome-contracts/contracts/interfaces/IPool.sol";
-import {IFactoryRegistry} from "../vendor/velodrome-contracts/contracts/interfaces/factories/IFactoryRegistry.sol";
-import {IAutomationRegistrar} from "./interfaces/IAutomationRegistrar.sol";
-import {IGaugeUpkeepManager} from "./interfaces/IGaugeUpkeepManager.sol";
-import {IUpkeepBalanceMonitor} from "./interfaces/IUpkeepBalanceMonitor.sol";
-import {GaugeUpkeep} from "./GaugeUpkeep.sol";
+import {IAutomationRegistryMaster2_3} from "@chainlink/contracts/src/v0.8/automation/interfaces/v2_3/IAutomationRegistryMaster2_3.sol";
+import {IVoter} from "../../vendor/velodrome-contracts/contracts/interfaces/IVoter.sol";
+import {IPool} from "../../vendor/velodrome-contracts/contracts/interfaces/IPool.sol";
+import {IFactoryRegistry} from "../../vendor/velodrome-contracts/contracts/interfaces/factories/IFactoryRegistry.sol";
+import {IAutomationRegistrarV2_3} from "../interfaces/v2_3/IAutomationRegistrarV2_3.sol";
+import {IGaugeUpkeepManagerV2_3} from "../interfaces/v2_3/IGaugeUpkeepManagerV2_3.sol";
+import {IUpkeepBalanceMonitor} from "../interfaces/IUpkeepBalanceMonitor.sol";
+import {GaugeUpkeep} from "../GaugeUpkeep.sol";
 
-contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
+contract GaugeUpkeepManagerV2_3 is IGaugeUpkeepManagerV2_3, Ownable {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.UintSet;
 
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     address public immutable override linkToken;
-    /// @inheritdoc IGaugeUpkeepManager
-    address public immutable override keeperRegistry;
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    address payable public immutable override keeperRegistry;
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     address public immutable override automationRegistrar;
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     address public immutable override voter;
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     address public immutable override factoryRegistry;
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     address public override upkeepBalanceMonitor;
 
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     uint96 public override newUpkeepFundAmount;
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     uint32 public override newUpkeepGasLimit;
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     uint8 public override batchSize;
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     mapping(address => bool) public override trustedForwarder;
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     mapping(address => bool) public override excludedGaugeFactory;
 
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     uint256[] public override upkeepIds;
 
     EnumerableSet.AddressSet private _gaugeList;
@@ -64,7 +64,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
 
     constructor(
         address _linkToken,
-        address _keeperRegistry,
+        address payable _keeperRegistry,
         address _automationRegistrar,
         address _upkeepBalanceMonitor,
         address _voter,
@@ -89,7 +89,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         factoryRegistry = IVoter(_voter).factoryRegistry();
     }
 
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     function performUpkeep(bytes calldata _performData) external override {
         if (!trustedForwarder[msg.sender]) {
             revert UnauthorizedSender();
@@ -104,7 +104,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         }
     }
 
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     function registerGauges(address[] calldata _gauges) external override onlyOwner {
         address gauge;
         address gaugeFactory;
@@ -127,7 +127,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         }
     }
 
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     function deregisterGauges(address[] calldata _gauges) external override onlyOwner {
         address gauge;
         uint256 length = _gauges.length;
@@ -142,7 +142,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         }
     }
 
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     function withdrawCancelledUpkeeps(uint256 _startIndex, uint256 _endIndex) external override onlyOwner {
         uint256 length = _cancelledUpkeepIds.length();
         _endIndex = _endIndex > length ? length : _endIndex;
@@ -154,7 +154,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         }
     }
 
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     function withdrawLinkBalance() external override onlyOwner {
         address receiver = owner();
         uint256 balance = IERC20(linkToken).balanceOf(address(this));
@@ -165,26 +165,26 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         emit LinkBalanceWithdrawn(receiver, balance);
     }
 
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     function setNewUpkeepGasLimit(uint32 _newUpkeepGasLimit) external override onlyOwner {
         newUpkeepGasLimit = _newUpkeepGasLimit;
         emit NewUpkeepGasLimitSet(_newUpkeepGasLimit);
     }
 
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     function setNewUpkeepFundAmount(uint96 _newUpkeepFundAmount) external override onlyOwner {
         newUpkeepFundAmount = _newUpkeepFundAmount;
         emit NewUpkeepFundAmountSet(_newUpkeepFundAmount);
     }
 
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     function setBatchSize(uint8 _batchSize) external override onlyOwner {
         if (_batchSize == 0 || _batchSize > GAUGES_PER_UPKEEP) revert InvalidBatchSize();
         batchSize = _batchSize;
         emit BatchSizeSet(_batchSize);
     }
 
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     function setTrustedForwarder(address _trustedForwarder, bool _isTrusted) external override onlyOwner {
         if (_trustedForwarder == address(0)) {
             revert AddressZeroNotAllowed();
@@ -193,7 +193,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         emit TrustedForwarderSet(_trustedForwarder, _isTrusted);
     }
 
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     function setUpkeepBalanceMonitor(address _upkeepBalanceMonitor) external override onlyOwner {
         if (_upkeepBalanceMonitor == address(0)) {
             revert AddressZeroNotAllowed();
@@ -202,7 +202,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         emit UpkeepBalanceMonitorSet(_upkeepBalanceMonitor);
     }
 
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     function setExcludedGaugeFactory(address _gaugeFactory, bool _isExcluded) external override onlyOwner {
         if (_gaugeFactory == address(0)) {
             revert AddressZeroNotAllowed();
@@ -211,7 +211,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         emit ExcludedGaugeFactorySet(_gaugeFactory, _isExcluded);
     }
 
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     function checkLog(
         Log calldata _log,
         bytes memory
@@ -237,7 +237,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         }
     }
 
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     function gaugeList(
         uint256 _startIndex,
         uint256 _endIndex
@@ -251,17 +251,17 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         }
     }
 
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     function gaugeCount() external view override returns (uint256) {
         return _gaugeList.length();
     }
 
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     function upkeepCount() external view override returns (uint256) {
         return upkeepIds.length;
     }
 
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     function cancelledUpkeeps(
         uint256 _startIndex,
         uint256 _endIndex
@@ -275,7 +275,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         }
     }
 
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_3
     function cancelledUpkeepCount() external view override returns (uint256) {
         return _cancelledUpkeepIds.length();
     }
@@ -309,7 +309,7 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         uint256 startIndex = _getNextUpkeepStartIndex(upkeepIds.length);
         uint256 endIndex = startIndex + GAUGES_PER_UPKEEP;
         address gaugeUpkeep = address(new GaugeUpkeep(voter, startIndex, endIndex));
-        IAutomationRegistrar.RegistrationParams memory params = IAutomationRegistrar.RegistrationParams({
+        IAutomationRegistrarV2_3.RegistrationParams memory params = IAutomationRegistrarV2_3.RegistrationParams({
             name: UPKEEP_NAME,
             encryptedEmail: "",
             upkeepContract: gaugeUpkeep,
@@ -319,7 +319,8 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
             checkData: "",
             triggerConfig: "",
             offchainConfig: "",
-            amount: newUpkeepFundAmount
+            amount: newUpkeepFundAmount,
+            billingToken: IERC20(linkToken)
         });
         uint256 upkeepId = _registerUpkeep(params);
         upkeepIds.push(upkeepId);
@@ -327,9 +328,9 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         emit GaugeUpkeepRegistered(gaugeUpkeep, upkeepId, startIndex, endIndex);
     }
 
-    function _registerUpkeep(IAutomationRegistrar.RegistrationParams memory _params) internal returns (uint256) {
+    function _registerUpkeep(IAutomationRegistrarV2_3.RegistrationParams memory _params) internal returns (uint256) {
         IERC20(linkToken).safeIncreaseAllowance(automationRegistrar, _params.amount);
-        uint256 upkeepID = IAutomationRegistrar(automationRegistrar).registerUpkeep(_params);
+        uint256 upkeepID = IAutomationRegistrarV2_3(automationRegistrar).registerUpkeep(_params);
         if (upkeepID != 0) {
             return upkeepID;
         } else {
@@ -341,13 +342,13 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         upkeepIds.pop();
         _cancelledUpkeepIds.add(_upkeepId);
         IUpkeepBalanceMonitor(upkeepBalanceMonitor).removeFromWatchList(_upkeepId);
-        IKeeperRegistryMaster(keeperRegistry).cancelUpkeep(_upkeepId);
+        IAutomationRegistryMaster2_3(keeperRegistry).cancelUpkeep(_upkeepId);
         emit GaugeUpkeepCancelled(_upkeepId);
     }
 
     function _withdrawUpkeep(uint256 _upkeepId) internal {
         _cancelledUpkeepIds.remove(_upkeepId);
-        IKeeperRegistryMaster(keeperRegistry).withdrawFunds(_upkeepId, address(this));
+        IAutomationRegistryMaster2_3(keeperRegistry).withdrawFunds(_upkeepId, address(this));
         emit GaugeUpkeepWithdrawn(_upkeepId);
     }
 

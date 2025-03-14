@@ -6,7 +6,7 @@ import {
   stopImpersonatingAccount,
   mine,
 } from '@nomicfoundation/hardhat-network-helpers'
-import { findLog, getNextEpochUTC } from '../utils'
+import { findLog, getNextEpochUTC } from '../../utils'
 import { BigNumber } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import {
@@ -16,21 +16,28 @@ import {
   IKeeperRegistryMaster,
   IERC20,
   UpkeepBalanceMonitor,
-} from '../../typechain-types'
-import { EmergencyCouncilAbi } from '../abi'
+} from '../../../typechain-types'
+import { EmergencyCouncilAbi } from '../../abi'
 import {
-  AUTOMATION_REGISTRAR_ADDRESS,
-  KEEPER_REGISTRY_ADDRESS,
-  LINK_TOKEN_ADDRESS,
-  VOTER_ADDRESS,
-  EXCLUDED_GAUGE_FACTORIES,
-  POOL_FACTORY_ADDRESS,
-  POOL_ADDRESS,
-  LINK_HOLDER_ADDRESS,
   UPKEEP_CANCELLATION_DELAY,
   MAX_UINT32,
   PerformAction,
-} from '../constants'
+} from '../../constants'
+
+// Optimism Mainnet Addresses
+export const AUTOMATION_REGISTRAR_ADDRESS =
+  '0xe601C5837307f07aB39DEB0f5516602f045BF14f'
+export const KEEPER_REGISTRY_ADDRESS =
+  '0x696fB0d7D069cc0bb35a7c36115CE63E55cb9AA6'
+export const LINK_TOKEN_ADDRESS = '0x350a791Bfc2C21F9Ed5d10980Dad2e2638ffa7f6'
+export const VOTER_ADDRESS = '0x41C914ee0c7E1A5edCD0295623e6dC557B5aBf3C'
+export const EXCLUDED_GAUGE_FACTORIES = [
+  '0x42e403b73898320f23109708b0ba1Ae85838C445',
+  '0xeAD23f606643E387a073D0EE8718602291ffaAeB',
+]
+export const POOL_FACTORY_ADDRESS = '0xF1046053aa5682b4F9a81b5481394DA16BE5FF5a'
+export const POOL_ADDRESS = '0x8b9d5a71F347BC1967f39435B5d83C7C581AfbcF'
+export const LINK_HOLDER_ADDRESS = '0x166C794d890dD91bBe71F304ecA660E1c4892CBB'
 
 const { AddressZero, HashZero, MaxUint256 } = ethers.constants
 
