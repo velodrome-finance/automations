@@ -11,7 +11,7 @@ import { BigNumber } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import {
   Voter,
-  GaugeUpkeepManager,
+  GaugeUpkeepManagerV2_1,
   AutomationRegistrar2_1,
   IKeeperRegistryMaster,
   IERC20,
@@ -106,9 +106,9 @@ async function registerLogTriggerUpkeep(
 
 let snapshotId: any
 
-describe('GaugeUpkeepManager Script Tests', function () {
+describe('GaugeUpkeepManagerV2_1 Script Tests', function () {
   let accounts: SignerWithAddress[]
-  let gaugeUpkeepManager: GaugeUpkeepManager
+  let gaugeUpkeepManager: GaugeUpkeepManagerV2_1
   let upkeepBalanceMonitor: UpkeepBalanceMonitor
   let voter: Voter
   let keeperRegistry: IKeeperRegistryMaster
@@ -158,8 +158,9 @@ describe('GaugeUpkeepManager Script Tests', function () {
       },
     )
     // setup gauge upkeep manager
-    const gaugeUpkeepManagerFactory =
-      await ethers.getContractFactory('GaugeUpkeepManager')
+    const gaugeUpkeepManagerFactory = await ethers.getContractFactory(
+      'GaugeUpkeepManagerV2_1',
+    )
     gaugeUpkeepManager = await gaugeUpkeepManagerFactory.deploy(
       linkToken.address,
       keeperRegistry.address,
