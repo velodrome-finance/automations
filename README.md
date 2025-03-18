@@ -82,8 +82,6 @@ npx hardhat run scripts/<version>/register_monitor_upkeep.ts --network <network>
 npx hardhat run scripts/<version>/deploy_upkeep_manager.ts --network <network>
 ```
 
-**Note:** Currently supported Chainlink Automation versions are `v2_1` and `v2_3`.
-
 2. Register log trigger upkeeps for the deployed `GaugeUpkeepManager` contract and set the trusted forwarders:
 
 ```bash
