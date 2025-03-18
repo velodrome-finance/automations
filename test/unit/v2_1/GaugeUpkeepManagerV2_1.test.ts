@@ -95,8 +95,9 @@ describe('GaugeUpkeepManagerV2_1 Unit Tests', function () {
     )
 
     // deploy gauge upkeep manager
-    const gaugeUpkeepManagerFactory =
-      await ethers.getContractFactory('GaugeUpkeepManagerV2_1')
+    const gaugeUpkeepManagerFactory = await ethers.getContractFactory(
+      'GaugeUpkeepManagerV2_1',
+    )
     gaugeUpkeepManager = await gaugeUpkeepManagerFactory.deploy(
       linkToken.address,
       keeperRegistryMock.address,
