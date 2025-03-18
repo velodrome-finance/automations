@@ -73,7 +73,7 @@ async function main() {
 
   // Get GaugeUpkeepManager contract
   const gaugeUpkeepManager = await ethers.getContractAt(
-    'GaugeUpkeepManager',
+    'GaugeUpkeepManagerV2_1',
     GAUGE_UPKEEP_MANAGER_ADDRESS!,
   )
 
