@@ -47,8 +47,9 @@ async function main() {
   // await hre.run('compile');
 
   // Deploy GaugeUpkeepManager contract
-  const gaugeUpkeepManagerFactory =
-    await ethers.getContractFactory('GaugeUpkeepManagerV2_1')
+  const gaugeUpkeepManagerFactory = await ethers.getContractFactory(
+    'GaugeUpkeepManagerV2_1',
+  )
   const gaugeUpkeepManager = await gaugeUpkeepManagerFactory.deploy(
     LINK_TOKEN_ADDRESS!,
     KEEPER_REGISTRY_ADDRESS!,
