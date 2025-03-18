@@ -11,18 +11,19 @@ import {IVoter} from "../../vendor/velodrome-contracts/contracts/interfaces/IVot
 import {IPool} from "../../vendor/velodrome-contracts/contracts/interfaces/IPool.sol";
 import {IFactoryRegistry} from "../../vendor/velodrome-contracts/contracts/interfaces/factories/IFactoryRegistry.sol";
 import {IAutomationRegistrar} from "../interfaces/v2_1/IAutomationRegistrar.sol";
-import {IGaugeUpkeepManager} from "../interfaces/v2_1/IGaugeUpkeepManager.sol";
+import {IGaugeUpkeepManager} from "../interfaces/common/IGaugeUpkeepManager.sol";
+import {IGaugeUpkeepManagerV2_1} from "../interfaces/v2_1/IGaugeUpkeepManagerV2_1.sol";
 import {IUpkeepBalanceMonitor} from "../interfaces/IUpkeepBalanceMonitor.sol";
 import {GaugeUpkeep} from "../GaugeUpkeep.sol";
 
-contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
+contract GaugeUpkeepManager is IGaugeUpkeepManagerV2_1, Ownable {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.UintSet;
 
     /// @inheritdoc IGaugeUpkeepManager
     address public immutable override linkToken;
-    /// @inheritdoc IGaugeUpkeepManager
+    /// @inheritdoc IGaugeUpkeepManagerV2_1
     address public immutable override keeperRegistry;
     /// @inheritdoc IGaugeUpkeepManager
     address public immutable override automationRegistrar;

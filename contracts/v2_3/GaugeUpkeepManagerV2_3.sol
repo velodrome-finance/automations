@@ -11,6 +11,7 @@ import {IVoter} from "../../vendor/velodrome-contracts/contracts/interfaces/IVot
 import {IPool} from "../../vendor/velodrome-contracts/contracts/interfaces/IPool.sol";
 import {IFactoryRegistry} from "../../vendor/velodrome-contracts/contracts/interfaces/factories/IFactoryRegistry.sol";
 import {IAutomationRegistrarV2_3} from "../interfaces/v2_3/IAutomationRegistrarV2_3.sol";
+import {IGaugeUpkeepManager} from "../interfaces/common/IGaugeUpkeepManager.sol";
 import {IGaugeUpkeepManagerV2_3} from "../interfaces/v2_3/IGaugeUpkeepManagerV2_3.sol";
 import {IUpkeepBalanceMonitor} from "../interfaces/IUpkeepBalanceMonitor.sol";
 import {GaugeUpkeep} from "../GaugeUpkeep.sol";
@@ -20,31 +21,31 @@ contract GaugeUpkeepManagerV2_3 is IGaugeUpkeepManagerV2_3, Ownable {
     using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.UintSet;
 
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     address public immutable override linkToken;
     /// @inheritdoc IGaugeUpkeepManagerV2_3
     address payable public immutable override keeperRegistry;
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     address public immutable override automationRegistrar;
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     address public immutable override voter;
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     address public immutable override factoryRegistry;
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     address public override upkeepBalanceMonitor;
 
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     uint96 public override newUpkeepFundAmount;
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     uint32 public override newUpkeepGasLimit;
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     uint8 public override batchSize;
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     mapping(address => bool) public override trustedForwarder;
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     mapping(address => bool) public override excludedGaugeFactory;
 
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     uint256[] public override upkeepIds;
 
     EnumerableSet.AddressSet private _gaugeList;
@@ -89,7 +90,7 @@ contract GaugeUpkeepManagerV2_3 is IGaugeUpkeepManagerV2_3, Ownable {
         factoryRegistry = IVoter(_voter).factoryRegistry();
     }
 
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     function performUpkeep(bytes calldata _performData) external override {
         if (!trustedForwarder[msg.sender]) {
             revert UnauthorizedSender();
@@ -104,7 +105,7 @@ contract GaugeUpkeepManagerV2_3 is IGaugeUpkeepManagerV2_3, Ownable {
         }
     }
 
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     function registerGauges(address[] calldata _gauges) external override onlyOwner {
         address gauge;
         address gaugeFactory;
@@ -127,7 +128,7 @@ contract GaugeUpkeepManagerV2_3 is IGaugeUpkeepManagerV2_3, Ownable {
         }
     }
 
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     function deregisterGauges(address[] calldata _gauges) external override onlyOwner {
         address gauge;
         uint256 length = _gauges.length;
@@ -142,7 +143,7 @@ contract GaugeUpkeepManagerV2_3 is IGaugeUpkeepManagerV2_3, Ownable {
         }
     }
 
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     function withdrawCancelledUpkeeps(uint256 _startIndex, uint256 _endIndex) external override onlyOwner {
         uint256 length = _cancelledUpkeepIds.length();
         _endIndex = _endIndex > length ? length : _endIndex;
@@ -154,7 +155,7 @@ contract GaugeUpkeepManagerV2_3 is IGaugeUpkeepManagerV2_3, Ownable {
         }
     }
 
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     function withdrawLinkBalance() external override onlyOwner {
         address receiver = owner();
         uint256 balance = IERC20(linkToken).balanceOf(address(this));
@@ -165,26 +166,26 @@ contract GaugeUpkeepManagerV2_3 is IGaugeUpkeepManagerV2_3, Ownable {
         emit LinkBalanceWithdrawn(receiver, balance);
     }
 
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     function setNewUpkeepGasLimit(uint32 _newUpkeepGasLimit) external override onlyOwner {
         newUpkeepGasLimit = _newUpkeepGasLimit;
         emit NewUpkeepGasLimitSet(_newUpkeepGasLimit);
     }
 
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     function setNewUpkeepFundAmount(uint96 _newUpkeepFundAmount) external override onlyOwner {
         newUpkeepFundAmount = _newUpkeepFundAmount;
         emit NewUpkeepFundAmountSet(_newUpkeepFundAmount);
     }
 
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     function setBatchSize(uint8 _batchSize) external override onlyOwner {
         if (_batchSize == 0 || _batchSize > GAUGES_PER_UPKEEP) revert InvalidBatchSize();
         batchSize = _batchSize;
         emit BatchSizeSet(_batchSize);
     }
 
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     function setTrustedForwarder(address _trustedForwarder, bool _isTrusted) external override onlyOwner {
         if (_trustedForwarder == address(0)) {
             revert AddressZeroNotAllowed();
@@ -193,7 +194,7 @@ contract GaugeUpkeepManagerV2_3 is IGaugeUpkeepManagerV2_3, Ownable {
         emit TrustedForwarderSet(_trustedForwarder, _isTrusted);
     }
 
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     function setUpkeepBalanceMonitor(address _upkeepBalanceMonitor) external override onlyOwner {
         if (_upkeepBalanceMonitor == address(0)) {
             revert AddressZeroNotAllowed();
@@ -202,7 +203,7 @@ contract GaugeUpkeepManagerV2_3 is IGaugeUpkeepManagerV2_3, Ownable {
         emit UpkeepBalanceMonitorSet(_upkeepBalanceMonitor);
     }
 
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     function setExcludedGaugeFactory(address _gaugeFactory, bool _isExcluded) external override onlyOwner {
         if (_gaugeFactory == address(0)) {
             revert AddressZeroNotAllowed();
@@ -211,7 +212,7 @@ contract GaugeUpkeepManagerV2_3 is IGaugeUpkeepManagerV2_3, Ownable {
         emit ExcludedGaugeFactorySet(_gaugeFactory, _isExcluded);
     }
 
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     function checkLog(
         Log calldata _log,
         bytes memory
@@ -237,7 +238,7 @@ contract GaugeUpkeepManagerV2_3 is IGaugeUpkeepManagerV2_3, Ownable {
         }
     }
 
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     function gaugeList(
         uint256 _startIndex,
         uint256 _endIndex
@@ -251,17 +252,17 @@ contract GaugeUpkeepManagerV2_3 is IGaugeUpkeepManagerV2_3, Ownable {
         }
     }
 
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     function gaugeCount() external view override returns (uint256) {
         return _gaugeList.length();
     }
 
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     function upkeepCount() external view override returns (uint256) {
         return upkeepIds.length;
     }
 
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     function cancelledUpkeeps(
         uint256 _startIndex,
         uint256 _endIndex
@@ -275,7 +276,7 @@ contract GaugeUpkeepManagerV2_3 is IGaugeUpkeepManagerV2_3, Ownable {
         }
     }
 
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IGaugeUpkeepManager
     function cancelledUpkeepCount() external view override returns (uint256) {
         return _cancelledUpkeepIds.length();
     }

@@ -2,7 +2,7 @@
 pragma solidity 0.8.6;
 
 import {IVoter} from "../vendor/velodrome-contracts/contracts/interfaces/IVoter.sol";
-import {IGaugeUpkeepManager} from "./interfaces/v2_1/IGaugeUpkeepManager.sol";
+import {IGaugeUpkeepManagerV2_1} from "./interfaces/v2_1/IGaugeUpkeepManagerV2_1.sol";
 import {IGaugeUpkeep} from "./interfaces/IGaugeUpkeep.sol";
 
 contract GaugeUpkeep is IGaugeUpkeep {
@@ -38,7 +38,7 @@ contract GaugeUpkeep is IGaugeUpkeep {
 
         if (!_checkUpkeep(_currentIndex, _endIndex)) revert UpkeepNotNeeded();
 
-        uint256 nextIndex = _currentIndex + IGaugeUpkeepManager(gaugeUpkeepManager).batchSize();
+        uint256 nextIndex = _currentIndex + IGaugeUpkeepManagerV2_1(gaugeUpkeepManager).batchSize();
         nextIndex = nextIndex > _endIndex ? _endIndex : nextIndex;
 
         _distributeBatch(_currentIndex, nextIndex);
@@ -58,7 +58,7 @@ contract GaugeUpkeep is IGaugeUpkeep {
     }
 
     function _distributeBatch(uint256 _startIndex, uint256 _endIndex) internal {
-        address[] memory gauges = IGaugeUpkeepManager(gaugeUpkeepManager).gaugeList(_startIndex, _endIndex);
+        address[] memory gauges = IGaugeUpkeepManagerV2_1(gaugeUpkeepManager).gaugeList(_startIndex, _endIndex);
         try IVoter(voter).distribute(gauges) {} catch {
             emit BatchDistributeFailed(_startIndex, _endIndex);
         }
@@ -73,7 +73,7 @@ contract GaugeUpkeep is IGaugeUpkeep {
     }
 
     function _adjustedEndIndex() internal view returns (uint256) {
-        uint256 gaugeCount = IGaugeUpkeepManager(gaugeUpkeepManager).gaugeCount();
+        uint256 gaugeCount = IGaugeUpkeepManagerV2_1(gaugeUpkeepManager).gaugeCount();
         return gaugeCount < endIndex ? gaugeCount : endIndex;
     }
 }
