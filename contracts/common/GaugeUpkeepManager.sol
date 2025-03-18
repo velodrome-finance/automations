@@ -41,7 +41,7 @@ abstract contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
     /// @inheritdoc IGaugeUpkeepManager
     uint256[] public override upkeepIds;
 
-    EnumerableSet.AddressSet internal _gaugeList;
+    EnumerableSet.AddressSet private _gaugeList;
     EnumerableSet.UintSet internal _cancelledUpkeepIds;
 
     uint256 internal constant GAUGES_PER_UPKEEP = 100;
@@ -49,11 +49,11 @@ abstract contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
     uint8 internal constant CONDITIONAL_TRIGGER_TYPE = 0;
     string internal constant UPKEEP_NAME = "Gauge upkeep";
 
-    bytes32 internal constant GAUGE_CREATED_SIGNATURE =
+    bytes32 private constant GAUGE_CREATED_SIGNATURE =
         0xef9f7d1ffff3b249c6b9bf2528499e935f7d96bb6d6ec4e7da504d1d3c6279e1;
-    bytes32 internal constant GAUGE_KILLED_SIGNATURE =
+    bytes32 private constant GAUGE_KILLED_SIGNATURE =
         0x04a5d3f5d80d22d9345acc80618f4a4e7e663cf9e1aed23b57d975acec002ba7;
-    bytes32 internal constant GAUGE_REVIVED_SIGNATURE =
+    bytes32 private constant GAUGE_REVIVED_SIGNATURE =
         0xed18e9faa3dccfd8aa45f69c4de40546b2ca9cccc4538a2323531656516db1aa;
 
     constructor(
