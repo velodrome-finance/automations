@@ -33,7 +33,6 @@ assert.ok(
   'UPKEEP_BALANCE_MONITOR_ADDRESS is required',
 )
 assert.ok(VOTER_ADDRESS, 'VOTER_ADDRESS is required')
-assert.ok(EXCLUDED_GAUGE_FACTORIES, 'EXCLUDED_GAUGE_FACTORIES is required')
 assert.ok(NEW_UPKEEP_FUND_AMOUNT, 'NEW_UPKEEP_FUND_AMOUNT is required')
 assert.ok(NEW_UPKEEP_GAS_LIMIT, 'NEW_UPKEEP_GAS_LIMIT is required')
 assert.ok(BATCH_SIZE, 'BATCH_SIZE is required')
@@ -50,6 +49,9 @@ async function main() {
   const gaugeUpkeepManagerFactory = await ethers.getContractFactory(
     'GaugeUpkeepManagerV2_3',
   )
+  const excludedGaugeFactories = EXCLUDED_GAUGE_FACTORIES
+    ? EXCLUDED_GAUGE_FACTORIES.split(',')
+    : []
   const gaugeUpkeepManager = await gaugeUpkeepManagerFactory.deploy(
     LINK_TOKEN_ADDRESS!,
     KEEPER_REGISTRY_ADDRESS!,
@@ -59,7 +61,7 @@ async function main() {
     NEW_UPKEEP_FUND_AMOUNT!,
     NEW_UPKEEP_GAS_LIMIT!,
     BATCH_SIZE!,
-    EXCLUDED_GAUGE_FACTORIES!.split(','),
+    excludedGaugeFactories,
   )
   await gaugeUpkeepManager.deployed()
   console.log('GaugeUpkeepManager deployed to:', gaugeUpkeepManager.address)
@@ -84,7 +86,7 @@ async function main() {
     NEW_UPKEEP_FUND_AMOUNT!,
     NEW_UPKEEP_GAS_LIMIT!,
     BATCH_SIZE!,
-    EXCLUDED_GAUGE_FACTORIES!.split(','),
+    excludedGaugeFactories,
   ])
 }
 
