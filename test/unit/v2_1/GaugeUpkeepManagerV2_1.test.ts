@@ -5,18 +5,18 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import {
   IERC20,
   VoterMock,
-  GaugeUpkeepManager,
+  GaugeUpkeepManagerV2_1,
   FactoryRegistryMock,
   KeeperRegistryMock,
   AutomationRegistrarMock,
   UpkeepBalanceMonitor,
-} from '../../typechain-types'
-import { PerformAction } from '../constants'
+} from '../../../typechain-types'
+import { PerformAction } from '../../constants'
 
 const { HashZero } = ethers.constants
 
-describe('GaugeUpkeepManager Unit Tests', function () {
-  let gaugeUpkeepManager: GaugeUpkeepManager
+describe('GaugeUpkeepManagerV2_1 Unit Tests', function () {
+  let gaugeUpkeepManager: GaugeUpkeepManagerV2_1
   let upkeepBalanceMonitor: UpkeepBalanceMonitor
   let linkToken: IERC20
   let keeperRegistryMock: KeeperRegistryMock
@@ -95,8 +95,9 @@ describe('GaugeUpkeepManager Unit Tests', function () {
     )
 
     // deploy gauge upkeep manager
-    const gaugeUpkeepManagerFactory =
-      await ethers.getContractFactory('GaugeUpkeepManager')
+    const gaugeUpkeepManagerFactory = await ethers.getContractFactory(
+      'GaugeUpkeepManagerV2_1',
+    )
     gaugeUpkeepManager = await gaugeUpkeepManagerFactory.deploy(
       linkToken.address,
       keeperRegistryMock.address,

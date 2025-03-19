@@ -6,24 +6,18 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {Log} from "@chainlink/contracts/src/v0.8/automation/interfaces/ILogAutomation.sol";
-import {IKeeperRegistryMaster} from "@chainlink/contracts/src/v0.8/automation/interfaces/v2_1/IKeeperRegistryMaster.sol";
-import {IVoter} from "../vendor/velodrome-contracts/contracts/interfaces/IVoter.sol";
-import {IPool} from "../vendor/velodrome-contracts/contracts/interfaces/IPool.sol";
-import {IFactoryRegistry} from "../vendor/velodrome-contracts/contracts/interfaces/factories/IFactoryRegistry.sol";
-import {IAutomationRegistrar} from "./interfaces/IAutomationRegistrar.sol";
-import {IGaugeUpkeepManager} from "./interfaces/IGaugeUpkeepManager.sol";
-import {IUpkeepBalanceMonitor} from "./interfaces/IUpkeepBalanceMonitor.sol";
-import {GaugeUpkeep} from "./GaugeUpkeep.sol";
+import {IVoter} from "../../vendor/velodrome-contracts/contracts/interfaces/IVoter.sol";
+import {IPool} from "../../vendor/velodrome-contracts/contracts/interfaces/IPool.sol";
+import {IFactoryRegistry} from "../../vendor/velodrome-contracts/contracts/interfaces/factories/IFactoryRegistry.sol";
+import {IGaugeUpkeepManager} from "../interfaces/common/IGaugeUpkeepManager.sol";
 
-contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
+abstract contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.UintSet;
 
     /// @inheritdoc IGaugeUpkeepManager
     address public immutable override linkToken;
-    /// @inheritdoc IGaugeUpkeepManager
-    address public immutable override keeperRegistry;
     /// @inheritdoc IGaugeUpkeepManager
     address public immutable override automationRegistrar;
     /// @inheritdoc IGaugeUpkeepManager
@@ -48,12 +42,12 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
     uint256[] public override upkeepIds;
 
     EnumerableSet.AddressSet private _gaugeList;
-    EnumerableSet.UintSet private _cancelledUpkeepIds;
+    EnumerableSet.UintSet internal _cancelledUpkeepIds;
 
-    uint256 private constant GAUGES_PER_UPKEEP = 100;
-    uint256 private constant UPKEEP_CANCEL_BUFFER = 20;
-    uint8 private constant CONDITIONAL_TRIGGER_TYPE = 0;
-    string private constant UPKEEP_NAME = "Gauge upkeep";
+    uint256 internal constant GAUGES_PER_UPKEEP = 100;
+    uint256 internal constant UPKEEP_CANCEL_BUFFER = 20;
+    uint8 internal constant CONDITIONAL_TRIGGER_TYPE = 0;
+    string internal constant UPKEEP_NAME = "Gauge upkeep";
 
     bytes32 private constant GAUGE_CREATED_SIGNATURE =
         0xef9f7d1ffff3b249c6b9bf2528499e935f7d96bb6d6ec4e7da504d1d3c6279e1;
@@ -64,7 +58,6 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
 
     constructor(
         address _linkToken,
-        address _keeperRegistry,
         address _automationRegistrar,
         address _upkeepBalanceMonitor,
         address _voter,
@@ -74,7 +67,6 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         address[] memory _excludedGaugeFactories
     ) {
         linkToken = _linkToken;
-        keeperRegistry = _keeperRegistry;
         automationRegistrar = _automationRegistrar;
         upkeepBalanceMonitor = _upkeepBalanceMonitor;
         voter = _voter;
@@ -305,51 +297,11 @@ contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
         emit GaugeDeregistered(_gauge);
     }
 
-    function _registerGaugeUpkeep() internal {
-        uint256 startIndex = _getNextUpkeepStartIndex(upkeepIds.length);
-        uint256 endIndex = startIndex + GAUGES_PER_UPKEEP;
-        address gaugeUpkeep = address(new GaugeUpkeep(voter, startIndex, endIndex));
-        IAutomationRegistrar.RegistrationParams memory params = IAutomationRegistrar.RegistrationParams({
-            name: UPKEEP_NAME,
-            encryptedEmail: "",
-            upkeepContract: gaugeUpkeep,
-            gasLimit: newUpkeepGasLimit,
-            adminAddress: address(this),
-            triggerType: CONDITIONAL_TRIGGER_TYPE,
-            checkData: "",
-            triggerConfig: "",
-            offchainConfig: "",
-            amount: newUpkeepFundAmount
-        });
-        uint256 upkeepId = _registerUpkeep(params);
-        upkeepIds.push(upkeepId);
-        IUpkeepBalanceMonitor(upkeepBalanceMonitor).addToWatchList(upkeepId);
-        emit GaugeUpkeepRegistered(gaugeUpkeep, upkeepId, startIndex, endIndex);
-    }
+    function _registerGaugeUpkeep() internal virtual;
 
-    function _registerUpkeep(IAutomationRegistrar.RegistrationParams memory _params) internal returns (uint256) {
-        IERC20(linkToken).safeIncreaseAllowance(automationRegistrar, _params.amount);
-        uint256 upkeepID = IAutomationRegistrar(automationRegistrar).registerUpkeep(_params);
-        if (upkeepID != 0) {
-            return upkeepID;
-        } else {
-            revert AutoApproveDisabled();
-        }
-    }
+    function _cancelGaugeUpkeep(uint256 _upkeepId) internal virtual;
 
-    function _cancelGaugeUpkeep(uint256 _upkeepId) internal {
-        upkeepIds.pop();
-        _cancelledUpkeepIds.add(_upkeepId);
-        IUpkeepBalanceMonitor(upkeepBalanceMonitor).removeFromWatchList(_upkeepId);
-        IKeeperRegistryMaster(keeperRegistry).cancelUpkeep(_upkeepId);
-        emit GaugeUpkeepCancelled(_upkeepId);
-    }
-
-    function _withdrawUpkeep(uint256 _upkeepId) internal {
-        _cancelledUpkeepIds.remove(_upkeepId);
-        IKeeperRegistryMaster(keeperRegistry).withdrawFunds(_upkeepId, address(this));
-        emit GaugeUpkeepWithdrawn(_upkeepId);
-    }
+    function _withdrawUpkeep(uint256 _upkeepId) internal virtual;
 
     function _getNextUpkeepStartIndex(uint256 _upkeepCount) internal pure returns (uint256) {
         return _upkeepCount * GAUGES_PER_UPKEEP;

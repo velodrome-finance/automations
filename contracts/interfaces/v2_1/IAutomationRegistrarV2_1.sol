@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-interface IAutomationRegistrar {
+interface IAutomationRegistrarV2_1 {
     struct RegistrationParams {
         string name;
         bytes encryptedEmail;

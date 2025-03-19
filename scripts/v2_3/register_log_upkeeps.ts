@@ -7,7 +7,7 @@ import { ethers } from 'hardhat'
 import { BigNumber } from 'ethers'
 import * as assert from 'assert'
 import * as dotenv from 'dotenv'
-import { registerLogTriggerUpkeep } from './utils'
+import { registerLogTriggerUpkeepV2_3 } from '../utils'
 
 // Load environment variables
 dotenv.config()
@@ -17,6 +17,8 @@ const VOTER_ADDRESS = process.env.VOTER_ADDRESS
 const KEEPER_REGISTRY_ADDRESS = process.env.KEEPER_REGISTRY_ADDRESS
 const AUTOMATION_REGISTRAR_ADDRESS = process.env.AUTOMATION_REGISTRAR_ADDRESS
 const LINK_TOKEN_ADDRESS = process.env.LINK_TOKEN_ADDRESS
+const UPKEEP_BALANCE_MONITOR_ADDRESS =
+  process.env.UPKEEP_BALANCE_MONITOR_ADDRESS
 const LOG_UPKEEP_FUND_AMOUNT = process.env.LOG_UPKEEP_FUND_AMOUNT
 const LOG_UPKEEP_GAS_LIMIT = process.env.LOG_UPKEEP_GAS_LIMIT
 
@@ -31,6 +33,10 @@ assert.ok(
   'AUTOMATION_REGISTRAR_ADDRESS is required',
 )
 assert.ok(LINK_TOKEN_ADDRESS, 'LINK_TOKEN_ADDRESS is required')
+assert.ok(
+  UPKEEP_BALANCE_MONITOR_ADDRESS,
+  'UPKEEP_BALANCE_MONITOR_ADDRESS is required',
+)
 assert.ok(LOG_UPKEEP_FUND_AMOUNT, 'LOG_UPKEEP_FUND_AMOUNT is required')
 assert.ok(LOG_UPKEEP_GAS_LIMIT, 'LOG_UPKEEP_GAS_LIMIT is required')
 
@@ -55,24 +61,30 @@ async function main() {
 
   // Get AutomationRegistrar contract
   const automationRegistrar = await ethers.getContractAt(
-    'AutomationRegistrar2_1',
+    'AutomationRegistrar2_3',
     AUTOMATION_REGISTRAR_ADDRESS!,
   )
 
   // Get KeeperRegistry contract
   const keeperRegistry = await ethers.getContractAt(
-    'IKeeperRegistryMaster',
+    'IAutomationRegistryMaster2_3',
     KEEPER_REGISTRY_ADDRESS!,
   )
 
   // Get GaugeUpkeepManager contract
   const gaugeUpkeepManager = await ethers.getContractAt(
-    'GaugeUpkeepManager',
+    'GaugeUpkeepManagerV2_3',
     GAUGE_UPKEEP_MANAGER_ADDRESS!,
   )
 
   // Get Voter contract
   const voter = await ethers.getContractAt('Voter', VOTER_ADDRESS!)
+
+  // Get UpkeepBalanceMonitor contract
+  const upkeepBalanceMonitor = await ethers.getContractAt(
+    'UpkeepBalanceMonitor',
+    UPKEEP_BALANCE_MONITOR_ADDRESS!,
+  )
 
   // Approve LINK token for AutomationRegistrar
   const totalLinkRequired = BigNumber.from(LOG_UPKEEP_FUND_AMOUNT!).mul(3)
@@ -89,7 +101,7 @@ async function main() {
   )
 
   // Register create gauge log upkeep
-  const createGaugeLogUpkeepId = await registerLogTriggerUpkeep(
+  const createGaugeLogUpkeepId = await registerLogTriggerUpkeepV2_3(
     automationRegistrar,
     voter.address,
     voter.interface.getEventTopic('GaugeCreated'),
@@ -98,6 +110,7 @@ async function main() {
     'Create Gauge Log Upkeep',
     LOG_UPKEEP_FUND_AMOUNT!,
     LOG_UPKEEP_GAS_LIMIT!,
+    LINK_TOKEN_ADDRESS!,
   )
   console.log(
     'Registered create gauge log upkeep',
@@ -105,7 +118,7 @@ async function main() {
   )
 
   // Register kill gauge log upkeep
-  const killGaugeLogUpkeepId = await registerLogTriggerUpkeep(
+  const killGaugeLogUpkeepId = await registerLogTriggerUpkeepV2_3(
     automationRegistrar,
     voter.address,
     voter.interface.getEventTopic('GaugeKilled'),
@@ -114,6 +127,7 @@ async function main() {
     'Kill Gauge Log Upkeep',
     LOG_UPKEEP_FUND_AMOUNT!,
     LOG_UPKEEP_GAS_LIMIT!,
+    LINK_TOKEN_ADDRESS!,
   )
   console.log(
     'Registered kill gauge log upkeep',
@@ -121,7 +135,7 @@ async function main() {
   )
 
   // Register revive gauge log upkeep
-  const reviveGaugeLogUpkeepId = await registerLogTriggerUpkeep(
+  const reviveGaugeLogUpkeepId = await registerLogTriggerUpkeepV2_3(
     automationRegistrar,
     voter.address,
     voter.interface.getEventTopic('GaugeRevived'),
@@ -130,6 +144,7 @@ async function main() {
     'Revive Gauge Log Upkeep',
     LOG_UPKEEP_FUND_AMOUNT!,
     LOG_UPKEEP_GAS_LIMIT!,
+    LINK_TOKEN_ADDRESS!,
   )
   console.log(
     'Registered revive gauge log upkeep',
@@ -146,6 +161,14 @@ async function main() {
     await gaugeUpkeepManager.setTrustedForwarder(forwarder, true)
   }
   console.log('Set trusted forwarders for all upkeeps')
+
+  // Add upkeeps to upkeep balance monitor
+  await upkeepBalanceMonitor.addMultipleToWatchList([
+    createGaugeLogUpkeepId,
+    killGaugeLogUpkeepId,
+    reviveGaugeLogUpkeepId,
+  ])
+  console.log('Added all upkeeps to upkeep balance monitor')
 }
 
 // We recommend this pattern to be able to use async/await everywhere
