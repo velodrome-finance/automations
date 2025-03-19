@@ -8,7 +8,7 @@ import * as path from 'path'
 import { ethers } from 'hardhat'
 import * as assert from 'assert'
 import * as dotenv from 'dotenv'
-import { GaugeUpkeepManager } from '../typechain-types'
+import { IGaugeUpkeepManager } from '../typechain-types'
 
 // Load environment variables
 dotenv.config()
@@ -21,7 +21,7 @@ assert.ok(
 )
 
 async function registerGauges(
-  gaugeUpkeepManager: GaugeUpkeepManager,
+  gaugeUpkeepManager: IGaugeUpkeepManager,
   gauges: string[],
   batchSize = 25,
 ) {
@@ -87,8 +87,8 @@ async function main() {
   // manually to make sure everything is compiled
   // await hre.run('compile');
 
-  const gaugeUpkeepManager: GaugeUpkeepManager = await ethers.getContractAt(
-    'GaugeUpkeepManager',
+  const gaugeUpkeepManager: IGaugeUpkeepManager = await ethers.getContractAt(
+    'IGaugeUpkeepManager',
     GAUGE_UPKEEP_MANAGER_ADDRESS!,
   )
   const gauges = readGauges()

@@ -6,36 +6,41 @@ import {
   stopImpersonatingAccount,
   mine,
 } from '@nomicfoundation/hardhat-network-helpers'
-import { findLog, getNextEpochUTC } from '../utils'
+import { findLog, getNextEpochUTC } from '../../utils'
 import { BigNumber } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import {
   Voter,
-  GaugeUpkeepManager,
-  AutomationRegistrar2_1,
-  IKeeperRegistryMaster,
+  GaugeUpkeepManagerV2_3,
+  AutomationRegistrar2_3,
+  IAutomationRegistryMaster2_3,
   IERC20,
   UpkeepBalanceMonitor,
-} from '../../typechain-types'
-import { EmergencyCouncilAbi } from '../abi'
+} from '../../../typechain-types'
 import {
-  AUTOMATION_REGISTRAR_ADDRESS,
-  KEEPER_REGISTRY_ADDRESS,
-  LINK_TOKEN_ADDRESS,
-  VOTER_ADDRESS,
-  EXCLUDED_GAUGE_FACTORIES,
-  POOL_FACTORY_ADDRESS,
-  POOL_ADDRESS,
-  LINK_HOLDER_ADDRESS,
   UPKEEP_CANCELLATION_DELAY,
   MAX_UINT32,
   PerformAction,
-} from '../constants'
+} from '../../constants'
+
+// Base Mainnet Addresses
+const AUTOMATION_REGISTRAR_ADDRESS =
+  '0xE28Adc50c7551CFf69FCF32D45d037e5F6554264'
+const KEEPER_REGISTRY_ADDRESS = '0xf4bAb6A129164aBa9B113cB96BA4266dF49f8743'
+const LINK_TOKEN_ADDRESS = '0x88Fb150BDc53A65fe94Dea0c9BA0a6dAf8C6e196'
+const VOTER_ADDRESS = '0x16613524e02ad97eDfeF371bC883F2F5d6C480A5'
+const EXCLUDED_GAUGE_FACTORIES = [
+  '0x42e403b73898320f23109708b0ba1Ae85838C445',
+  '0xeAD23f606643E387a073D0EE8718602291ffaAeB',
+]
+const POOL_FACTORY_ADDRESS = '0x420dd381b31aef6683db6b902084cb0ffece40da'
+const POOL_ADDRESS = '0x81ebea20ea6acb544c0511e1ed9d6835d8532ed6'
+const LINK_HOLDER_ADDRESS = '0xdf812b91d8bf6df698bfd1d8047839479ba63420'
 
 const { AddressZero, HashZero, MaxUint256 } = ethers.constants
 
 async function simulatePerformUpkeep(
-  keeperRegistry: IKeeperRegistryMaster,
+  keeperRegistry: IAutomationRegistryMaster2_3,
   upkeepId: BigNumber,
   performData: string,
 ) {
@@ -56,7 +61,7 @@ async function simulatePerformUpkeep(
 }
 
 async function registerLogTriggerUpkeep(
-  automationRegistrar: AutomationRegistrar2_1,
+  automationRegistrar: AutomationRegistrar2_3,
   eventSignature: string,
   voterAddress: string,
   gaugeUpkeepManagerAddress: string,
@@ -83,6 +88,7 @@ async function registerLogTriggerUpkeep(
     triggerConfig,
     offchainConfig: '0x',
     amount: ethers.utils.parseEther('10'),
+    billingToken: LINK_TOKEN_ADDRESS,
   })
   const registerReceipt = await registerTx.wait()
 
@@ -99,12 +105,12 @@ async function registerLogTriggerUpkeep(
 
 let snapshotId: any
 
-describe('GaugeUpkeepManager Script Tests', function () {
+describe('GaugeUpkeepManagerV2_3 Script Tests', function () {
   let accounts: SignerWithAddress[]
-  let gaugeUpkeepManager: GaugeUpkeepManager
+  let gaugeUpkeepManager: GaugeUpkeepManagerV2_3
   let upkeepBalanceMonitor: UpkeepBalanceMonitor
   let voter: Voter
-  let keeperRegistry: IKeeperRegistryMaster
+  let keeperRegistry: IAutomationRegistryMaster2_3
   let linkToken: IERC20
   let createGaugeLogUpkeepId: BigNumber
   let killGaugeLogUpkeepId: BigNumber
@@ -125,12 +131,12 @@ describe('GaugeUpkeepManager Script Tests', function () {
     linkToken = await ethers.getContractAt('ERC20Mintable', LINK_TOKEN_ADDRESS)
     // setup automation registrar contract
     const automationRegistrar = await ethers.getContractAt(
-      'AutomationRegistrar2_1',
+      'AutomationRegistrar2_3',
       AUTOMATION_REGISTRAR_ADDRESS,
     )
     // setup keeper registry contract
     keeperRegistry = await ethers.getContractAt(
-      'IKeeperRegistryMaster',
+      'IAutomationRegistryMaster2_3',
       KEEPER_REGISTRY_ADDRESS,
     )
     // setup voter contract
@@ -151,8 +157,9 @@ describe('GaugeUpkeepManager Script Tests', function () {
       },
     )
     // setup gauge upkeep manager
-    const gaugeUpkeepManagerFactory =
-      await ethers.getContractFactory('GaugeUpkeepManager')
+    const gaugeUpkeepManagerFactory = await ethers.getContractFactory(
+      'GaugeUpkeepManagerV2_3',
+    )
     gaugeUpkeepManager = await gaugeUpkeepManagerFactory.deploy(
       linkToken.address,
       keeperRegistry.address,
@@ -250,6 +257,10 @@ describe('GaugeUpkeepManager Script Tests', function () {
   it('Gauge upkeep registration flow', async () => {
     // create gauge via voter
     const voterGovernor = await voter.governor()
+    await accounts[0].sendTransaction({
+      to: voterGovernor,
+      value: ethers.utils.parseEther('1'),
+    })
     await impersonateAccount(voterGovernor)
     const voterSigner = await ethers.getSigner(voterGovernor)
     const createGaugeTx = await voter.populateTransaction.createGauge(
@@ -399,27 +410,20 @@ describe('GaugeUpkeepManager Script Tests', function () {
   it('Gauge upkeep cancellation flow', async () => {
     // impersonate voter emergency council and kill gauge
     const voterEmergencyCouncil = await voter.emergencyCouncil()
-    const emergencyCouncil = new ethers.Contract(
-      voterEmergencyCouncil,
-      EmergencyCouncilAbi,
-      accounts[0],
-    )
-    const emergencyCouncilOwner = await emergencyCouncil.owner()
     await accounts[0].sendTransaction({
-      to: emergencyCouncilOwner,
+      to: voterEmergencyCouncil,
       value: ethers.utils.parseEther('1'),
     })
-    await impersonateAccount(emergencyCouncilOwner)
+    await impersonateAccount(voterEmergencyCouncil)
     const emergencyCouncilOwnerSigner = await ethers.getSigner(
-      emergencyCouncilOwner,
+      voterEmergencyCouncil,
     )
-    const killGaugeTx =
-      await emergencyCouncil.populateTransaction.killRootGauge(gaugeAddress)
+    const killGaugeTx = await voter.populateTransaction.killGauge(gaugeAddress)
     const killResultTx = await emergencyCouncilOwnerSigner.sendTransaction({
       ...killGaugeTx,
-      from: emergencyCouncilOwner,
+      from: voterEmergencyCouncil,
     })
-    await stopImpersonatingAccount(emergencyCouncilOwner)
+    await stopImpersonatingAccount(voterEmergencyCouncil)
     const killResultReceipt = await killResultTx.wait()
     const gaugeKilledLog = findLog(
       killResultReceipt,
@@ -528,27 +532,21 @@ describe('GaugeUpkeepManager Script Tests', function () {
   it('Gauge upkeep revival flow', async () => {
     // impersonate voter emergency council and revive gauge
     const voterEmergencyCouncil = await voter.emergencyCouncil()
-    const emergencyCouncil = new ethers.Contract(
-      voterEmergencyCouncil,
-      EmergencyCouncilAbi,
-      accounts[0],
-    )
-    const emergencyCouncilOwner = await emergencyCouncil.owner()
     await accounts[0].sendTransaction({
-      to: emergencyCouncilOwner,
+      to: voterEmergencyCouncil,
       value: ethers.utils.parseEther('1'),
     })
-    await impersonateAccount(emergencyCouncilOwner)
+    await impersonateAccount(voterEmergencyCouncil)
     const emergencyCouncilOwnerSigner = await ethers.getSigner(
-      emergencyCouncilOwner,
+      voterEmergencyCouncil,
     )
     const reviveGaugeTx =
-      await emergencyCouncil.populateTransaction.reviveRootGauge(gaugeAddress)
+      await voter.populateTransaction.reviveGauge(gaugeAddress)
     const reviveResultTx = await emergencyCouncilOwnerSigner.sendTransaction({
       ...reviveGaugeTx,
-      from: emergencyCouncilOwner,
+      from: voterEmergencyCouncil,
     })
-    await stopImpersonatingAccount(emergencyCouncilOwner)
+    await stopImpersonatingAccount(voterEmergencyCouncil)
     const reviveResultReceipt = await reviveResultTx.wait()
     const gaugeRevivedLog = findLog(
       reviveResultReceipt,

@@ -13,7 +13,7 @@ vendor
 .github/**/*.yml
 .gitmodules
 
-.env.example
+.env.*
 .gitignore
 .prettierrc
 .prettierignore

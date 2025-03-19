@@ -55,6 +55,11 @@ const config: HardhatUserConfig = {
       accounts:
         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
     },
+    baseSepolia: {
+      url: process.env.BASE_SEPOLIA_URL || '',
+      accounts:
+        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+    },
   },
   etherscan: {
     apiKey: {
@@ -75,9 +80,13 @@ const config: HardhatUserConfig = {
 }
 
 if (process.env.FORK_ENABLED === 'true') {
+  let forkChainUrl =
+    process.env.FORK_CHAIN === 'base'
+      ? process.env.BASE_MAINNET_URL
+      : process.env.OP_MAINNET_URL
   config.networks!.hardhat = {
     forking: {
-      url: process.env.OP_MAINNET_URL || '',
+      url: forkChainUrl || '',
       blockNumber: parseInt(process.env.BLOCK_NUMBER || ''),
     },
   }

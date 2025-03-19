@@ -50,6 +50,7 @@ pnpm run test:unit
 
 ```bash
 pnpm run test:fork
+pnpm run test:fork:v2_3
 ```
 
 ## Deployment
@@ -65,9 +66,10 @@ npx hardhat run scripts/deploy_balance_monitor.ts --network <network>
 2. Register custom logic trigger for the deployed `UpkeepBalanceMonitor` contract and set the trusted forwarders:
 
 ```bash
-npx hardhat run scripts/register_monitor_upkeep.ts --network <network>
+npx hardhat run scripts/<version>/register_monitor_upkeep.ts --network <network>
 ```
 
+**Note:** Currently supported Chainlink Automation versions are `v2_1` and `v2_3`.  
 **Note:** The account running the script must have enough LINK to pay for the initial upkeep registration funding determined by the `BALANCE_MONITOR_UPKEEP_FUND_AMOUNT` and `BALANCE_MONITOR_UPKEEP_GAS_LIMIT` environment variables.
 
 3. Transfer LINK tokens to the `UpkeepBalanceMonitor` contract which will be used to top-up the gauge upkeeps.
@@ -77,13 +79,13 @@ npx hardhat run scripts/register_monitor_upkeep.ts --network <network>
 1. Deploy and configure `GaugeUpkeepManager` contract by running:
 
 ```bash
-npx hardhat run scripts/deploy_upkeep_manager.ts --network <network>
+npx hardhat run scripts/<version>/deploy_upkeep_manager.ts --network <network>
 ```
 
 2. Register log trigger upkeeps for the deployed `GaugeUpkeepManager` contract and set the trusted forwarders:
 
 ```bash
-npx hardhat run scripts/register_log_upkeeps.ts --network <network>
+npx hardhat run scripts/<version>/register_log_upkeeps.ts --network <network>
 ```
 
 **Note:** Make sure the account running the script has enough LINK to pay for the initial funding of each upkeep registration determined by the `LOG_UPKEEP_FUND_AMOUNT` and `LOG_UPKEEP_GAS_LIMIT` environment variables.
