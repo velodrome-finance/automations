@@ -15,7 +15,7 @@ import {
   AutomationRegistrar2_1,
   IKeeperRegistryMaster,
   IERC20,
-  UpkeepBalanceMonitor,
+  UpkeepBalanceMonitorV2_1,
 } from '../../../typechain-types'
 import { EmergencyCouncilAbi } from '../../abi'
 import {
@@ -109,7 +109,7 @@ let snapshotId: any
 describe('GaugeUpkeepManagerV2_1 Script Tests', function () {
   let accounts: SignerWithAddress[]
   let gaugeUpkeepManager: GaugeUpkeepManagerV2_1
-  let upkeepBalanceMonitor: UpkeepBalanceMonitor
+  let upkeepBalanceMonitor: UpkeepBalanceMonitorV2_1
   let voter: Voter
   let keeperRegistry: IKeeperRegistryMaster
   let linkToken: IERC20
@@ -144,7 +144,7 @@ describe('GaugeUpkeepManagerV2_1 Script Tests', function () {
     voter = await ethers.getContractAt('Voter', VOTER_ADDRESS)
     // deploy upkeep balance monitor
     const upkeepBalanceMonitorFactory = await ethers.getContractFactory(
-      'UpkeepBalanceMonitor',
+      'UpkeepBalanceMonitorV2_1',
     )
     upkeepBalanceMonitor = await upkeepBalanceMonitorFactory.deploy(
       linkToken.address,

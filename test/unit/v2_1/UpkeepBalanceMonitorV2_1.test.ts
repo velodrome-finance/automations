@@ -3,15 +3,15 @@ import { ethers } from 'hardhat'
 import { BigNumber } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import { mine } from '@nomicfoundation/hardhat-network-helpers'
-import { matchSet } from '../utils'
+import { matchSet } from '../../utils'
 import {
   IERC20,
   KeeperRegistryMock,
-  UpkeepBalanceMonitor,
-} from '../../typechain-types'
+  UpkeepBalanceMonitorV2_1,
+} from '../../../typechain-types'
 
-describe('UpkeepBalanceMonitor Unit Tests', function () {
-  let upkeepBalanceMonitor: UpkeepBalanceMonitor
+describe('UpkeepBalanceMonitorV2_1 Unit Tests', function () {
+  let upkeepBalanceMonitor: UpkeepBalanceMonitorV2_1
   let linkToken: IERC20
   let keeperRegistryMock: KeeperRegistryMock
   let accounts: SignerWithAddress[]
@@ -42,7 +42,7 @@ describe('UpkeepBalanceMonitor Unit Tests', function () {
 
     // deploy upkeep balance monitor
     const upkeepBalanceMonitorFactory = await ethers.getContractFactory(
-      'UpkeepBalanceMonitor',
+      'UpkeepBalanceMonitorV2_1',
     )
     upkeepBalanceMonitor = await upkeepBalanceMonitorFactory.deploy(
       linkToken.address,

@@ -15,7 +15,7 @@ import {
   AutomationRegistrar2_3,
   IAutomationRegistryMaster2_3,
   IERC20,
-  UpkeepBalanceMonitor,
+  UpkeepBalanceMonitorV2_3,
 } from '../../../typechain-types'
 import {
   UPKEEP_CANCELLATION_DELAY,
@@ -108,7 +108,7 @@ let snapshotId: any
 describe('GaugeUpkeepManagerV2_3 Script Tests', function () {
   let accounts: SignerWithAddress[]
   let gaugeUpkeepManager: GaugeUpkeepManagerV2_3
-  let upkeepBalanceMonitor: UpkeepBalanceMonitor
+  let upkeepBalanceMonitor: UpkeepBalanceMonitorV2_3
   let voter: Voter
   let keeperRegistry: IAutomationRegistryMaster2_3
   let linkToken: IERC20
@@ -143,7 +143,7 @@ describe('GaugeUpkeepManagerV2_3 Script Tests', function () {
     voter = await ethers.getContractAt('Voter', VOTER_ADDRESS)
     // deploy upkeep balance monitor
     const upkeepBalanceMonitorFactory = await ethers.getContractFactory(
-      'UpkeepBalanceMonitor',
+      'UpkeepBalanceMonitorV2_3',
     )
     upkeepBalanceMonitor = await upkeepBalanceMonitorFactory.deploy(
       linkToken.address,
