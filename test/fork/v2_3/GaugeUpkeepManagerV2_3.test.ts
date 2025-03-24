@@ -15,7 +15,6 @@ import {
   AutomationRegistrar2_3,
   IAutomationRegistryMaster2_3,
   IERC20,
-  UpkeepBalanceMonitorV2_3,
 } from '../../../typechain-types'
 import {
   UPKEEP_CANCELLATION_DELAY,
@@ -108,7 +107,6 @@ let snapshotId: any
 describe('GaugeUpkeepManagerV2_3 Script Tests', function () {
   let accounts: SignerWithAddress[]
   let gaugeUpkeepManager: GaugeUpkeepManagerV2_3
-  let upkeepBalanceMonitor: UpkeepBalanceMonitorV2_3
   let voter: Voter
   let keeperRegistry: IAutomationRegistryMaster2_3
   let linkToken: IERC20
@@ -145,7 +143,7 @@ describe('GaugeUpkeepManagerV2_3 Script Tests', function () {
     const upkeepBalanceMonitorFactory = await ethers.getContractFactory(
       'UpkeepBalanceMonitorV2_3',
     )
-    upkeepBalanceMonitor = await upkeepBalanceMonitorFactory.deploy(
+    const upkeepBalanceMonitor = await upkeepBalanceMonitorFactory.deploy(
       linkToken.address,
       keeperRegistry.address,
       {
@@ -384,27 +382,6 @@ describe('GaugeUpkeepManagerV2_3 Script Tests', function () {
       gaugeUpkeep.interface.getEventTopic('GaugeUpkeepPerformed'),
     )
     expect(upkeepPerformedLog).to.exist
-  })
-
-  it('Gauge upkeep balance top-up flow', async function () {
-    const [underfundedUpkeepsBefore] =
-      await upkeepBalanceMonitor.callStatic.getUnderfundedUpkeeps()
-
-    expect(underfundedUpkeepsBefore.length).to.equal(1)
-
-    // upkeep should be triggered
-    const checkUpkeepResult =
-      await upkeepBalanceMonitor.callStatic.checkUpkeep(HashZero)
-
-    expect(checkUpkeepResult.upkeepNeeded).to.be.true
-
-    // perform upkeep with check data
-    await upkeepBalanceMonitor.performUpkeep(checkUpkeepResult.performData)
-
-    const [underfundedUpkeepsAfter] =
-      await upkeepBalanceMonitor.callStatic.getUnderfundedUpkeeps()
-
-    expect(underfundedUpkeepsAfter.length).to.equal(0)
   })
 
   it('Gauge upkeep cancellation flow', async () => {

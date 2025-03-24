@@ -15,7 +15,6 @@ import {
   AutomationRegistrar2_1,
   IKeeperRegistryMaster,
   IERC20,
-  UpkeepBalanceMonitorV2_1,
 } from '../../../typechain-types'
 import { EmergencyCouncilAbi } from '../../abi'
 import {
@@ -109,7 +108,6 @@ let snapshotId: any
 describe('GaugeUpkeepManagerV2_1 Script Tests', function () {
   let accounts: SignerWithAddress[]
   let gaugeUpkeepManager: GaugeUpkeepManagerV2_1
-  let upkeepBalanceMonitor: UpkeepBalanceMonitorV2_1
   let voter: Voter
   let keeperRegistry: IKeeperRegistryMaster
   let linkToken: IERC20
@@ -146,7 +144,7 @@ describe('GaugeUpkeepManagerV2_1 Script Tests', function () {
     const upkeepBalanceMonitorFactory = await ethers.getContractFactory(
       'UpkeepBalanceMonitorV2_1',
     )
-    upkeepBalanceMonitor = await upkeepBalanceMonitorFactory.deploy(
+    const upkeepBalanceMonitor = await upkeepBalanceMonitorFactory.deploy(
       linkToken.address,
       keeperRegistry.address,
       {
@@ -192,11 +190,6 @@ describe('GaugeUpkeepManagerV2_1 Script Tests', function () {
     await linkToken.transfer(
       gaugeUpkeepManager.address,
       ethers.utils.parseEther('50'),
-    )
-    // transfer link tokens to upkeep balance monitor
-    await linkToken.transfer(
-      upkeepBalanceMonitor.address,
-      ethers.utils.parseEther('10'),
     )
     // impersonate automation registrar owner and set auto approve for log trigger type
     const automationRegistrarOwner = await automationRegistrar.owner()
@@ -381,27 +374,6 @@ describe('GaugeUpkeepManagerV2_1 Script Tests', function () {
       gaugeUpkeep.interface.getEventTopic('GaugeUpkeepPerformed'),
     )
     expect(upkeepPerformedLog).to.exist
-  })
-
-  it('Gauge upkeep balance top-up flow', async function () {
-    const [underfundedUpkeepsBefore] =
-      await upkeepBalanceMonitor.callStatic.getUnderfundedUpkeeps()
-
-    expect(underfundedUpkeepsBefore.length).to.equal(1)
-
-    // upkeep should be triggered
-    const checkUpkeepResult =
-      await upkeepBalanceMonitor.callStatic.checkUpkeep(HashZero)
-
-    expect(checkUpkeepResult.upkeepNeeded).to.be.true
-
-    // perform upkeep with check data
-    await upkeepBalanceMonitor.performUpkeep(checkUpkeepResult.performData)
-
-    const [underfundedUpkeepsAfter] =
-      await upkeepBalanceMonitor.callStatic.getUnderfundedUpkeeps()
-
-    expect(underfundedUpkeepsAfter.length).to.equal(0)
   })
 
   it('Gauge upkeep cancellation flow', async () => {

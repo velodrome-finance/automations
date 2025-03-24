@@ -50,7 +50,6 @@ pnpm run test:unit
 
 ```bash
 pnpm run test:fork
-pnpm run test:fork:v2_3
 ```
 
 ## Deployment
