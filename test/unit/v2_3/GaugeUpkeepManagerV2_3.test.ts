@@ -9,7 +9,7 @@ import {
   FactoryRegistryMock,
   KeeperRegistryMock,
   AutomationRegistrarMockV2_3,
-  UpkeepBalanceMonitor,
+  UpkeepBalanceMonitorV2_3,
 } from '../../../typechain-types'
 import { PerformAction } from '../../constants'
 
@@ -17,7 +17,7 @@ const { HashZero } = ethers.constants
 
 describe('GaugeUpkeepManagerV2_3 Unit Tests', function () {
   let gaugeUpkeepManager: GaugeUpkeepManagerV2_3
-  let upkeepBalanceMonitor: UpkeepBalanceMonitor
+  let upkeepBalanceMonitor: UpkeepBalanceMonitorV2_3
   let linkToken: IERC20
   let keeperRegistryMock: KeeperRegistryMock
   let automationRegistrarMock: AutomationRegistrarMockV2_3
@@ -80,7 +80,7 @@ describe('GaugeUpkeepManagerV2_3 Unit Tests', function () {
 
     // deploy upkeep balance monitor
     const upkeepBalanceMonitorFactory = await ethers.getContractFactory(
-      'UpkeepBalanceMonitor',
+      'UpkeepBalanceMonitorV2_3',
     )
     upkeepBalanceMonitor = await upkeepBalanceMonitorFactory.deploy(
       linkToken.address,

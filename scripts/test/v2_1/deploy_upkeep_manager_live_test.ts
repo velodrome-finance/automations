@@ -7,7 +7,7 @@ import { ethers, run } from 'hardhat'
 import { BigNumber } from 'ethers'
 import * as assert from 'assert'
 import * as dotenv from 'dotenv'
-import { registerLogTriggerUpkeepV2_3 } from '../../utils'
+import { registerLogTriggerUpkeep } from '../../utils'
 
 // Load environment variables
 dotenv.config()
@@ -82,7 +82,7 @@ async function main() {
 
   // Deploy UpkeepBalanceMonitor contract
   const UpkeepBalanceMonitor = await ethers.getContractFactory(
-    'UpkeepBalanceMonitor',
+    'UpkeepBalanceMonitorV2_1',
   )
   const upkeepBalanceMonitor = await UpkeepBalanceMonitor.deploy(
     LINK_TOKEN_ADDRESS!,
@@ -100,7 +100,7 @@ async function main() {
 
   // Deploy GaugeUpkeepManager contract
   const gaugeUpkeepManagerFactory = await ethers.getContractFactory(
-    'GaugeUpkeepManagerV2_3',
+    'GaugeUpkeepManagerV2_1',
   )
   const gaugeUpkeepManager = await gaugeUpkeepManagerFactory.deploy(
     LINK_TOKEN_ADDRESS!,
@@ -139,13 +139,13 @@ async function main() {
 
   // Get AutomationRegistrar contract
   const automationRegistrar = await ethers.getContractAt(
-    'AutomationRegistrar2_3',
+    'AutomationRegistrar2_1',
     AUTOMATION_REGISTRAR_ADDRESS!,
   )
 
   // Get KeeperRegistry contract
   const keeperRegistry = await ethers.getContractAt(
-    'IAutomationRegistryMaster2_3',
+    'IKeeperRegistryMaster',
     KEEPER_REGISTRY_ADDRESS!,
   )
 
@@ -164,7 +164,7 @@ async function main() {
   )
 
   // Register create gauge log upkeep
-  const createGaugeLogUpkeepId = await registerLogTriggerUpkeepV2_3(
+  const createGaugeLogUpkeepId = await registerLogTriggerUpkeep(
     automationRegistrar,
     voterMock.address,
     voterMock.interface.getEventTopic('GaugeCreated'),
@@ -173,7 +173,6 @@ async function main() {
     'Create Gauge Log Upkeep',
     LOG_UPKEEP_FUND_AMOUNT!,
     LOG_UPKEEP_GAS_LIMIT!,
-    LINK_TOKEN_ADDRESS!,
   )
   console.log(
     'Registered create gauge log upkeep',
@@ -181,7 +180,7 @@ async function main() {
   )
 
   // Register kill gauge log upkeep
-  const killGaugeLogUpkeepId = await registerLogTriggerUpkeepV2_3(
+  const killGaugeLogUpkeepId = await registerLogTriggerUpkeep(
     automationRegistrar,
     voterMock.address,
     voterMock.interface.getEventTopic('GaugeKilled'),
@@ -190,7 +189,6 @@ async function main() {
     'Kill Gauge Log Upkeep',
     LOG_UPKEEP_FUND_AMOUNT!,
     LOG_UPKEEP_GAS_LIMIT!,
-    LINK_TOKEN_ADDRESS!,
   )
   console.log(
     'Registered kill gauge log upkeep',
@@ -198,7 +196,7 @@ async function main() {
   )
 
   // Register revive gauge log upkeep
-  const reviveGaugeLogUpkeepId = await registerLogTriggerUpkeepV2_3(
+  const reviveGaugeLogUpkeepId = await registerLogTriggerUpkeep(
     automationRegistrar,
     voterMock.address,
     voterMock.interface.getEventTopic('GaugeRevived'),
@@ -207,7 +205,6 @@ async function main() {
     'Revive Gauge Log Upkeep',
     LOG_UPKEEP_FUND_AMOUNT!,
     LOG_UPKEEP_GAS_LIMIT!,
-    LINK_TOKEN_ADDRESS!,
   )
   console.log(
     'Registered revive gauge log upkeep',

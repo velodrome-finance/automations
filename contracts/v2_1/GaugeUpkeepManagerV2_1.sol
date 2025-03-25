@@ -7,7 +7,7 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {IKeeperRegistryMaster} from "@chainlink/contracts/src/v0.8/automation/interfaces/v2_1/IKeeperRegistryMaster.sol";
 import {IAutomationRegistrarV2_1} from "../interfaces/v2_1/IAutomationRegistrarV2_1.sol";
 import {IGaugeUpkeepManagerV2_1} from "../interfaces/v2_1/IGaugeUpkeepManagerV2_1.sol";
-import {IUpkeepBalanceMonitor} from "../interfaces/IUpkeepBalanceMonitor.sol";
+import {IUpkeepBalanceMonitorV2_1} from "../interfaces/v2_1/IUpkeepBalanceMonitorV2_1.sol";
 import {GaugeUpkeepManager} from "../common/GaugeUpkeepManager.sol";
 import {GaugeUpkeep} from "../GaugeUpkeep.sol";
 
@@ -61,7 +61,7 @@ contract GaugeUpkeepManagerV2_1 is GaugeUpkeepManager, IGaugeUpkeepManagerV2_1 {
         });
         uint256 upkeepId = _registerUpkeep(params);
         upkeepIds.push(upkeepId);
-        IUpkeepBalanceMonitor(upkeepBalanceMonitor).addToWatchList(upkeepId);
+        IUpkeepBalanceMonitorV2_1(upkeepBalanceMonitor).addToWatchList(upkeepId);
         emit GaugeUpkeepRegistered(gaugeUpkeep, upkeepId, startIndex, endIndex);
     }
 
@@ -78,7 +78,7 @@ contract GaugeUpkeepManagerV2_1 is GaugeUpkeepManager, IGaugeUpkeepManagerV2_1 {
     function _cancelGaugeUpkeep(uint256 _upkeepId) internal override {
         upkeepIds.pop();
         _cancelledUpkeepIds.add(_upkeepId);
-        IUpkeepBalanceMonitor(upkeepBalanceMonitor).removeFromWatchList(_upkeepId);
+        IUpkeepBalanceMonitorV2_1(upkeepBalanceMonitor).removeFromWatchList(_upkeepId);
         IKeeperRegistryMaster(keeperRegistry).cancelUpkeep(_upkeepId);
         emit GaugeUpkeepCancelled(_upkeepId);
     }
