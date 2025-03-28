@@ -81,7 +81,7 @@ describe('TokenUpkeep Unit Tests', function () {
   })
 
   describe('Check Upkeep', function () {
-    it('should trigger upkeep when tokens need to be fetched', async function () {
+    it('should trigger upkeep when tokens need to be processed', async function () {
       const [upkeepNeeded, performData] =
         await tokenUpkeep.callStatic.checkUpkeep(HashZero)
 
@@ -89,8 +89,41 @@ describe('TokenUpkeep Unit Tests', function () {
       expect(performData).to.equal(samplePerformData)
     })
 
-    it('should not trigger upkeep when tokens are already fetched', async function () {
-      await pricesMock.storePrices(tokenList, Array(tokenList.length).fill(1))
+    it('should trigger upkeep when interval has passed', async function () {
+      // perform upkeep for all tokens in range
+      for (let i = 0; i < tokenCount; i++) {
+        const [_, performData] =
+          await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+        await tokenUpkeep.connect(accounts[0]).performUpkeep(performData)
+      }
+
+      // simulate interval passing
+      await time.increase(fetchInterval)
+
+      const [upkeepNeeded, performData] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+      expect(upkeepNeeded).to.be.true
+      expect(performData).to.equal(samplePerformData)
+    })
+
+    it('should not trigger upkeep when tokens are already processed', async function () {
+      // perform upkeep for all tokens in range
+      for (let i = 0; i < tokenCount; i++) {
+        const [_, performData] =
+          await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+        await tokenUpkeep.connect(accounts[0]).performUpkeep(performData)
+      }
+
+      const [upkeepNeeded, performData] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+      expect(upkeepNeeded).to.be.false
+      expect(performData).to.equal('0x')
+    })
+
+    it('should not trigger upkeep when token list is empty', async function () {
+      await tokenUpkeepManagerMock.removeTokenList()
 
       const [upkeepNeeded, performData] =
         await tokenUpkeep.callStatic.checkUpkeep(HashZero)
@@ -101,6 +134,22 @@ describe('TokenUpkeep Unit Tests', function () {
   })
 
   describe('Perform Upkeep', function () {
+    it('should perform upkeep when token need to be processed', async function () {
+      const [_, performData] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+      const performTx = await tokenUpkeep
+        .connect(accounts[0])
+        .performUpkeep(performData)
+
+      await expect(performTx)
+        .to.emit(tokenUpkeep, 'TokenUpkeepPerformed')
+        .withArgs(0, true)
+
+      // check that current index is incremented
+      expect(await tokenUpkeep.currentIndex()).to.equal(1)
+    })
+
     it('should perform upkeep for all tokens in range', async function () {
       let fetchedTokensCount = 0
       for (let i = 0; i < tokenCount; i++) {
@@ -113,9 +162,8 @@ describe('TokenUpkeep Unit Tests', function () {
 
         await expect(performTx)
           .to.emit(tokenUpkeep, 'TokenUpkeepPerformed')
-          .withArgs(i)
+          .withArgs(i, true)
 
-        await pricesMock.storePrices([tokenList[i]], [1])
         fetchedTokensCount++
       }
 
@@ -135,63 +183,6 @@ describe('TokenUpkeep Unit Tests', function () {
       expect(performData).to.equal('0x')
     })
 
-    it('should perform upkeep on interval', async function () {
-      await pricesMock.storePrices(tokenList, Array(tokenList.length).fill(1))
-
-      const [checkUpkeepBefore, performDataBefore] =
-        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
-
-      expect(checkUpkeepBefore).to.be.false
-      expect(performDataBefore).to.equal('0x')
-
-      const performTxBefore = tokenUpkeep
-        .connect(accounts[0])
-        .performUpkeep(samplePerformData)
-
-      await expect(performTxBefore)
-        .to.be.revertedWithCustomError(tokenUpkeep, 'PriceAlreadyFetched')
-        .withArgs(tokenList[0])
-
-      await time.increase(fetchInterval)
-
-      for (let i = 0; i < tokenCount; i++) {
-        const [_, performData] =
-          await tokenUpkeep.callStatic.checkUpkeep(HashZero)
-
-        const performTx = tokenUpkeep
-          .connect(accounts[0])
-          .performUpkeep(performData)
-
-        await expect(performTx)
-          .to.emit(tokenUpkeep, 'TokenUpkeepPerformed')
-          .withArgs(i)
-
-        await pricesMock.storePrices([tokenList[i]], [1])
-      }
-    })
-
-    it('should store token prices via token upkeep manager', async function () {
-      const [_, performData] =
-        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
-
-      const tx = await tokenUpkeep
-        .connect(accounts[0])
-        .performUpkeep(performData)
-      const receipt = await tx.wait()
-
-      const fetchedTokenLog = findLog(
-        receipt,
-        tokenUpkeepManagerMock.interface.getEventTopic('FetchedTokenPrice'),
-      )
-      expect(fetchedTokenLog).to.exist
-
-      const [token, price] =
-        tokenUpkeepManagerMock.interface.parseLog(fetchedTokenLog).args
-
-      expect(token).to.equal(tokenList[0])
-      expect(price).to.equal(1)
-    })
-
     it('should perform upkeep correctly when range is not full', async function () {
       const newTokenCount = 5
       const newTokenList = tokenList.slice(0, newTokenCount)
@@ -209,9 +200,8 @@ describe('TokenUpkeep Unit Tests', function () {
 
         await expect(performTx)
           .to.emit(tokenUpkeep, 'TokenUpkeepPerformed')
-          .withArgs(i)
+          .withArgs(i, true)
 
-        await pricesMock.storePrices([tokenList[i]], [1])
         fetchedTokensCount++
       }
 
@@ -260,9 +250,8 @@ describe('TokenUpkeep Unit Tests', function () {
 
         await expect(performTx)
           .to.emit(tokenUpkeep, 'TokenUpkeepPerformed')
-          .withArgs(i)
+          .withArgs(i, true)
 
-        await pricesMock.storePrices([newTokenList[i]], [1])
         fetchedTokensCount++
       }
 
@@ -280,22 +269,101 @@ describe('TokenUpkeep Unit Tests', function () {
       expect(performData).to.equal('0x')
     })
 
-    it('should not perform upkeep for tokens that are already fetched', async function () {
+    it('should not perform upkeep after all tokens are processed', async function () {
+      // perform upkeep for all tokens in range
+      for (let i = 0; i < tokenCount; i++) {
+        const [_, performData] =
+          await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+        await tokenUpkeep.connect(accounts[0]).performUpkeep(performData)
+      }
+
+      // check that upkeep is not needed
+      const [checkUpkeep, performData] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+      expect(checkUpkeep).to.be.false
+      expect(performData).to.equal('0x')
+
+      // try to perform upkeep again before interval has passed
+      await expect(
+        tokenUpkeep.connect(accounts[0]).performUpkeep(performData),
+      ).to.be.revertedWithCustomError(tokenUpkeep, 'UpkeepNotNeeded')
+    })
+
+    it('should store fetched token price via token upkeep manager', async function () {
       const [_, performData] =
         await tokenUpkeep.callStatic.checkUpkeep(HashZero)
 
-      // fetch token after check upkeep was called and before perform upkeep
-      await pricesMock.storePrices([tokenList[0]], [1])
+      const tx = await tokenUpkeep
+        .connect(accounts[0])
+        .performUpkeep(performData)
+      const receipt = await tx.wait()
 
-      await expect(tokenUpkeep.connect(accounts[0]).performUpkeep(performData))
-        .to.be.revertedWithCustomError(tokenUpkeep, 'PriceAlreadyFetched')
-        .withArgs(tokenList[0])
+      const fetchedTokenLog = findLog(
+        receipt,
+        tokenUpkeepManagerMock.interface.getEventTopic('FetchedTokenPrice'),
+      )
+      expect(fetchedTokenLog).to.exist
+
+      const [token, price] =
+        tokenUpkeepManagerMock.interface.parseLog(fetchedTokenLog).args
+
+      expect(token).to.equal(tokenList[0])
+      expect(price).to.equal(1)
     })
 
-    it('should not perform upkeep when token list is empty', async function () {
-      await tokenUpkeepManagerMock.removeTokenList()
+    it('should not store token price if already fetched', async function () {
+      // simulate fetching first token price
+      await pricesMock.storePrices([tokenList[0]], [1])
 
-      await expect(tokenUpkeep.callStatic.checkUpkeep(HashZero)).to.be.reverted
+      const [_, performData] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+      await expect(tokenUpkeep.connect(accounts[0]).performUpkeep(performData))
+        .to.emit(tokenUpkeep, 'TokenUpkeepPerformed')
+        .withArgs(0, false)
+    })
+
+    it('should continue fetching tokens after skipping one', async function () {
+      // simulate fetching token price in the middle of the range
+      const fetchedTokenIndex = 5
+      await pricesMock.storePrices([tokenList[fetchedTokenIndex]], [1])
+
+      let fetchedTokensCount = 0
+      for (let i = 0; i < tokenCount; i++) {
+        const [_, performData] =
+          await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+        const performTx = tokenUpkeep
+          .connect(accounts[0])
+          .performUpkeep(performData)
+
+        if (i !== fetchedTokenIndex) {
+          await expect(performTx)
+            .to.emit(tokenUpkeep, 'TokenUpkeepPerformed')
+            .withArgs(i, true)
+          fetchedTokensCount++
+        } else {
+          await expect(performTx)
+            .to.emit(tokenUpkeep, 'TokenUpkeepPerformed')
+            .withArgs(i, false)
+        }
+      }
+
+      // check that all tokens are fetched
+      expect(fetchedTokensCount).to.equal(tokenCount - 1)
+
+      // check if current index is reset to start index
+      expect(await tokenUpkeep.currentIndex()).to.equal(
+        await tokenUpkeep.startIndex(),
+      )
+
+      // check that upkeep is not needed
+      const [checkUpkeep, performData] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+      expect(checkUpkeep).to.be.false
+      expect(performData).to.equal('0x')
     })
   })
 

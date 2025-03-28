@@ -2,10 +2,10 @@
 pragma solidity 0.8.6;
 
 interface ITokenUpkeep {
-    event TokenUpkeepPerformed(uint256 indexed currentIndex);
+    event TokenUpkeepPerformed(uint256 indexed currentIndex, bool indexed success);
     event TrustedForwarderSet(address indexed trustedForwarder);
 
-    error PriceAlreadyFetched(address token);
+    error UpkeepNotNeeded();
     error UnauthorizedSender();
     error AddressZeroNotAllowed();
 
@@ -23,6 +23,9 @@ interface ITokenUpkeep {
 
     /// @notice The current index of token to be processed
     function currentIndex() external view returns (uint256);
+
+    /// @notice The last hour timestamp when the upkeep was performed
+    function lastRun() external view returns (uint256);
 
     /// @notice The address of the trusted forwarder
     function trustedForwarder() external view returns (address);

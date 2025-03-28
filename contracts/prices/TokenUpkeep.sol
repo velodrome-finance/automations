@@ -19,7 +19,11 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
     /// @inheritdoc ITokenUpkeep
     uint256 public override currentIndex;
     /// @inheritdoc ITokenUpkeep
+    uint256 public override lastRun;
+    /// @inheritdoc ITokenUpkeep
     address public override trustedForwarder;
+
+    uint256 private constant FETCH_INTERVAL = 1 hours;
 
     constructor(address _pricesContract, uint256 _startIndex, uint256 _endIndex) {
         pricesContract = _pricesContract;
@@ -33,20 +37,22 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
     function performUpkeep(bytes calldata _performData) external override {
         if (msg.sender != trustedForwarder) revert UnauthorizedSender();
 
+        uint256 _currentIndex = currentIndex;
+        uint256 _endIndex = _adjustedEndIndex();
+        if (!_upkeepNeeded(_currentIndex, _endIndex)) revert UpkeepNotNeeded();
+
         (address token, uint256 price) = abi.decode(_performData, (address, uint256));
-        if (_isPriceFetched(token, _currentHourTimestamp())) {
-            revert PriceAlreadyFetched(token);
-        }
-        ITokenUpkeepManager(tokenUpkeepManager).storePrice(token, price);
+        uint256 hourTimestamp = (block.timestamp / 1 hours) * 1 hours;
+        bool success = _tryStorePrice(token, price, hourTimestamp);
 
-        emit TokenUpkeepPerformed(currentIndex);
-
-        uint256 nextIndex = currentIndex + 1;
-        if (nextIndex < _adjustedEndIndex()) {
+        uint256 nextIndex = _currentIndex + 1;
+        if (nextIndex < _endIndex) {
             currentIndex = nextIndex;
         } else {
             currentIndex = startIndex;
+            lastRun = hourTimestamp;
         }
+        emit TokenUpkeepPerformed(_currentIndex, success);
     }
 
     /// @inheritdoc ITokenUpkeep
@@ -60,10 +66,18 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
 
     /// @inheritdoc ITokenUpkeep
     function checkUpkeep(bytes calldata) external view override returns (bool, bytes memory) {
-        address token = ITokenUpkeepManager(tokenUpkeepManager).tokenAt(currentIndex);
-        if (!_isPriceFetched(token, _currentHourTimestamp())) {
+        uint256 _currentIndex = currentIndex;
+        if (_upkeepNeeded(_currentIndex, _adjustedEndIndex())) {
+            address token = ITokenUpkeepManager(tokenUpkeepManager).tokenAt(_currentIndex);
             uint256 price = _fetchPrice(token);
             return (true, abi.encode(token, price));
+        }
+    }
+
+    function _tryStorePrice(address _token, uint256 _price, uint256 _timestamp) internal returns (bool success) {
+        if (IPrices(pricesContract).latest(_token, _timestamp) == 0) {
+            ITokenUpkeepManager(tokenUpkeepManager).storePrice(_token, _price);
+            success = true;
         }
     }
 
@@ -74,12 +88,8 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
         return prices[0];
     }
 
-    function _currentHourTimestamp() internal view returns (uint256) {
-        return (block.timestamp / 1 hours) * 1 hours;
-    }
-
-    function _isPriceFetched(address _token, uint256 _timestamp) internal view returns (bool) {
-        return IPrices(pricesContract).latest(_token, _timestamp) != 0;
+    function _upkeepNeeded(uint256 _currentIndex, uint256 _endIndex) internal view returns (bool) {
+        return lastRun + FETCH_INTERVAL < block.timestamp && _currentIndex < _endIndex;
     }
 
     function _adjustedEndIndex() internal view returns (uint256) {
