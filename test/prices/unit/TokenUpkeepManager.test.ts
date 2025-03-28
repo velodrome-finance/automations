@@ -474,6 +474,16 @@ describe('TokenUpkeepManager Unit Tests', function () {
       )
     })
 
+    it('should set a new prices oracle', async () => {
+      const newPricesOracle = accounts[1]
+
+      await tokenUpkeepManager.setPricesOracle(newPricesOracle.address)
+
+      expect(await tokenUpkeepManager.pricesOracle()).to.equal(
+        newPricesOracle.address,
+      )
+    })
+
     it('should register tokens in bulk', async () => {
       const tx = await tokenUpkeepManager.registerTokens(tokenList.slice(0, 3))
 

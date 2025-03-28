@@ -25,7 +25,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     /// @inheritdoc ITokenUpkeepManager
     address public immutable override automationRegistrar;
     /// @inheritdoc ITokenUpkeepManager
-    address public immutable override pricesContract;
+    address public override pricesOracle;
     /// @inheritdoc ITokenUpkeepManager
     address public override upkeepBalanceMonitor;
     /// @inheritdoc ITokenUpkeepManager
@@ -55,7 +55,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         address _linkToken,
         address _keeperRegistry,
         address _automationRegistrar,
-        address _pricesContract,
+        address _pricesOracle,
         address _upkeepBalanceMonitor,
         uint96 _newUpkeepFundAmount,
         uint32 _newUpkeepGasLimit
@@ -63,7 +63,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         linkToken = _linkToken;
         keeperRegistry = _keeperRegistry;
         automationRegistrar = _automationRegistrar;
-        pricesContract = _pricesContract;
+        pricesOracle = _pricesOracle;
         upkeepBalanceMonitor = _upkeepBalanceMonitor;
         newUpkeepFundAmount = _newUpkeepFundAmount;
         newUpkeepGasLimit = _newUpkeepGasLimit;
@@ -93,7 +93,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         tokens[0] = _token;
         uint256[] memory prices = new uint256[](1);
         prices[0] = _price;
-        IPrices(pricesContract).storePrices(tokens, prices);
+        IPrices(pricesOracle).storePrices(tokens, prices);
         emit FetchedTokenPrice(_token, _price);
     }
 
@@ -162,6 +162,15 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         }
         upkeepBalanceMonitor = _upkeepBalanceMonitor;
         emit UpkeepBalanceMonitorSet(_upkeepBalanceMonitor);
+    }
+
+    /// @inheritdoc ITokenUpkeepManager
+    function setPricesOracle(address _pricesOracle) external override onlyOwner {
+        if (_pricesOracle == address(0)) {
+            revert AddressZeroNotAllowed();
+        }
+        pricesOracle = _pricesOracle;
+        emit PricesOracleSet(_pricesOracle);
     }
 
     /// @inheritdoc ITokenUpkeepManager
@@ -242,7 +251,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     function _registerTokenUpkeep() internal {
         uint256 startIndex = _getNextUpkeepStartIndex(upkeepIds.length);
         uint256 endIndex = startIndex + TOKENS_PER_UPKEEP;
-        address tokenUpkeep = address(new TokenUpkeep(pricesContract, startIndex, endIndex));
+        address tokenUpkeep = address(new TokenUpkeep(startIndex, endIndex));
         isTokenUpkeep[tokenUpkeep] = true;
         IAutomationRegistrarV2_1.RegistrationParams memory params = IAutomationRegistrarV2_1.RegistrationParams({
             name: UPKEEP_NAME,

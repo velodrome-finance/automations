@@ -6,9 +6,15 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 contract TokenUpkeepManagerMock {
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    address public pricesOracle;
+
     EnumerableSet.AddressSet internal _tokenList;
 
     event FetchedTokenPrice(address indexed token, uint256 price);
+
+    constructor(address _pricesOracle) {
+        pricesOracle = _pricesOracle;
+    }
 
     function setTokenList(address[] calldata _tokens) external {
         for (uint256 i = 0; i < _tokens.length; i++) {

@@ -37,7 +37,9 @@ describe('TokenUpkeep Unit Tests', function () {
     const tokenUpkeepManagerMockFactory = await ethers.getContractFactory(
       'TokenUpkeepManagerMock',
     )
-    tokenUpkeepManagerMock = await tokenUpkeepManagerMockFactory.deploy()
+    tokenUpkeepManagerMock = await tokenUpkeepManagerMockFactory.deploy(
+      pricesMock.address,
+    )
 
     // set token list
     tokenList = Array.from(
@@ -64,11 +66,7 @@ describe('TokenUpkeep Unit Tests', function () {
       'TokenUpkeep',
       impersonatedSigner,
     )
-    tokenUpkeep = await tokenUpkeepFactory.deploy(
-      pricesMock.address,
-      startIndex,
-      endIndex,
-    )
+    tokenUpkeep = await tokenUpkeepFactory.deploy(startIndex, endIndex)
 
     // set trusted forwarder
     await tokenUpkeep.setTrustedForwarder(accounts[0].address)
@@ -232,11 +230,7 @@ describe('TokenUpkeep Unit Tests', function () {
       await tokenUpkeepManagerMock.removeTokenList()
       await tokenUpkeepManagerMock.setTokenList(newTokenList)
 
-      tokenUpkeep = await tokenUpkeepFactory.deploy(
-        pricesMock.address,
-        newStartIndex,
-        newEndIndex,
-      )
+      tokenUpkeep = await tokenUpkeepFactory.deploy(newStartIndex, newEndIndex)
       await tokenUpkeep.setTrustedForwarder(accounts[0].address)
 
       let fetchedTokensCount = 0

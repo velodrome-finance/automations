@@ -9,9 +9,6 @@ interface ITokenUpkeep {
     error UnauthorizedSender();
     error AddressZeroNotAllowed();
 
-    /// @notice Address of the Prices contract
-    function pricesContract() external view returns (address);
-
     /// @notice Address of the token upkeep manager
     function tokenUpkeepManager() external view returns (address);
 

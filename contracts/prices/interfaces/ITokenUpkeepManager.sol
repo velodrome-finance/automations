@@ -14,6 +14,7 @@ interface ITokenUpkeepManager {
     event NewUpkeepFundAmountSet(uint96 newUpkeepFundAmount);
     event TrustedForwarderSet(address indexed trustedForwarder);
     event UpkeepBalanceMonitorSet(address indexed upkeepBalanceMonitor);
+    event PricesOracleSet(address indexed pricesOracle);
     event FetchedTokenPrice(address indexed token, uint256 price);
 
     error AutoApproveDisabled();
@@ -38,7 +39,7 @@ interface ITokenUpkeepManager {
     function automationRegistrar() external view returns (address);
 
     /// @notice Prices contract address
-    function pricesContract() external view returns (address);
+    function pricesOracle() external view returns (address);
 
     /// @notice Upkeep balance monitor address
     function upkeepBalanceMonitor() external view returns (address);
@@ -102,6 +103,10 @@ interface ITokenUpkeepManager {
     /// @notice Set upkeep balance monitor address
     /// @param _upkeepBalanceMonitor New upkeep balance monitor address
     function setUpkeepBalanceMonitor(address _upkeepBalanceMonitor) external;
+
+    /// @notice Set prices oracle address
+    /// @param _pricesOracle New prices oracle address
+    function setPricesOracle(address _pricesOracle) external;
 
     /// @notice Check log for token registration/deregistration
     /// @param _log The log to check

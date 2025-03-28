@@ -8,8 +8,6 @@ import {ITokenUpkeepManager} from "./interfaces/ITokenUpkeepManager.sol";
 
 contract TokenUpkeep is ITokenUpkeep, Ownable {
     /// @inheritdoc ITokenUpkeep
-    address public immutable override pricesContract;
-    /// @inheritdoc ITokenUpkeep
     address public immutable override tokenUpkeepManager;
     /// @inheritdoc ITokenUpkeep
     uint256 public immutable override startIndex;
@@ -25,8 +23,7 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
 
     uint256 private constant FETCH_INTERVAL = 1 hours;
 
-    constructor(address _pricesContract, uint256 _startIndex, uint256 _endIndex) {
-        pricesContract = _pricesContract;
+    constructor(uint256 _startIndex, uint256 _endIndex) {
         tokenUpkeepManager = msg.sender;
         startIndex = _startIndex;
         endIndex = _endIndex;
@@ -75,7 +72,7 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
     }
 
     function _tryStorePrice(address _token, uint256 _price, uint256 _timestamp) internal returns (bool success) {
-        if (IPrices(pricesContract).latest(_token, _timestamp) == 0) {
+        if (_pricesOracle().latest(_token, _timestamp) == 0) {
             ITokenUpkeepManager(tokenUpkeepManager).storePrice(_token, _price);
             success = true;
         }
@@ -84,8 +81,13 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
     function _fetchPrice(address _token) internal view returns (uint256) {
         address[] memory tokens = new address[](1);
         tokens[0] = _token;
-        uint256[] memory prices = IPrices(pricesContract).fetchPrices(tokens);
+        uint256[] memory prices = _pricesOracle().fetchPrices(tokens);
         return prices[0];
+    }
+
+    function _pricesOracle() internal view returns (IPrices) {
+        address pricesOracle = ITokenUpkeepManager(tokenUpkeepManager).pricesOracle();
+        return IPrices(pricesOracle);
     }
 
     function _upkeepNeeded(uint256 _currentIndex, uint256 _endIndex) internal view returns (bool) {
