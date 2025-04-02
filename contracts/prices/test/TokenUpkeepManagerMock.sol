@@ -36,8 +36,11 @@ contract TokenUpkeepManagerMock {
         price = PricesMock(pricesOracle).fetchPrices(tokens)[0];
     }
 
-    function storePrice(address _token, uint256 _price) external {
-        emit FetchedTokenPrice(_token, _price);
+    function storePrice(address _token, uint256 _price) external returns (bool success) {
+        if (PricesMock(pricesOracle).latest(_token, block.timestamp) == 0) {
+            success = true;
+            emit FetchedTokenPrice(_token, _price);
+        }
     }
 
     function tokenAt(uint256 index) external view returns (address) {

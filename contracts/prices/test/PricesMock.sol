@@ -7,7 +7,7 @@ contract PricesMock {
     event Price(address indexed token, uint256 price);
 
     function latest(address _token, uint256 _timestamp) external view returns (uint256) {
-        return prices[_token][_timestamp];
+        return prices[_token][(block.timestamp / 1 hours) * 1 hours];
     }
 
     function fetchPrices(address[] calldata _tokens) external view returns (uint256[] memory _prices) {

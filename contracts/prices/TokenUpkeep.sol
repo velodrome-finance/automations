@@ -39,15 +39,14 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
         if (!_upkeepNeeded(_currentIndex, _endIndex)) revert UpkeepNotNeeded();
 
         (address token, uint256 price) = abi.decode(_performData, (address, uint256));
-        uint256 hourTimestamp = (block.timestamp / 1 hours) * 1 hours;
-        bool success = _tryStorePrice(token, price, hourTimestamp);
+        bool success = ITokenUpkeepManager(tokenUpkeepManager).storePrice(token, price);
 
         uint256 nextIndex = _currentIndex + 1;
         if (nextIndex < _endIndex) {
             currentIndex = nextIndex;
         } else {
             currentIndex = startIndex;
-            lastRun = hourTimestamp;
+            lastRun = (block.timestamp / 1 hours) * 1 hours;
         }
         emit TokenUpkeepPerformed(_currentIndex, success);
     }
@@ -67,14 +66,6 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
         if (_upkeepNeeded(_currentIndex, _adjustedEndIndex())) {
             (address token, uint256 price) = ITokenUpkeepManager(tokenUpkeepManager).fetchPriceByIndex(_currentIndex);
             return (true, abi.encode(token, price));
-        }
-    }
-
-    function _tryStorePrice(address _token, uint256 _price, uint256 _timestamp) internal returns (bool success) {
-        address pricesOracle = ITokenUpkeepManager(tokenUpkeepManager).pricesOracle();
-        if (IPrices(pricesOracle).latest(_token, _timestamp) == 0) {
-            ITokenUpkeepManager(tokenUpkeepManager).storePrice(_token, _price);
-            success = true;
         }
     }
 

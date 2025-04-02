@@ -76,7 +76,8 @@ interface ITokenUpkeepManager {
     /// @notice Store token price (called by token upkeeps)
     /// @param _token Address of the token
     /// @param _price Price of the token
-    function storePrice(address _token, uint256 _price) external;
+    /// @return True if the price was successfully stored
+    function storePrice(address _token, uint256 _price) external returns (bool);
 
     /// @notice Register multiple tokens
     /// @param _tokens Array of token addresses to register

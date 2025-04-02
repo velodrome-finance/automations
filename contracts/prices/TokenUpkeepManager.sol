@@ -97,16 +97,19 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     }
 
     /// @inheritdoc ITokenUpkeepManager
-    function storePrice(address _token, uint256 _price) external override {
+    function storePrice(address _token, uint256 _price) external override returns (bool success) {
         if (!isTokenUpkeep[msg.sender]) {
             revert UnauthorizedSender();
         }
-        address[] memory tokens = new address[](1);
-        tokens[0] = _token;
-        uint256[] memory prices = new uint256[](1);
-        prices[0] = _price;
-        IPrices(pricesOracle).storePrices(tokens, prices);
-        emit FetchedTokenPrice(_token, _price);
+        if (IPrices(pricesOracle).latest(_token, block.timestamp) == 0) {
+            address[] memory tokens = new address[](1);
+            tokens[0] = _token;
+            uint256[] memory prices = new uint256[](1);
+            prices[0] = _price;
+            IPrices(pricesOracle).storePrices(tokens, prices);
+            success = true;
+            emit FetchedTokenPrice(_token, _price);
+        }
     }
 
     /// @inheritdoc ITokenUpkeepManager
