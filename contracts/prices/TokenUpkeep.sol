@@ -65,29 +65,17 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
     function checkUpkeep(bytes calldata) external view override returns (bool, bytes memory) {
         uint256 _currentIndex = currentIndex;
         if (_upkeepNeeded(_currentIndex, _adjustedEndIndex())) {
-            address token = ITokenUpkeepManager(tokenUpkeepManager).tokenAt(_currentIndex);
-            uint256 price = _fetchPrice(token);
+            (address token, uint256 price) = ITokenUpkeepManager(tokenUpkeepManager).fetchPriceByIndex(_currentIndex);
             return (true, abi.encode(token, price));
         }
     }
 
     function _tryStorePrice(address _token, uint256 _price, uint256 _timestamp) internal returns (bool success) {
-        if (_pricesOracle().latest(_token, _timestamp) == 0) {
+        address pricesOracle = ITokenUpkeepManager(tokenUpkeepManager).pricesOracle();
+        if (IPrices(pricesOracle).latest(_token, _timestamp) == 0) {
             ITokenUpkeepManager(tokenUpkeepManager).storePrice(_token, _price);
             success = true;
         }
-    }
-
-    function _fetchPrice(address _token) internal view returns (uint256) {
-        address[] memory tokens = new address[](1);
-        tokens[0] = _token;
-        uint256[] memory prices = _pricesOracle().fetchPrices(tokens);
-        return prices[0];
-    }
-
-    function _pricesOracle() internal view returns (IPrices) {
-        address pricesOracle = ITokenUpkeepManager(tokenUpkeepManager).pricesOracle();
-        return IPrices(pricesOracle);
     }
 
     function _upkeepNeeded(uint256 _currentIndex, uint256 _endIndex) internal view returns (bool) {

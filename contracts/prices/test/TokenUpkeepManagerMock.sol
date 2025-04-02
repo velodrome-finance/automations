@@ -2,6 +2,7 @@
 pragma solidity 0.8.6;
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {PricesMock} from "./PricesMock.sol";
 
 contract TokenUpkeepManagerMock {
     using EnumerableSet for EnumerableSet.AddressSet;
@@ -26,6 +27,13 @@ contract TokenUpkeepManagerMock {
         while (_tokenList.length() > 0) {
             _tokenList.remove(_tokenList.at(_tokenList.length() - 1));
         }
+    }
+
+    function fetchPriceByIndex(uint256 _tokenIndex) external view returns (address token, uint256 price) {
+        token = _tokenList.at(_tokenIndex);
+        address[] memory tokens = new address[](1);
+        tokens[0] = token;
+        price = PricesMock(pricesOracle).fetchPrices(tokens)[0];
     }
 
     function storePrice(address _token, uint256 _price) external {

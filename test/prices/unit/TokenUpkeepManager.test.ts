@@ -334,6 +334,50 @@ describe('TokenUpkeepManager Unit Tests', function () {
     })
   })
 
+  describe('Fetch token price', function () {
+    it('should fetch token price by index', async () => {
+      // register token upkeep
+      const registerTx =
+        await tokenUpkeepManager.performUpkeep(registerPerformData)
+      const registerReceipt = await registerTx.wait()
+
+      // get token upkeep address
+      const registerLog = findLog(
+        registerReceipt,
+        tokenUpkeepManager.interface.getEventTopic('TokenUpkeepRegistered'),
+      )
+      const [tokenUpkeepAddress] =
+        tokenUpkeepManager.interface.parseLog(registerLog).args
+
+      // impersonate token upkeep
+      await network.provider.request({
+        method: 'hardhat_impersonateAccount',
+        params: [tokenUpkeepAddress],
+      })
+      const impersonatedSigner = ethers.provider.getSigner(tokenUpkeepAddress)
+      await network.provider.send('hardhat_setBalance', [
+        tokenUpkeepAddress,
+        '0xffffffffffffffff',
+      ])
+
+      // fetch price via token upkeep
+      const index = 0
+      const token = tokenList[index]
+      const [fetchedToken, fetchedPrice] = await tokenUpkeepManager
+        .connect(impersonatedSigner)
+        .fetchPriceByIndex(index)
+
+      expect(fetchedToken).to.equal(token)
+      expect(fetchedPrice).to.equal(1)
+    })
+
+    it('should only allow token upkeep to fetch price', async () => {
+      await expect(
+        tokenUpkeepManager.fetchPriceByIndex(0),
+      ).to.be.revertedWithCustomError(tokenUpkeepManager, 'UnauthorizedSender')
+    })
+  })
+
   describe('Store fetched price', function () {
     it('should store a new token price', async () => {
       // register token upkeep
