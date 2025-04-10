@@ -2,7 +2,6 @@
 pragma solidity 0.8.6;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IPrices} from "./interfaces/IPrices.sol";
 import {ITokenUpkeep} from "./interfaces/ITokenUpkeep.sol";
 import {ITokenUpkeepManager} from "./interfaces/ITokenUpkeepManager.sol";
 
