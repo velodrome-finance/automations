@@ -7,4 +7,8 @@ interface IPrices {
     function fetchPrices(address[] calldata _tokens) external view returns (uint256[] memory _prices);
 
     function storePrices(address[] calldata _tokens, uint256[] calldata _prices) external;
+
+    function addKeeper(address _keeper) external;
+
+    function setStableToken(address _stableToken) external;
 }
