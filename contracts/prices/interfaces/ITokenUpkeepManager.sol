@@ -16,7 +16,6 @@ interface ITokenUpkeepManager {
     event UpkeepBalanceMonitorSet(address indexed upkeepBalanceMonitor);
     event PricesOracleSet(address indexed pricesOracle);
     event FetchedTokenPrice(address indexed token, uint256 price);
-    event TokenListCleaned();
 
     error AutoApproveDisabled();
     error NoLinkBalance();
@@ -95,9 +94,6 @@ interface ITokenUpkeepManager {
 
     /// @notice Withdraw LINK balance from the contract
     function withdrawLinkBalance() external;
-
-    /// @notice Cleanup token list by removing empty slots
-    function cleanupTokenList() external;
 
     /// @notice Set gas limit for new upkeeps
     /// @param _newUpkeepGasLimit New gas limit value

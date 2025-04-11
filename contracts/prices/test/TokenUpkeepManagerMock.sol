@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {StableEnumerableSet} from "../libraries/StableEnumerableSet.sol";
 import {PricesMock} from "./PricesMock.sol";
 
 contract TokenUpkeepManagerMock {
-    using EnumerableSet for EnumerableSet.AddressSet;
+    using StableEnumerableSet for StableEnumerableSet.AddressSet;
 
     address public pricesOracle;
 
-    EnumerableSet.AddressSet internal _tokenList;
+    StableEnumerableSet.AddressSet internal _tokenList;
 
     event FetchedTokenPrice(address indexed token, uint256 price);
 
@@ -24,8 +24,9 @@ contract TokenUpkeepManagerMock {
     }
 
     function removeTokenList() external {
-        while (_tokenList.length() > 0) {
-            _tokenList.remove(_tokenList.at(_tokenList.length() - 1));
+        address[] memory current = _tokenList.values();
+        for (uint256 i = 0; i < current.length; i++) {
+            _tokenList.remove(current[i]);
         }
     }
 
@@ -48,7 +49,7 @@ contract TokenUpkeepManagerMock {
     }
 
     function tokenCount() external view returns (uint256) {
-        return _tokenList.length();
+        return _tokenList.lengthWithoutZeroes();
     }
 
     function tokenListLength() external view returns (uint256) {

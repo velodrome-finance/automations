@@ -438,58 +438,139 @@ describe('TokenUpkeepManager Unit Tests', function () {
     })
   })
 
-  describe('Cleanup token list', function () {
-    it('should clean up the token list', async () => {
+  describe('Token list', function () {
+    it('should correctly add and remove a token from the list', async () => {
       expect(await tokenUpkeepManager.tokenListLength()).to.equal(0)
       expect(await tokenUpkeepManager.tokenCount()).to.equal(0)
+      await expect(tokenUpkeepManager.tokenAt(0)).to.be.reverted
 
+      // regisering a token
       await tokenUpkeepManager.performUpkeep(registerPerformData)
 
       expect(await tokenUpkeepManager.tokenListLength()).to.equal(1)
       expect(await tokenUpkeepManager.tokenCount()).to.equal(1)
+      expect(await tokenUpkeepManager.tokenAt(0)).to.equal(tokenList[0])
 
+      // deregistering the token
       await tokenUpkeepManager.performUpkeep(deregisterPerformData)
 
       expect(await tokenUpkeepManager.tokenListLength()).to.equal(1)
       expect(await tokenUpkeepManager.tokenCount()).to.equal(0)
+      expect(await tokenUpkeepManager.tokenAt(0)).to.equal(AddressZero)
 
-      const tx = await tokenUpkeepManager.cleanupTokenList()
+      // registering the token again
+      await tokenUpkeepManager.performUpkeep(registerPerformData)
 
-      await expect(tx).to.emit(tokenUpkeepManager, 'TokenListCleaned')
-
-      expect(await tokenUpkeepManager.tokenCount()).to.equal(0)
-      expect(await tokenUpkeepManager.tokenListLength()).to.equal(0)
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(1)
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(1)
+      expect(await tokenUpkeepManager.tokenAt(0)).to.equal(tokenList[0])
     })
 
-    it.only('should clean up the token list within the gas limit', async () => {
-      const performUpkeepGasLimit = 5_000_000
-      const maxTokensPerUpkeep = 340
+    it('should correctly add and remove multiple tokens from the list', async () => {
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(0)
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(0)
+      await expect(tokenUpkeepManager.tokenAt(0)).to.be.reverted
 
-      // register a large number of tokens
-      const bulkFakeTokenAddresses = Array.from(
-        { length: maxTokensPerUpkeep / 2 },
+      // registering multiple tokens
+      await tokenUpkeepManager.registerTokens(tokenList)
+
+      // check if the count is correct
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(
+        tokenList.length,
+      )
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenList.length)
+
+      // check if all tokens are present
+      for (let i = 0; i < tokenList.length; i++) {
+        expect(await tokenUpkeepManager.tokenAt(i)).to.equal(tokenList[i])
+      }
+
+      // deregistering half of the tokens
+      const halfTokenList = tokenList.slice(0, tokenList.length / 2)
+      await tokenUpkeepManager.deregisterTokens(halfTokenList)
+
+      // check if the count is correct
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(
+        tokenList.length,
+      )
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(
+        tokenList.length - halfTokenList.length,
+      )
+
+      // check if the first half of the tokens are removed
+      for (let i = 0; i < halfTokenList.length; i++) {
+        expect(await tokenUpkeepManager.tokenAt(i)).to.equal(AddressZero)
+      }
+      // check if the second half of the tokens are still present
+      for (let i = halfTokenList.length; i < tokenList.length; i++) {
+        expect(await tokenUpkeepManager.tokenAt(i)).to.equal(tokenList[i])
+      }
+
+      // registering the first half of the tokens again
+      await tokenUpkeepManager.registerTokens(halfTokenList)
+
+      // check if the count is correct
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(
+        tokenList.length,
+      )
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenList.length)
+
+      // check if the first half of the tokens are present again
+      for (let i = 0; i < halfTokenList.length; i++) {
+        expect(await tokenUpkeepManager.tokenAt(i)).to.equal(
+          halfTokenList[halfTokenList.length - 1 - i],
+        )
+      }
+      // check if the second half of the tokens are still present
+      for (let i = halfTokenList.length; i < tokenList.length; i++) {
+        expect(await tokenUpkeepManager.tokenAt(i)).to.equal(tokenList[i])
+      }
+
+      // regisering more tokens
+      const moreTokens = Array.from(
+        { length: 10 },
         () => ethers.Wallet.createRandom().address,
       )
-      await tokenUpkeepManager.registerTokens(bulkFakeTokenAddresses)
-      // split in two batches to avoid hitting the block gas limit
-      const bulkFakeTokenAddresses2 = Array.from(
-        { length: maxTokensPerUpkeep / 2 },
-        () => ethers.Wallet.createRandom().address,
+      await tokenUpkeepManager.registerTokens(moreTokens)
+      // check if the count is correct
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(
+        tokenList.length + moreTokens.length,
       )
-      await tokenUpkeepManager.registerTokens(bulkFakeTokenAddresses2)
-
-      // worst case scenario: deregiser second half of the tokens
-      // cleanup need to move half of the tokens and pop the rest
-      await tokenUpkeepManager.deregisterTokens(bulkFakeTokenAddresses)
-
-      const tx = await tokenUpkeepManager.cleanupTokenList()
-      const receipt = await tx.wait()
-
-      console.log(
-        `Gas used to cleanup ${maxTokensPerUpkeep} tokens: ${receipt.gasUsed.toString()}`,
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(
+        tokenList.length + moreTokens.length,
       )
+      // check if all tokens are present
+      for (let i = 0; i < halfTokenList.length; i++) {
+        expect(await tokenUpkeepManager.tokenAt(i)).to.equal(
+          halfTokenList[halfTokenList.length - 1 - i],
+        )
+      }
+      for (let i = halfTokenList.length; i < tokenList.length; i++) {
+        expect(await tokenUpkeepManager.tokenAt(i)).to.equal(tokenList[i])
+      }
+      for (
+        let i = tokenList.length;
+        i < tokenList.length + moreTokens.length;
+        i++
+      ) {
+        expect(await tokenUpkeepManager.tokenAt(i)).to.equal(
+          moreTokens[i - tokenList.length],
+        )
+      }
 
-      expect(receipt.gasUsed).to.be.lessThan(performUpkeepGasLimit)
+      // deregistering all tokens
+      await tokenUpkeepManager.deregisterTokens(tokenList.concat(moreTokens))
+
+      // check if the count is correct
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(
+        tokenList.length + moreTokens.length,
+      )
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(0)
+
+      // check if all tokens are removed
+      for (let i = 0; i < tokenList.length + moreTokens.length; i++) {
+        expect(await tokenUpkeepManager.tokenAt(i)).to.equal(AddressZero)
+      }
     })
   })
 
