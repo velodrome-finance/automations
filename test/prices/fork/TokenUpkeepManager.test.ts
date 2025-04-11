@@ -482,7 +482,7 @@ describe('TokenUpkeepManager Script Tests', function () {
 
     expect(deregisteredToken).to.equal(removedToken)
 
-    await expect(tokenUpkeepManager.tokenAt(0)).to.be.reverted
+    expect(await tokenUpkeepManager.tokenAt(0)).to.equal(AddressZero)
 
     // check if token upkeep is cancelled
     const tokenUpkeepCancelledLog = findLog(

@@ -38,7 +38,10 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
         if (!_upkeepNeeded(_currentIndex, _endIndex)) revert UpkeepNotNeeded();
 
         (address token, uint256 price) = abi.decode(_performData, (address, uint256));
-        bool success = ITokenUpkeepManager(tokenUpkeepManager).storePrice(token, price);
+        bool success;
+        if (token != address(0)) {
+            success = ITokenUpkeepManager(tokenUpkeepManager).storePrice(token, price);
+        }
 
         uint256 nextIndex = _currentIndex + 1;
         if (nextIndex < _endIndex) {
@@ -73,7 +76,7 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
     }
 
     function _adjustedEndIndex() internal view returns (uint256) {
-        uint256 tokenCount = ITokenUpkeepManager(tokenUpkeepManager).tokenCount();
-        return tokenCount < endIndex ? tokenCount : endIndex;
+        uint256 listLength = ITokenUpkeepManager(tokenUpkeepManager).tokenListLength();
+        return listLength < endIndex ? listLength : endIndex;
     }
 }

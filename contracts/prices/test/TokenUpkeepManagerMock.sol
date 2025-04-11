@@ -50,4 +50,8 @@ contract TokenUpkeepManagerMock {
     function tokenCount() external view returns (uint256) {
         return _tokenList.length();
     }
+
+    function tokenListLength() external view returns (uint256) {
+        return _tokenList.length();
+    }
 }

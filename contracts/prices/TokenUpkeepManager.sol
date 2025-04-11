@@ -5,6 +5,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {StableEnumerableSet} from "./libraries/StableEnumerableSet.sol";
 import {Log} from "@chainlink/contracts/src/v0.8/automation/interfaces/ILogAutomation.sol";
 import {IKeeperRegistryMaster} from "@chainlink/contracts/src/v0.8/automation/interfaces/v2_1/IKeeperRegistryMaster.sol";
 import {IAutomationRegistrarV2_1} from "../interfaces/v2_1/IAutomationRegistrarV2_1.sol";
@@ -15,7 +16,7 @@ import {ITokenUpkeepManager} from "./interfaces/ITokenUpkeepManager.sol";
 
 contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     using SafeERC20 for IERC20;
-    using EnumerableSet for EnumerableSet.AddressSet;
+    using StableEnumerableSet for StableEnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.UintSet;
 
     /// @inheritdoc ITokenUpkeepManager
@@ -41,7 +42,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     /// @inheritdoc ITokenUpkeepManager
     uint256[] public override upkeepIds;
 
-    EnumerableSet.AddressSet internal _tokenList;
+    StableEnumerableSet.AddressSet internal _tokenList;
     EnumerableSet.UintSet private _cancelledUpkeepIds;
 
     uint256 private constant TOKENS_PER_UPKEEP = 100;
@@ -150,6 +151,12 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     }
 
     /// @inheritdoc ITokenUpkeepManager
+    function cleanupTokenList() external override onlyOwner {
+        _tokenList.cleanup();
+        emit TokenListCleaned();
+    }
+
+    /// @inheritdoc ITokenUpkeepManager
     function setNewUpkeepGasLimit(uint32 _newUpkeepGasLimit) external override onlyOwner {
         newUpkeepGasLimit = _newUpkeepGasLimit;
         emit NewUpkeepGasLimitSet(_newUpkeepGasLimit);
@@ -215,8 +222,13 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     }
 
     /// @inheritdoc ITokenUpkeepManager
-    function tokenCount() external view override returns (uint256) {
+    function tokenListLength() external view override returns (uint256) {
         return _tokenList.length();
+    }
+
+    /// @inheritdoc ITokenUpkeepManager
+    function tokenCount() external view override returns (uint256) {
+        return _tokenList.lengthWithoutZeroes();
     }
 
     /// @inheritdoc ITokenUpkeepManager
@@ -254,7 +266,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
 
     function _deregisterToken(address _token) internal {
         _tokenList.remove(_token);
-        uint256 _tokenCount = _tokenList.length();
+        uint256 _tokenCount = _tokenList.lengthWithoutZeroes();
         uint256 _currentUpkeep = upkeepIds.length - 1;
         uint256 currentUpkeepStartIndex = _getNextUpkeepStartIndex(_currentUpkeep);
         if (_tokenCount + UPKEEP_CANCEL_BUFFER <= currentUpkeepStartIndex || _tokenCount == 0) {

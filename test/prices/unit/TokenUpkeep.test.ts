@@ -318,6 +318,8 @@ describe('TokenUpkeep Unit Tests', function () {
         .withArgs(0, false)
     })
 
+    // todo: it('should skip zero address tokens')
+
     it('should continue fetching tokens after skipping one', async function () {
       // simulate fetching token price in the middle of the range
       const fetchedTokenIndex = 5

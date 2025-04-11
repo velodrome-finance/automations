@@ -267,7 +267,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
         .to.emit(tokenUpkeepManager, 'TokenDeregistered')
         .withArgs(tokenList[0])
 
-      await expect(tokenUpkeepManager.tokenAt(0)).to.be.reverted
+      expect(await tokenUpkeepManager.tokenAt(0)).to.equal(AddressZero)
       expect(await tokenUpkeepManager.tokenCount()).to.equal(0)
       expect(await tokenUpkeepManager.cancelledUpkeeps(0, 1)).deep.include(
         upkeepId,
@@ -435,6 +435,61 @@ describe('TokenUpkeepManager Unit Tests', function () {
           ethers.utils.parseEther('1'),
         ),
       ).to.be.revertedWithCustomError(tokenUpkeepManager, 'UnauthorizedSender')
+    })
+  })
+
+  describe('Cleanup token list', function () {
+    it('should clean up the token list', async () => {
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(0)
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(0)
+
+      await tokenUpkeepManager.performUpkeep(registerPerformData)
+
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(1)
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(1)
+
+      await tokenUpkeepManager.performUpkeep(deregisterPerformData)
+
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(1)
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(0)
+
+      const tx = await tokenUpkeepManager.cleanupTokenList()
+
+      await expect(tx).to.emit(tokenUpkeepManager, 'TokenListCleaned')
+
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(0)
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(0)
+    })
+
+    it.only('should clean up the token list within the gas limit', async () => {
+      const performUpkeepGasLimit = 5_000_000
+      const maxTokensPerUpkeep = 340
+
+      // register a large number of tokens
+      const bulkFakeTokenAddresses = Array.from(
+        { length: maxTokensPerUpkeep / 2 },
+        () => ethers.Wallet.createRandom().address,
+      )
+      await tokenUpkeepManager.registerTokens(bulkFakeTokenAddresses)
+      // split in two batches to avoid hitting the block gas limit
+      const bulkFakeTokenAddresses2 = Array.from(
+        { length: maxTokensPerUpkeep / 2 },
+        () => ethers.Wallet.createRandom().address,
+      )
+      await tokenUpkeepManager.registerTokens(bulkFakeTokenAddresses2)
+
+      // worst case scenario: deregiser second half of the tokens
+      // cleanup need to move half of the tokens and pop the rest
+      await tokenUpkeepManager.deregisterTokens(bulkFakeTokenAddresses)
+
+      const tx = await tokenUpkeepManager.cleanupTokenList()
+      const receipt = await tx.wait()
+
+      console.log(
+        `Gas used to cleanup ${maxTokensPerUpkeep} tokens: ${receipt.gasUsed.toString()}`,
+      )
+
+      expect(receipt.gasUsed).to.be.lessThan(performUpkeepGasLimit)
     })
   })
 
