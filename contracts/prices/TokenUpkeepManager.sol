@@ -85,15 +85,14 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     }
 
     /// @inheritdoc ITokenUpkeepManager
-    function fetchPriceByIndex(uint256 _tokenIndex) external view override returns (address token, uint256 price) {
+    function fetchPrice(address _token) external view override returns (uint256) {
         if (!isTokenUpkeep[msg.sender]) {
             revert UnauthorizedSender();
         }
-        token = _tokenList.at(_tokenIndex);
         address[] memory tokens = new address[](1);
-        tokens[0] = token;
+        tokens[0] = _token;
         uint256[] memory prices = IPrices(pricesOracle).fetchPrices(tokens);
-        price = prices[0];
+        return prices[0];
     }
 
     /// @inheritdoc ITokenUpkeepManager

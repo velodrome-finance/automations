@@ -30,10 +30,13 @@ contract TokenUpkeepManagerMock {
         }
     }
 
-    function fetchPriceByIndex(uint256 _tokenIndex) external view returns (address token, uint256 price) {
-        token = _tokenList.at(_tokenIndex);
+    function removeFromTokenList(address _token) external {
+        _tokenList.remove(_token);
+    }
+
+    function fetchPrice(address _token) external view returns (uint256 price) {
         address[] memory tokens = new address[](1);
-        tokens[0] = token;
+        tokens[0] = _token;
         price = PricesMock(pricesOracle).fetchPrices(tokens)[0];
     }
 

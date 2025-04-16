@@ -73,8 +73,8 @@ describe('TokenUpkeep Unit Tests', function () {
 
     // create sample perform data
     samplePerformData = ethers.utils.defaultAbiCoder.encode(
-      ['address', 'uint256'],
-      [tokenList[0], 1],
+      ['uint256', 'address', 'uint256'],
+      [0, tokenList[0], 1],
     )
   })
 
@@ -120,16 +120,33 @@ describe('TokenUpkeep Unit Tests', function () {
       expect(performData).to.equal('0x')
     })
 
-    // todo: refactor considering the new EnumerableSet behaviour
-    // it('should not trigger upkeep when token list is empty', async function () {
-    //   await tokenUpkeepManagerMock.removeTokenList()
+    it('should not trigger upkeep with only zero address tokens', async function () {
+      // remove all tokens from list so they become zero address
+      await tokenUpkeepManagerMock.removeTokenList()
 
-    //   const [upkeepNeeded, performData] =
-    //     await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+      const [upkeepNeeded, performData] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
 
-    //   expect(upkeepNeeded).to.be.false
-    //   expect(performData).to.equal('0x')
-    // })
+      expect(upkeepNeeded).to.be.false
+      expect(performData).to.equal('0x')
+    })
+
+    it('should skip zero address tokens', async function () {
+      // remove first token from list so it becomes zero address
+      await tokenUpkeepManagerMock.removeFromTokenList(tokenList[0])
+
+      const [upkeepNeeded, performData] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+      // the perform data should be for the next token in the list
+      expect(performData).to.equal(
+        ethers.utils.defaultAbiCoder.encode(
+          ['uint256', 'address', 'uint256'],
+          [1, tokenList[1], 1],
+        ),
+      )
+      expect(upkeepNeeded).to.be.true
+    })
   })
 
   describe('Perform Upkeep', function () {
@@ -182,44 +199,42 @@ describe('TokenUpkeep Unit Tests', function () {
       expect(performData).to.equal('0x')
     })
 
-    // todo: refactor considering the new EnumerableSet behaviour
-    // it('should perform upkeep correctly when range is not full', async function () {
-    //   const newTokenCount = 5
-    //   const newTokenList = tokenList.slice(0, newTokenCount)
-    //   await tokenUpkeepManagerMock.removeTokenList()
-    //   await tokenUpkeepManagerMock.setTokenList(newTokenList)
+    it('should perform upkeep correctly when range is not full', async function () {
+      // deploy token upkeep with a range that is not full
+      tokenUpkeep = await tokenUpkeepFactory.deploy(startIndex, endIndex + 5)
+      await tokenUpkeep.setTrustedForwarder(accounts[0].address)
 
-    //   let fetchedTokensCount = 0
-    //   for (let i = 0; i < newTokenCount; i++) {
-    //     const [_, performData] =
-    //       await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+      let fetchedTokensCount = 0
+      for (let i = 0; i < tokenCount; i++) {
+        const [_, performData] =
+          await tokenUpkeep.callStatic.checkUpkeep(HashZero)
 
-    //     const performTx = tokenUpkeep
-    //       .connect(accounts[0])
-    //       .performUpkeep(performData)
+        const performTx = tokenUpkeep
+          .connect(accounts[0])
+          .performUpkeep(performData)
 
-    //     await expect(performTx)
-    //       .to.emit(tokenUpkeep, 'TokenUpkeepPerformed')
-    //       .withArgs(i, true)
+        await expect(performTx)
+          .to.emit(tokenUpkeep, 'TokenUpkeepPerformed')
+          .withArgs(i, true)
 
-    //     fetchedTokensCount++
-    //   }
+        fetchedTokensCount++
+      }
 
-    //   // check that all tokens are fetched
-    //   expect(fetchedTokensCount).to.equal(newTokenCount)
+      // check that all tokens are fetched
+      expect(fetchedTokensCount).to.equal(tokenCount)
 
-    //   // check if current index is reset to start index
-    //   expect(await tokenUpkeep.currentIndex()).to.equal(
-    //     await tokenUpkeep.startIndex(),
-    //   )
+      // check if current index is reset to start index
+      expect(await tokenUpkeep.currentIndex()).to.equal(
+        await tokenUpkeep.startIndex(),
+      )
 
-    //   // check that upkeep is not needed
-    //   const [checkUpkeep, performData] =
-    //     await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+      // check that upkeep is not needed
+      const [checkUpkeep, performData] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
 
-    //   expect(checkUpkeep).to.be.false
-    //   expect(performData).to.equal('0x')
-    // })
+      expect(checkUpkeep).to.be.false
+      expect(performData).to.equal('0x')
+    })
 
     it('should perform upkeep correctly when start index is not 0', async function () {
       const newStartIndex = 10
@@ -282,7 +297,7 @@ describe('TokenUpkeep Unit Tests', function () {
 
       // try to perform upkeep again before interval has passed
       await expect(
-        tokenUpkeep.connect(accounts[0]).performUpkeep(performData),
+        tokenUpkeep.connect(accounts[0]).performUpkeep(samplePerformData),
       ).to.be.revertedWithCustomError(tokenUpkeep, 'UpkeepNotNeeded')
     })
 
@@ -320,7 +335,46 @@ describe('TokenUpkeep Unit Tests', function () {
         .withArgs(0, false)
     })
 
-    // todo: it('should skip zero address tokens')
+    it('should skip zero address tokens', async function () {
+      // remove tokens from list so they become zero address
+      await tokenUpkeepManagerMock.removeFromTokenList(tokenList[0])
+      await tokenUpkeepManagerMock.removeFromTokenList(tokenList[5])
+
+      let fetchedTokensCount = 0
+      let tokenUpkeepIndex = 0
+      for (let i = 0; i < tokenCount - 2; i++) {
+        const [_, performData] =
+          await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+        const performTx = tokenUpkeep
+          .connect(accounts[0])
+          .performUpkeep(performData)
+
+        // adjust tokenUpkeepIndex for skipped tokens
+        if (i === 0 || i === 4) {
+          tokenUpkeepIndex++
+        }
+        await expect(performTx)
+          .to.emit(tokenUpkeep, 'TokenUpkeepPerformed')
+          .withArgs(tokenUpkeepIndex, true)
+
+        tokenUpkeepIndex++
+        fetchedTokensCount++
+      }
+
+      // check that all tokens are fetched
+      expect(fetchedTokensCount).to.equal(tokenCount - 2)
+
+      // check if current index is reset to start index
+      expect(await tokenUpkeep.currentIndex()).to.equal(
+        await tokenUpkeep.startIndex(),
+      )
+
+      // check that upkeep is not needed
+      const [checkUpkeep, performData] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+      expect(checkUpkeep).to.be.false
+      expect(performData).to.equal('0x')
+    })
 
     it('should continue fetching tokens after skipping one', async function () {
       // simulate fetching token price in the middle of the range

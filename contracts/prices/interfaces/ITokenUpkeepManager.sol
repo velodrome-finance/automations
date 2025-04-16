@@ -67,11 +67,10 @@ interface ITokenUpkeepManager {
     /// @param _performData Encoded data for the operation
     function performUpkeep(bytes calldata _performData) external;
 
-    /// @notice Fetch token price at a specific index
-    /// @param _tokenIndex The index of the token
-    /// @return _token Address of the token
-    /// @return _price Price of the token
-    function fetchPriceByIndex(uint256 _tokenIndex) external view returns (address _token, uint256 _price);
+    /// @notice Fetch token price
+    /// @param _token Address of the token
+    /// @return Price of the token
+    function fetchPrice(address _token) external view returns (uint256);
 
     /// @notice Store token price (called by token upkeeps)
     /// @param _token Address of the token

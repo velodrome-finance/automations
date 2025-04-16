@@ -282,7 +282,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
   })
 
   describe('Fetch token price', function () {
-    it('should fetch token price by index', async () => {
+    it('should fetch token price', async () => {
       // register token upkeep
       const registerTx =
         await tokenUpkeepManager.performUpkeep(registerPerformData)
@@ -308,19 +308,17 @@ describe('TokenUpkeepManager Unit Tests', function () {
       ])
 
       // fetch price via token upkeep
-      const index = 0
-      const token = tokenList[index]
-      const [fetchedToken, fetchedPrice] = await tokenUpkeepManager
+      const token = tokenList[0]
+      const fetchedPrice = await tokenUpkeepManager
         .connect(impersonatedSigner)
-        .fetchPriceByIndex(index)
+        .fetchPrice(token)
 
-      expect(fetchedToken).to.equal(token)
       expect(fetchedPrice).to.equal(1)
     })
 
     it('should only allow token upkeep to fetch price', async () => {
       await expect(
-        tokenUpkeepManager.fetchPriceByIndex(0),
+        tokenUpkeepManager.fetchPrice(tokenList[0]),
       ).to.be.revertedWithCustomError(tokenUpkeepManager, 'UnauthorizedSender')
     })
   })
