@@ -269,62 +269,9 @@ describe('TokenUpkeepManager Unit Tests', function () {
 
       expect(await tokenUpkeepManager.tokenAt(0)).to.equal(AddressZero)
       expect(await tokenUpkeepManager.tokenCount()).to.equal(0)
-      expect(await tokenUpkeepManager.cancelledUpkeeps(0, 1)).deep.include(
-        upkeepId,
-      )
     })
 
-    it('should cancel a token upkeep', async () => {
-      await tokenUpkeepManager.performUpkeep(registerPerformData)
-      const tx = await tokenUpkeepManager.performUpkeep(deregisterPerformData)
-
-      await expect(tx)
-        .to.emit(tokenUpkeepManager, 'TokenUpkeepCancelled')
-        .withArgs(upkeepId)
-
-      await expect(tokenUpkeepManager.upkeepIds(0)).to.be.reverted
-      expect(await tokenUpkeepManager.upkeepCount()).to.equal(0)
-    })
-
-    it('should not cancel upkeep before the buffer is reached', async () => {
-      const bulkFakeTokenAddresses = Array.from(
-        { length: tokensPerUpkeepLimit + 1 },
-        () => ethers.Wallet.createRandom().address,
-      )
-      await tokenUpkeepManager.registerTokens(bulkFakeTokenAddresses)
-      expect(await tokenUpkeepManager.upkeepCount()).to.equal(2)
-
-      // upkeep should not be cancelled until the buffer is reached
-      await tokenUpkeepManager.deregisterTokens(
-        bulkFakeTokenAddresses.slice(0, upkeepCancelBuffer),
-      )
-      expect(await tokenUpkeepManager.upkeepCount()).to.equal(2)
-
-      // upkeep should be cancelled after the buffer is reached
-      await expect(
-        tokenUpkeepManager.deregisterTokens(
-          bulkFakeTokenAddresses.slice(
-            upkeepCancelBuffer,
-            upkeepCancelBuffer + 1,
-          ),
-        ),
-      ).to.emit(tokenUpkeepManager, 'TokenUpkeepCancelled')
-      expect(await tokenUpkeepManager.upkeepCount()).to.equal(1)
-      expect(await tokenUpkeepManager.tokenCount()).to.equal(
-        tokensPerUpkeepLimit - upkeepCancelBuffer,
-      )
-    })
-
-    it('should remove cancelled upkeeps from the watch list', async () => {
-      await tokenUpkeepManager.performUpkeep(registerPerformData)
-      await tokenUpkeepManager.performUpkeep(deregisterPerformData)
-
-      const watchList = await upkeepBalanceMonitor.getWatchList()
-
-      expect(watchList).to.not.include(upkeepId)
-    })
-
-    it('should not allow non-trusted forwarder to cancel upkeep', async () => {
+    it('should not allow non-trusted forwarder to perform upkeep', async () => {
       await tokenUpkeepManager.performUpkeep(registerPerformData)
       await expect(
         tokenUpkeepManager
@@ -574,10 +521,35 @@ describe('TokenUpkeepManager Unit Tests', function () {
     })
   })
 
+  describe('Cancel upkeep', function () {
+    it('should cancel a token upkeep', async () => {
+      await tokenUpkeepManager.performUpkeep(registerPerformData)
+      await tokenUpkeepManager.performUpkeep(deregisterPerformData)
+      const tx = await tokenUpkeepManager.cancelUpkeeps(0, 1)
+
+      await expect(tx)
+        .to.emit(tokenUpkeepManager, 'TokenUpkeepCancelled')
+        .withArgs(upkeepId)
+
+      await expect(tokenUpkeepManager.upkeepIds(0)).to.be.reverted
+      expect(await tokenUpkeepManager.upkeepCount()).to.equal(0)
+    })
+
+    it('should remove cancelled upkeeps from the watch list', async () => {
+      await tokenUpkeepManager.performUpkeep(registerPerformData)
+      await tokenUpkeepManager.performUpkeep(deregisterPerformData)
+
+      const watchList = await upkeepBalanceMonitor.getWatchList()
+
+      expect(watchList).to.not.include(upkeepId)
+    })
+  })
+
   describe('Withdraw token upkeep', function () {
     it('should withdraw cancelled upkeep balance', async () => {
       await tokenUpkeepManager.performUpkeep(registerPerformData)
       await tokenUpkeepManager.performUpkeep(deregisterPerformData)
+      await tokenUpkeepManager.cancelUpkeeps(0, 1)
 
       const tx = await tokenUpkeepManager.withdrawCancelledUpkeeps(0, 1)
 
@@ -594,6 +566,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
       )
       await tokenUpkeepManager.registerTokens(fakeTokenAddresses)
       await tokenUpkeepManager.deregisterTokens(fakeTokenAddresses)
+      await tokenUpkeepManager.cancelUpkeeps(0, upkeepCount)
 
       expect(await tokenUpkeepManager.cancelledUpkeepCount()).to.equal(
         upkeepCount,
@@ -738,6 +711,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
 
       await tokenUpkeepManager.performUpkeep(registerPerformData)
       await tokenUpkeepManager.performUpkeep(deregisterPerformData)
+      await tokenUpkeepManager.cancelUpkeeps(0, 1)
 
       expect(await tokenUpkeepManager.cancelledUpkeeps(0, 1)).to.deep.include(
         upkeepId,
@@ -749,6 +723,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
 
       await tokenUpkeepManager.performUpkeep(registerPerformData)
       await tokenUpkeepManager.performUpkeep(deregisterPerformData)
+      await tokenUpkeepManager.cancelUpkeeps(0, 1)
 
       expect(await tokenUpkeepManager.cancelledUpkeepCount()).to.equal(1)
     })
