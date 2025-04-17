@@ -74,10 +74,16 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         if (msg.sender != trustedForwarder) {
             revert UnauthorizedSender();
         }
-        (PerformAction action, address token) = abi.decode(performData, (PerformAction, address));
+        (PerformAction action, bytes memory data) = abi.decode(performData, (PerformAction, bytes));
         if (action == PerformAction.RegisterToken) {
+            address token = abi.decode(data, (address));
             _registerToken(token);
         } else if (action == PerformAction.DeregisterToken) {
+            (address token, address lastToken, uint256 lastTokenPrice) = abi.decode(data, (address, address, uint256));
+            // Store the last token price to avoid missing it when swapping it out during deregistration
+            if (token != lastToken) {
+                storePrice(lastToken, lastTokenPrice);
+            }
             _deregisterToken(token);
         } else {
             revert InvalidAction();
@@ -85,7 +91,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     }
 
     /// @inheritdoc ITokenUpkeepManager
-    function fetchPriceByIndex(uint256 _tokenIndex) external view override returns (address token, uint256 price) {
+    function fetchPriceByIndex(uint256 _tokenIndex) public view override returns (address token, uint256 price) {
         if (!isTokenUpkeep[msg.sender]) {
             revert UnauthorizedSender();
         }
@@ -97,7 +103,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     }
 
     /// @inheritdoc ITokenUpkeepManager
-    function storePrice(address _token, uint256 _price) external override returns (bool success) {
+    function storePrice(address _token, uint256 _price) public override returns (bool success) {
         if (!isTokenUpkeep[msg.sender]) {
             revert UnauthorizedSender();
         }
@@ -199,11 +205,16 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
             bool enabled = _bytes32ToBool(_log.topics[3]);
             if (enabled) {
                 if (!_tokenList.contains(token)) {
-                    return (true, abi.encode(PerformAction.RegisterToken, token));
+                    return (true, abi.encode(PerformAction.RegisterToken, abi.encode(token)));
                 }
             } else {
                 if (_tokenList.contains(token)) {
-                    return (true, abi.encode(PerformAction.DeregisterToken, token));
+                    // Preemptively fetch the last token index which is going to be swapped out
+                    // to avoid being missed during the deregistration process
+                    uint256 lastTokenIndex = _tokenList.length() - 1;
+                    (address lastToken, uint256 lastTokenPrice) = fetchPriceByIndex(lastTokenIndex);
+                    bytes memory data = abi.encode(token, lastToken, lastTokenPrice);
+                    return (true, abi.encode(PerformAction.DeregisterToken, data));
                 }
             }
         }
