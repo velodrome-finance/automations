@@ -212,6 +212,20 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     }
 
     /// @inheritdoc ITokenUpkeepManager
+    function tokenList(
+        uint256 _startIndex,
+        uint256 _endIndex
+    ) external view override returns (address[] memory tokens) {
+        uint256 length = _tokenList.length();
+        _endIndex = _endIndex > length ? length : _endIndex;
+        uint256 size = _endIndex - _startIndex;
+        tokens = new address[](size);
+        for (uint256 i = 0; i < size; i++) {
+            tokens[i] = _tokenList.at(_startIndex + i);
+        }
+    }
+
+    /// @inheritdoc ITokenUpkeepManager
     function tokenAt(uint256 _index) external view override returns (address) {
         return _tokenList.at(_index);
     }

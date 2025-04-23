@@ -591,6 +591,19 @@ describe('TokenUpkeepManager Unit Tests', function () {
       expect(await tokenUpkeepManager.tokenAt(0)).to.equal(tokenList[0])
     })
 
+    it('should return a range of tokens', async () => {
+      const bulkFakeTokenAddresses = Array.from(
+        { length: 5 },
+        () => ethers.Wallet.createRandom().address,
+      )
+      await tokenUpkeepManager.registerTokens(bulkFakeTokenAddresses)
+
+      const tokens = await tokenUpkeepManager.tokenList(0, 5)
+
+      expect(tokens).to.have.lengthOf(5)
+      expect(tokens).to.include.members(bulkFakeTokenAddresses)
+    })
+
     it('should get the upkeep count', async () => {
       await tokenUpkeepManager.performUpkeep(registerPerformData)
 

@@ -124,6 +124,12 @@ interface ITokenUpkeepManager {
         bytes memory
     ) external view returns (bool _upkeepNeeded, bytes memory _performData);
 
+    /// @notice Get a range of token addresses
+    /// @param _startIndex Start index of the token list
+    /// @param _endIndex End index of the token list
+    /// @return Array of token addresses
+    function tokenList(uint256 _startIndex, uint256 _endIndex) external view returns (address[] memory);
+
     /// @notice Get token at specified index
     /// @param _index The index to query
     /// @return Address of the token at index
