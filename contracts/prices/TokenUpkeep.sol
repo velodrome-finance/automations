@@ -45,7 +45,7 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
             currentIndex = nextIndex;
         } else {
             currentIndex = startIndex;
-            lastRun = (block.timestamp / 1 hours) * 1 hours;
+            lastRun = (block.timestamp / FETCH_INTERVAL) * FETCH_INTERVAL;
         }
         emit TokenUpkeepPerformed(_currentIndex, success);
     }
