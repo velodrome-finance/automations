@@ -169,11 +169,23 @@ describe('TokenUpkeepManager Unit Tests', function () {
 
     it('should register a new token upkeep', async () => {
       const tx = await tokenUpkeepManager.performUpkeep(registerPerformData)
+      const receipt = await tx.wait()
+      const log = findLog(
+        receipt,
+        tokenUpkeepManager.interface.getEventTopic('TokenUpkeepRegistered'),
+      )
+      const [tokenUpkeepAddress] =
+        tokenUpkeepManager.interface.parseLog(log).args
 
       await expect(tx).to.emit(tokenUpkeepManager, 'TokenUpkeepRegistered')
 
       expect(await tokenUpkeepManager.upkeepIds(0)).to.equal(1)
       expect(await tokenUpkeepManager.upkeepCount()).to.equal(1)
+      expect(await tokenUpkeepManager.isTokenUpkeep(tokenUpkeepAddress)).to.be
+        .true
+      expect(await tokenUpkeepManager.tokenUpkeep(1)).to.equal(
+        tokenUpkeepAddress,
+      )
     })
 
     it('should set the trusted forwarder when registering a new upkeep', async () => {
@@ -270,13 +282,19 @@ describe('TokenUpkeepManager Unit Tests', function () {
 
       await expect(tokenUpkeepManager.tokenAt(0)).to.be.reverted
       expect(await tokenUpkeepManager.tokenCount()).to.equal(0)
-      expect(await tokenUpkeepManager.cancelledUpkeeps(0, 1)).deep.include(
-        upkeepId,
-      )
     })
 
     it('should cancel a token upkeep', async () => {
-      await tokenUpkeepManager.performUpkeep(registerPerformData)
+      const registerTx =
+        await tokenUpkeepManager.performUpkeep(registerPerformData)
+      const registerReceipt = await registerTx.wait()
+      const registerLog = findLog(
+        registerReceipt,
+        tokenUpkeepManager.interface.getEventTopic('TokenUpkeepRegistered'),
+      )
+      const [tokenUpkeepAddress] =
+        tokenUpkeepManager.interface.parseLog(registerLog).args
+
       const tx = await tokenUpkeepManager.performUpkeep(deregisterPerformData)
 
       await expect(tx)
@@ -285,6 +303,14 @@ describe('TokenUpkeepManager Unit Tests', function () {
 
       await expect(tokenUpkeepManager.upkeepIds(0)).to.be.reverted
       expect(await tokenUpkeepManager.upkeepCount()).to.equal(0)
+      expect(await tokenUpkeepManager.cancelledUpkeeps(0, 1)).deep.include(
+        upkeepId,
+      )
+      expect(await tokenUpkeepManager.isTokenUpkeep(tokenUpkeepAddress)).to.be
+        .false
+      expect(await tokenUpkeepManager.tokenUpkeep(upkeepId)).to.equal(
+        AddressZero,
+      )
     })
 
     it('should not cancel upkeep before the buffer is reached', async () => {

@@ -39,6 +39,8 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     uint32 public override newUpkeepGasLimit;
 
     /// @inheritdoc ITokenUpkeepManager
+    mapping(uint256 => address) public override tokenUpkeep;
+    /// @inheritdoc ITokenUpkeepManager
     mapping(address => bool) public override isTokenUpkeep;
 
     /// @inheritdoc ITokenUpkeepManager
@@ -303,12 +305,12 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     function _registerTokenUpkeep() internal {
         uint256 startIndex = _getNextUpkeepStartIndex(upkeepIds.length);
         uint256 endIndex = startIndex + TOKENS_PER_UPKEEP;
-        address tokenUpkeep = address(new TokenUpkeep(startIndex, endIndex));
-        isTokenUpkeep[tokenUpkeep] = true;
+        address _tokenUpkeep = address(new TokenUpkeep(startIndex, endIndex));
+        isTokenUpkeep[_tokenUpkeep] = true;
         IAutomationRegistrarV2_1.RegistrationParams memory params = IAutomationRegistrarV2_1.RegistrationParams({
             name: UPKEEP_NAME,
             encryptedEmail: "",
-            upkeepContract: tokenUpkeep,
+            upkeepContract: _tokenUpkeep,
             gasLimit: newUpkeepGasLimit,
             adminAddress: address(this),
             triggerType: CONDITIONAL_TRIGGER_TYPE,
@@ -319,10 +321,11 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         });
         uint256 upkeepId = _registerUpkeep(params);
         upkeepIds.push(upkeepId);
+        tokenUpkeep[upkeepId] = _tokenUpkeep;
         address forwarder = IKeeperRegistryMaster(keeperRegistry).getForwarder(upkeepId);
-        TokenUpkeep(tokenUpkeep).setTrustedForwarder(forwarder);
+        TokenUpkeep(_tokenUpkeep).setTrustedForwarder(forwarder);
         IUpkeepBalanceMonitor(upkeepBalanceMonitor).addToWatchList(upkeepId);
-        emit TokenUpkeepRegistered(tokenUpkeep, upkeepId, startIndex, endIndex);
+        emit TokenUpkeepRegistered(_tokenUpkeep, upkeepId, startIndex, endIndex);
     }
 
     function _registerUpkeep(IAutomationRegistrarV2_1.RegistrationParams memory _params) internal returns (uint256) {
@@ -337,6 +340,8 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
 
     function _cancelTokenUpkeep(uint256 _upkeepId) internal {
         upkeepIds.pop();
+        isTokenUpkeep[tokenUpkeep[_upkeepId]] = false;
+        delete tokenUpkeep[_upkeepId];
         _cancelledUpkeepIds.add(_upkeepId);
         IUpkeepBalanceMonitor(upkeepBalanceMonitor).removeFromWatchList(_upkeepId);
         IKeeperRegistryMaster(keeperRegistry).cancelUpkeep(_upkeepId);

@@ -59,6 +59,11 @@ interface ITokenUpkeepManager {
     /// @notice Gas limit for new upkeeps
     function newUpkeepGasLimit() external view returns (uint32);
 
+    /// @notice Get token upkeep contract address
+    /// @param _upkeepId The upkeep ID
+    /// @return The token upkeep address
+    function tokenUpkeep(uint256 _upkeepId) external view returns (address);
+
     /// @notice Check if address is a token upkeep
     /// @param _address Address to check
     /// @return True if the address is a token upkeep contract
