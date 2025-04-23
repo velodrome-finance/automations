@@ -4,7 +4,7 @@ This repository contains the scripts designed to automate the Velodrome ecosyste
 
 ## Components
 
-### Distributes
+### Emissions
 
 - **GaugeUpkeepManager**: This contract is responsible for registering and deregistering scheduled distribute call upkeeps for a gauge. It is registered as an upkeep itself with the following triggers:
   - Log triggers (from the `Voter` contract)
