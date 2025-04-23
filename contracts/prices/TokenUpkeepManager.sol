@@ -116,6 +116,11 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     function registerTokens(address[] calldata _tokens) external override onlyOwner {
         uint256 length = _tokens.length;
         for (uint256 i = 0; i < length; i++) {
+            if (_tokenList.contains(_tokens[i])) {
+                revert TokenAlreadyRegistered();
+            }
+        }
+        for (uint256 i = 0; i < length; i++) {
             _registerToken(_tokens[i]);
         }
     }
@@ -123,6 +128,11 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     /// @inheritdoc ITokenUpkeepManager
     function deregisterTokens(address[] calldata _tokens) external override onlyOwner {
         uint256 length = _tokens.length;
+        for (uint256 i = 0; i < length; i++) {
+            if (!_tokenList.contains(_tokens[i])) {
+                revert TokenNotRegistered();
+            }
+        }
         for (uint256 i = 0; i < length; i++) {
             _deregisterToken(_tokens[i]);
         }
@@ -259,6 +269,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         return _cancelledUpkeepIds.length();
     }
 
+    /// @dev Assumes that the token is not already registered
     function _registerToken(address _token) internal {
         uint256 _tokenCount = _tokenList.length();
         _tokenList.add(_token);
@@ -268,6 +279,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         emit TokenRegistered(_token);
     }
 
+    /// @dev Assumes that the token is already registered
     function _deregisterToken(address _token) internal {
         _tokenList.remove(_token);
         uint256 _tokenCount = _tokenList.length();

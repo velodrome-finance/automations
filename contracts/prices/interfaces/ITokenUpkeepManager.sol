@@ -23,6 +23,8 @@ interface ITokenUpkeepManager {
     error UnauthorizedSender();
     error AddressZeroNotAllowed();
     error InvalidAction();
+    error TokenNotRegistered();
+    error TokenAlreadyRegistered();
 
     enum PerformAction {
         RegisterToken,
