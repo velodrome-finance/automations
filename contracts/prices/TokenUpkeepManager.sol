@@ -142,7 +142,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
 
     /// @inheritdoc ITokenUpkeepManager
     function withdrawLinkBalance() external override onlyOwner {
-        address receiver = owner();
+        address receiver = msg.sender;
         uint256 balance = IERC20(linkToken).balanceOf(address(this));
         if (balance == 0) {
             revert NoLinkBalance();

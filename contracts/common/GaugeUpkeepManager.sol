@@ -148,7 +148,7 @@ abstract contract GaugeUpkeepManager is IGaugeUpkeepManager, Ownable {
 
     /// @inheritdoc IGaugeUpkeepManager
     function withdrawLinkBalance() external override onlyOwner {
-        address receiver = owner();
+        address receiver = msg.sender;
         uint256 balance = IERC20(linkToken).balanceOf(address(this));
         if (balance == 0) {
             revert NoLinkBalance();
