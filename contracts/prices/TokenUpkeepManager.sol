@@ -29,12 +29,12 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     /// @inheritdoc ITokenUpkeepManager
     address public override upkeepBalanceMonitor;
     /// @inheritdoc ITokenUpkeepManager
-    address public override trustedForwarder;
-
-    /// @inheritdoc ITokenUpkeepManager
     uint96 public override newUpkeepFundAmount;
     /// @inheritdoc ITokenUpkeepManager
+    address public override trustedForwarder;
+    /// @inheritdoc ITokenUpkeepManager
     uint32 public override newUpkeepGasLimit;
+
     /// @inheritdoc ITokenUpkeepManager
     mapping(address => bool) public override isTokenUpkeep;
 
