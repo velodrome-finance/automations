@@ -371,6 +371,12 @@ describe('TokenUpkeepManager Unit Tests', function () {
       expect(fetchedPrice).to.equal(1)
     })
 
+    it('shoud revert if index is out of bounds', async () => {
+      await tokenUpkeepManager.performUpkeep(registerPerformData)
+
+      await expect(tokenUpkeepManager.fetchPriceByIndex(1)).to.be.reverted
+    })
+
     it('should only allow token upkeep to fetch price', async () => {
       await expect(
         tokenUpkeepManager.fetchPriceByIndex(0),
