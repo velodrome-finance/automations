@@ -165,6 +165,7 @@ describe('TokenUpkeepManager Script Tests', function () {
       linkToken.address,
       keeperRegistry.address,
       automationRegistrar.address,
+      voter.address,
       pricesOracle.address,
       upkeepBalanceMonitor.address,
       newUpkeepFundAmount,

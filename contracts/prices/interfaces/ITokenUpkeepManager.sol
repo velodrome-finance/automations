@@ -25,6 +25,7 @@ interface ITokenUpkeepManager {
     error InvalidAction();
     error TokenNotRegistered();
     error TokenAlreadyRegistered();
+    error TokenNotWhitelisted();
 
     enum PerformAction {
         RegisterToken,
@@ -39,6 +40,9 @@ interface ITokenUpkeepManager {
 
     /// @notice Automation registrar address
     function automationRegistrar() external view returns (address);
+
+    /// @notice Voter address
+    function voter() external view returns (address);
 
     /// @notice Prices contract address
     function pricesOracle() external view returns (address);

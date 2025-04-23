@@ -95,6 +95,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
       linkToken.address,
       keeperRegistryMock.address,
       automationRegistrarMock.address,
+      voterMock.address,
       pricesMock.address,
       upkeepBalanceMonitor.address,
       upkeepFundAmount,

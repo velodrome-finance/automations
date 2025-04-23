@@ -7,7 +7,7 @@ contract VoterMock {
     address public factoryRegistry;
 
     mapping(address => bool) public failingGauges;
-    mapping(address => bool) public isWhitelistedToken;
+    mapping(address => bool) public _isWhitelistedToken;
 
     event GaugeCreated(
         address indexed poolFactory,
@@ -53,8 +53,12 @@ contract VoterMock {
     }
 
     function whitelistToken(address _token, bool _bool) external {
-        isWhitelistedToken[_token] = _bool;
+        _isWhitelistedToken[_token] = _bool;
         emit WhitelistToken(msg.sender, _token, _bool);
+    }
+
+    function isWhitelistedToken(address) external view returns (bool) {
+        return true;
     }
 
     function isGauge(address) external view returns (bool) {

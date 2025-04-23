@@ -6,6 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {Log} from "@chainlink/contracts/src/v0.8/automation/interfaces/ILogAutomation.sol";
+import {IVoter} from "../../vendor/velodrome-contracts/contracts/interfaces/IVoter.sol";
 import {IKeeperRegistryMaster} from "@chainlink/contracts/src/v0.8/automation/interfaces/v2_1/IKeeperRegistryMaster.sol";
 import {IAutomationRegistrarV2_1} from "../interfaces/v2_1/IAutomationRegistrarV2_1.sol";
 import {IUpkeepBalanceMonitor} from "../interfaces/IUpkeepBalanceMonitor.sol";
@@ -24,6 +25,8 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     address public immutable override keeperRegistry;
     /// @inheritdoc ITokenUpkeepManager
     address public immutable override automationRegistrar;
+    /// @inheritdoc ITokenUpkeepManager
+    address public immutable override voter;
     /// @inheritdoc ITokenUpkeepManager
     address public override pricesOracle;
     /// @inheritdoc ITokenUpkeepManager
@@ -55,6 +58,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         address _linkToken,
         address _keeperRegistry,
         address _automationRegistrar,
+        address _voter,
         address _pricesOracle,
         address _upkeepBalanceMonitor,
         uint96 _newUpkeepFundAmount,
@@ -63,6 +67,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         linkToken = _linkToken;
         keeperRegistry = _keeperRegistry;
         automationRegistrar = _automationRegistrar;
+        voter = _voter;
         pricesOracle = _pricesOracle;
         upkeepBalanceMonitor = _upkeepBalanceMonitor;
         newUpkeepFundAmount = _newUpkeepFundAmount;
@@ -116,8 +121,12 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     function registerTokens(address[] calldata _tokens) external override onlyOwner {
         uint256 length = _tokens.length;
         for (uint256 i = 0; i < length; i++) {
-            if (_tokenList.contains(_tokens[i])) {
+            address token = _tokens[i];
+            if (_tokenList.contains(token)) {
                 revert TokenAlreadyRegistered();
+            }
+            if (!IVoter(voter).isWhitelistedToken(token)) {
+                revert TokenNotWhitelisted();
             }
         }
         for (uint256 i = 0; i < length; i++) {
