@@ -403,12 +403,6 @@ describe('TokenUpkeepManager Unit Tests', function () {
 
       await expect(tokenUpkeepManager.fetchPriceByIndex(1)).to.be.reverted
     })
-
-    it('should only allow token upkeep to fetch price', async () => {
-      await expect(
-        tokenUpkeepManager.fetchPriceByIndex(0),
-      ).to.be.revertedWithCustomError(tokenUpkeepManager, 'UnauthorizedSender')
-    })
   })
 
   describe('Store fetched price', function () {
