@@ -340,7 +340,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
 
     function _cancelTokenUpkeep(uint256 _upkeepId) internal {
         upkeepIds.pop();
-        isTokenUpkeep[tokenUpkeep[_upkeepId]] = false;
+        delete isTokenUpkeep[tokenUpkeep[_upkeepId]];
         delete tokenUpkeep[_upkeepId];
         _cancelledUpkeepIds.add(_upkeepId);
         IUpkeepBalanceMonitor(upkeepBalanceMonitor).removeFromWatchList(_upkeepId);
