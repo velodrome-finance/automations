@@ -122,8 +122,9 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     /// @inheritdoc ITokenUpkeepManager
     function registerTokens(address[] calldata _tokens) external override onlyOwner {
         uint256 length = _tokens.length;
+        address token;
         for (uint256 i = 0; i < length; i++) {
-            address token = _tokens[i];
+            token = _tokens[i];
             if (_tokenList.contains(token)) {
                 revert TokenAlreadyRegistered();
             }
