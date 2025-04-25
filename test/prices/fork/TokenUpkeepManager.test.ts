@@ -347,7 +347,7 @@ describe('TokenUpkeepManager Script Tests', function () {
       ...addKeeperTx,
       from: PRICES_ORACLE_OWNER_ADDRESS,
     })
-    // aslo set stable token to USDC
+    // set stable token to USDC
     const setStableTokenTx =
       await pricesOracle.populateTransaction.setStableToken(USDC_TOKEN_ADDRESS)
     await pricesOracleOwnerSigner.sendTransaction({
