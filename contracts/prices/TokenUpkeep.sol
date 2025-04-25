@@ -41,11 +41,11 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
         bool success = ITokenUpkeepManager(tokenUpkeepManager).storePrice(token, price);
 
         uint256 nextIndex = _currentIndex + 1;
-        if (nextIndex < _endIndex) {
-            currentIndex = nextIndex;
-        } else {
+        if (nextIndex == _endIndex) {
             currentIndex = startIndex;
             lastRun = (block.timestamp / FETCH_INTERVAL) * FETCH_INTERVAL;
+        } else {
+            currentIndex = nextIndex;
         }
         emit TokenUpkeepPerformed(_currentIndex, success);
     }
