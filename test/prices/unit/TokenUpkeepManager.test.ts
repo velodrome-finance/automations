@@ -120,6 +120,11 @@ describe('TokenUpkeepManager Unit Tests', function () {
       () => ethers.Wallet.createRandom().address,
     )
 
+    // whitelist tokens in voter mock
+    for (const token of tokenList) {
+      await voterMock.whitelistToken(token, true)
+    }
+
     // generate sample perform data
     registerPerformData = ethers.utils.defaultAbiCoder.encode(
       ['uint8', 'address'],
@@ -213,6 +218,9 @@ describe('TokenUpkeepManager Unit Tests', function () {
         { length: tokensPerUpkeepLimit },
         () => ethers.Wallet.createRandom().address,
       )
+      for (const token of bulkFakeTokenAddresses) {
+        await voterMock.whitelistToken(token, true)
+      }
       await tokenUpkeepManager.registerTokens(bulkFakeTokenAddresses)
 
       // should not register more than the tokens per upkeep limit
@@ -318,6 +326,9 @@ describe('TokenUpkeepManager Unit Tests', function () {
         { length: tokensPerUpkeepLimit + 1 },
         () => ethers.Wallet.createRandom().address,
       )
+      for (const token of bulkFakeTokenAddresses) {
+        await voterMock.whitelistToken(token, true)
+      }
       await tokenUpkeepManager.registerTokens(bulkFakeTokenAddresses)
       expect(await tokenUpkeepManager.upkeepCount()).to.equal(2)
 
@@ -483,6 +494,9 @@ describe('TokenUpkeepManager Unit Tests', function () {
         { length: tokensPerUpkeepLimit * upkeepCount },
         () => ethers.Wallet.createRandom().address,
       )
+      for (const token of fakeTokenAddresses) {
+        await voterMock.whitelistToken(token, true)
+      }
       await tokenUpkeepManager.registerTokens(fakeTokenAddresses)
       await tokenUpkeepManager.deregisterTokens(fakeTokenAddresses)
 
@@ -568,6 +582,13 @@ describe('TokenUpkeepManager Unit Tests', function () {
         .withArgs(tokenList[2])
     })
 
+    it('should revert if registering a token that is not whitelisted', async () => {
+      const fakeToken = ethers.Wallet.createRandom().address
+      await expect(
+        tokenUpkeepManager.registerTokens([fakeToken]),
+      ).to.be.revertedWithCustomError(tokenUpkeepManager, 'TokenNotWhitelisted')
+    })
+
     it('should deregister tokens in bulk', async () => {
       await tokenUpkeepManager.registerTokens(tokenList.slice(0, 3))
 
@@ -617,6 +638,9 @@ describe('TokenUpkeepManager Unit Tests', function () {
         { length: 5 },
         () => ethers.Wallet.createRandom().address,
       )
+      for (const token of bulkFakeTokenAddresses) {
+        await voterMock.whitelistToken(token, true)
+      }
       await tokenUpkeepManager.registerTokens(bulkFakeTokenAddresses)
 
       const tokens = await tokenUpkeepManager.tokenList(0, 5)

@@ -57,8 +57,8 @@ contract VoterMock {
         emit WhitelistToken(msg.sender, _token, _bool);
     }
 
-    function isWhitelistedToken(address) external view returns (bool) {
-        return true;
+    function isWhitelistedToken(address _token) external view returns (bool) {
+        return _isWhitelistedToken[_token];
     }
 
     function isGauge(address) external view returns (bool) {
