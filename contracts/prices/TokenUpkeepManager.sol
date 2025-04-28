@@ -161,6 +161,12 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     }
 
     /// @inheritdoc ITokenUpkeepManager
+    function cleanupTokenList() external override onlyOwner {
+        _tokenList.cleanup();
+        emit TokenListCleaned();
+    }
+
+    /// @inheritdoc ITokenUpkeepManager
     function setNewUpkeepGasLimit(uint32 _newUpkeepGasLimit) external override onlyOwner {
         newUpkeepGasLimit = _newUpkeepGasLimit;
         emit NewUpkeepGasLimitSet(_newUpkeepGasLimit);

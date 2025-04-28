@@ -5,7 +5,10 @@
 pragma solidity ^0.8.0;
 
 /**
- * @dev Library for managing sets of primitive types, with a custom "soft remove" mechanism and reuse of freed slots.
+ * @dev Library for managing sets of primitive types, with a custom "soft remove" mechanism:
+ *
+ * - Instead of "swap and pop", _remove() sets the slot to zero but keeps the array length the same.
+ * - A _cleanup() call later compacts out all zero slots and rebuilds the indexes mapping.
  */
 library StableEnumerableSet {
     // To implement this library for multiple types with as little code
@@ -23,41 +26,33 @@ library StableEnumerableSet {
         // Position of the value in the `values` array, plus 1 because index 0
         // means a value is not in the set.
         mapping(bytes32 => uint256) _indexes;
-        // Free-list stack of indexes (slots) that were freed by remove()
-        uint256[] _freeIndexes;
         // Number of zeroes in the array
-        uint256 _zeroCount;
+        uint256 _zeroes;
     }
 
     /**
-     * @dev Adds a value to the set. O(1).
+     * @dev Add a value to a set. O(1).
+     *
+     * Returns true if the value was added to the set, that is if it was not
+     * already present.
      */
     function _add(Set storage set, bytes32 value) private returns (bool) {
-        if (_contains(set, value)) {
+        if (!_contains(set, value)) {
+            set._values.push(value);
+            // The value is stored at length-1, but we add 1 to all indexes
+            // and use 0 as a sentinel value
+            set._indexes[value] = set._values.length;
+            return true;
+        } else {
             return false;
         }
-
-        if (set._freeIndexes.length > 0) {
-            // Reuse a freed slot
-            uint256 freePos = set._freeIndexes[set._freeIndexes.length - 1];
-            set._freeIndexes.pop();
-
-            // Fill this slot
-            set._values[freePos] = value;
-            set._indexes[value] = freePos + 1; // store as index+1
-
-            // Decrease zeroCount
-            set._zeroCount -= 1;
-        } else {
-            // No free slot, push at the end
-            set._values.push(value);
-            set._indexes[value] = set._values.length; // store as index+1
-        }
-        return true;
     }
 
     /**
-     * @dev Removes value from the set. O(1).
+     * @dev Removes a value from a set. O(1).
+     *
+     * Returns true if the value was removed from the set, that is if it was
+     * present.
      */
     function _remove(Set storage set, bytes32 value) private returns (bool) {
         uint256 valueIndex = set._indexes[value];
@@ -65,14 +60,46 @@ library StableEnumerableSet {
             return false; // not present
         }
 
-        // Freed slot
-        uint256 index = valueIndex - 1;
-        set._values[index] = bytes32(0);
+        // Overwrite the slot with zero
+        // valueIndex - 1 is the actual index in _values
+        set._values[valueIndex - 1] = bytes32(0);
+        // Remove from indexes
         delete set._indexes[value];
-        set._freeIndexes.push(index);
-        set._zeroCount += 1;
+        // Increment the number of zeroes
+        set._zeroes++;
 
         return true;
+    }
+
+    /**
+     * @dev Compacts out all zero addresses/values and rebuilds the `_indexes` map to match.
+     * This is an O(n) operation. Once done, the array’s length will shrink to reflect only valid elements.
+     */
+    function _cleanup(Set storage set) private {
+        bytes32[] storage store = set._values;
+        uint256 writeIndex = 0;
+        uint256 len = store.length;
+
+        // Rebuild the array in-place (stable compaction)
+        for (uint256 readIndex = 0; readIndex < len; readIndex++) {
+            bytes32 val = store[readIndex];
+            if (val != bytes32(0)) {
+                // keep it
+                store[writeIndex] = val;
+                set._indexes[val] = writeIndex + 1; // new index+1
+                writeIndex++;
+            } else {
+                // skip zero
+            }
+        }
+
+        // Now pop off the leftover slots
+        while (store.length > writeIndex) {
+            store.pop();
+        }
+
+        // Reset the zeroes count
+        set._zeroes = 0;
     }
 
     /**
@@ -93,7 +120,7 @@ library StableEnumerableSet {
      * @dev Returns the number of values on the set, excluding zeroes. O(1).
      */
     function _lengthWithoutZeroes(Set storage set) private view returns (uint256) {
-        return set._values.length - set._zeroCount;
+        return set._values.length - set._zeroes;
     }
 
     /**
@@ -146,6 +173,13 @@ library StableEnumerableSet {
      */
     function remove(Bytes32Set storage set, bytes32 value) internal returns (bool) {
         return _remove(set._inner, value);
+    }
+
+    /**
+     * @dev Removes all zero slots from the set. O(n).
+     */
+    function cleanup(Bytes32Set storage set) internal {
+        _cleanup(set._inner);
     }
 
     /**
@@ -230,6 +264,13 @@ library StableEnumerableSet {
     }
 
     /**
+     * @dev Removes all zero slots from the set. O(n).
+     */
+    function cleanup(AddressSet storage set) internal {
+        _cleanup(set._inner);
+    }
+
+    /**
      * @dev Returns true if the value is in the set. O(1).
      */
     function contains(AddressSet storage set, address value) internal view returns (bool) {
@@ -308,6 +349,13 @@ library StableEnumerableSet {
      */
     function remove(UintSet storage set, uint256 value) internal returns (bool) {
         return _remove(set._inner, bytes32(value));
+    }
+
+    /**
+     * @dev Removes all zero slots from the set. O(n).
+     */
+    function cleanup(UintSet storage set) internal {
+        _cleanup(set._inner);
     }
 
     /**
