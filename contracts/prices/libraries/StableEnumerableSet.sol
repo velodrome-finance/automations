@@ -28,6 +28,8 @@ library StableEnumerableSet {
         mapping(bytes32 => uint256) _indexes;
         // Number of zeroes in the array
         uint256 _zeroes;
+        // Indices of slots that currently hold zero (freed positions)
+        uint256[] _freeIndexes;
     }
 
     /**
@@ -60,11 +62,13 @@ library StableEnumerableSet {
             return false; // not present
         }
 
-        // Overwrite the slot with zero
-        // valueIndex - 1 is the actual index in _values
-        set._values[valueIndex - 1] = bytes32(0);
+        // Calculate the actual index in the array and zero it out
+        uint256 idx = valueIndex - 1;
+        set._values[idx] = bytes32(0);
         // Remove from indexes
         delete set._indexes[value];
+        // Track the freed slot
+        set._freeIndexes.push(idx);
         // Increment the number of zeroes
         set._zeroes++;
 
@@ -73,32 +77,35 @@ library StableEnumerableSet {
 
     /**
      * @dev Compacts out all zero addresses/values and rebuilds the `_indexes` map to match.
-     * This is an O(n) operation. Once done, the array’s length will shrink to reflect only valid elements.
+     * This is an O(n) operation, where n is the number of removed elements.
+     * Once done, the array’s length will shrink to reflect only valid elements.
      */
     function _cleanup(Set storage set) private {
         bytes32[] storage store = set._values;
-        uint256 writeIndex = 0;
-        uint256 len = store.length;
-
-        // Rebuild the array in-place (stable compaction)
-        for (uint256 readIndex = 0; readIndex < len; readIndex++) {
-            bytes32 val = store[readIndex];
-            if (val != bytes32(0)) {
-                // keep it
-                store[writeIndex] = val;
-                set._indexes[val] = writeIndex + 1; // new index+1
-                writeIndex++;
-            } else {
-                // skip zero
+        uint256[] storage free = set._freeIndexes;
+        // Process free slots until none remain
+        while (free.length > 0) {
+            // Pop the last recorded free slot for O(1) access
+            uint256 freeSlot = free[free.length - 1];
+            free.pop();
+            // If the freeSlot index is now out of bounds, it was already handled by
+            // a previous iteration’s swap/pop.
+            if (freeSlot >= store.length) {
+                continue;
             }
-        }
-
-        // Now pop off the leftover slots
-        while (store.length > writeIndex) {
+            uint256 lastIndex = store.length - 1;
+            // If the free slot is already the last element, just remove it.
+            if (freeSlot == lastIndex) {
+                store.pop();
+                continue;
+            }
+            // Move the last element into the free slot, update its index, then pop.
+            bytes32 lastVal = store[lastIndex];
+            store[freeSlot] = lastVal;
+            set._indexes[lastVal] = freeSlot + 1; // index is +1 encoded
             store.pop();
         }
-
-        // Reset the zeroes count
+        // Reset the free slots and zeroes count
         set._zeroes = 0;
     }
 
@@ -176,7 +183,7 @@ library StableEnumerableSet {
     }
 
     /**
-     * @dev Removes all zero slots from the set. O(n).
+     * @dev Removes all zero slots from the set. O(n − removed).
      */
     function cleanup(Bytes32Set storage set) internal {
         _cleanup(set._inner);
@@ -264,7 +271,7 @@ library StableEnumerableSet {
     }
 
     /**
-     * @dev Removes all zero slots from the set. O(n).
+     * @dev Removes all zero slots from the set. O(n − removed).
      */
     function cleanup(AddressSet storage set) internal {
         _cleanup(set._inner);
@@ -352,7 +359,7 @@ library StableEnumerableSet {
     }
 
     /**
-     * @dev Removes all zero slots from the set. O(n).
+     * @dev Removes all zero slots from the set. O(n − removed).
      */
     function cleanup(UintSet storage set) internal {
         _cleanup(set._inner);

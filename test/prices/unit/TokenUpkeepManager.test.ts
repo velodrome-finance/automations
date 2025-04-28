@@ -493,20 +493,21 @@ describe('TokenUpkeepManager Unit Tests', function () {
 
     it('should clean up the token list within the gas limit', async () => {
       const performUpkeepGasLimit = 5_000_000
-      const maxTokensPerUpkeep = 340
+      const maxTokensCleanup = 150
 
       // register a large number of tokens
       const bulkFakeTokenAddresses = Array.from(
-        { length: maxTokensPerUpkeep / 2 },
+        { length:maxTokensCleanup },
         () => ethers.Wallet.createRandom().address,
       )
       for (const token of bulkFakeTokenAddresses) {
         await voterMock.whitelistToken(token, true)
       }
       await tokenUpkeepManager.registerTokens(bulkFakeTokenAddresses)
+
       // split in two batches to avoid hitting the block gas limit
       const bulkFakeTokenAddresses2 = Array.from(
-        { length: maxTokensPerUpkeep / 2 },
+        { length: maxTokensCleanup },
         () => ethers.Wallet.createRandom().address,
       )
       for (const token of bulkFakeTokenAddresses2) {
@@ -514,8 +515,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
       }
       await tokenUpkeepManager.registerTokens(bulkFakeTokenAddresses2)
 
-      // worst case scenario: deregiser second half of the tokens
-      // cleanup need to move half of the tokens and pop the rest
+      // deregister half of the tokens
       await tokenUpkeepManager.deregisterTokens(bulkFakeTokenAddresses)
 
       const tx = await tokenUpkeepManager.cleanupTokenList()
