@@ -42,11 +42,11 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
         bool success = ITokenUpkeepManager(tokenUpkeepManager).storePrice(token, price);
 
         uint256 nextIndex = _currentIndex + 1;
-        if (nextIndex < _endIndex) {
-            currentIndex = nextIndex;
-        } else {
+        if (nextIndex == _endIndex) {
             currentIndex = startIndex;
-            lastRun = (block.timestamp / 1 hours) * 1 hours;
+            lastRun = (block.timestamp / FETCH_INTERVAL) * FETCH_INTERVAL;
+        } else {
+            currentIndex = nextIndex;
         }
         emit TokenUpkeepPerformed(_currentIndex, success);
     }
@@ -61,7 +61,7 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
     }
 
     /// @inheritdoc ITokenUpkeep
-    function checkUpkeep(bytes calldata) external view override returns (bool, bytes memory) {
+    function checkUpkeep(bytes calldata) external view override returns (bool upkeepNeeded, bytes memory performData) {
         if (lastRun + FETCH_INTERVAL < block.timestamp) {
             uint256 _currentIndex = currentIndex;
             uint256 _endIndex = _adjustedEndIndex();

@@ -95,6 +95,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
       linkToken.address,
       keeperRegistryMock.address,
       automationRegistrarMock.address,
+      voterMock.address,
       pricesMock.address,
       upkeepBalanceMonitor.address,
       upkeepFundAmount,
@@ -118,6 +119,11 @@ describe('TokenUpkeepManager Unit Tests', function () {
       { length: 10 },
       () => ethers.Wallet.createRandom().address,
     )
+
+    // whitelist tokens in voter mock
+    for (const token of tokenList) {
+      await voterMock.whitelistToken(token, true)
+    }
 
     // generate sample perform data
     registerPerformData = ethers.utils.defaultAbiCoder.encode(
@@ -168,11 +174,23 @@ describe('TokenUpkeepManager Unit Tests', function () {
 
     it('should register a new token upkeep', async () => {
       const tx = await tokenUpkeepManager.performUpkeep(registerPerformData)
+      const receipt = await tx.wait()
+      const log = findLog(
+        receipt,
+        tokenUpkeepManager.interface.getEventTopic('TokenUpkeepRegistered'),
+      )
+      const [tokenUpkeepAddress] =
+        tokenUpkeepManager.interface.parseLog(log).args
 
       await expect(tx).to.emit(tokenUpkeepManager, 'TokenUpkeepRegistered')
 
       expect(await tokenUpkeepManager.upkeepIds(0)).to.equal(1)
       expect(await tokenUpkeepManager.upkeepCount()).to.equal(1)
+      expect(await tokenUpkeepManager.isTokenUpkeep(tokenUpkeepAddress)).to.be
+        .true
+      expect(await tokenUpkeepManager.tokenUpkeep(1)).to.equal(
+        tokenUpkeepAddress,
+      )
     })
 
     it('should set the trusted forwarder when registering a new upkeep', async () => {
@@ -200,6 +218,9 @@ describe('TokenUpkeepManager Unit Tests', function () {
         { length: tokensPerUpkeepLimit },
         () => ethers.Wallet.createRandom().address,
       )
+      for (const token of bulkFakeTokenAddresses) {
+        await voterMock.whitelistToken(token, true)
+      }
       await tokenUpkeepManager.registerTokens(bulkFakeTokenAddresses)
 
       // should not register more than the tokens per upkeep limit
@@ -269,13 +290,19 @@ describe('TokenUpkeepManager Unit Tests', function () {
 
       expect(await tokenUpkeepManager.tokenAt(0)).to.equal(AddressZero)
       expect(await tokenUpkeepManager.tokenCount()).to.equal(0)
-      expect(await tokenUpkeepManager.cancelledUpkeeps(0, 1)).deep.include(
-        upkeepId,
-      )
     })
 
     it('should cancel a token upkeep', async () => {
-      await tokenUpkeepManager.performUpkeep(registerPerformData)
+      const registerTx =
+        await tokenUpkeepManager.performUpkeep(registerPerformData)
+      const registerReceipt = await registerTx.wait()
+      const registerLog = findLog(
+        registerReceipt,
+        tokenUpkeepManager.interface.getEventTopic('TokenUpkeepRegistered'),
+      )
+      const [tokenUpkeepAddress] =
+        tokenUpkeepManager.interface.parseLog(registerLog).args
+
       const tx = await tokenUpkeepManager.performUpkeep(deregisterPerformData)
 
       await expect(tx)
@@ -284,6 +311,14 @@ describe('TokenUpkeepManager Unit Tests', function () {
 
       await expect(tokenUpkeepManager.upkeepIds(0)).to.be.reverted
       expect(await tokenUpkeepManager.upkeepCount()).to.equal(0)
+      expect(await tokenUpkeepManager.cancelledUpkeeps(0, 1)).deep.include(
+        upkeepId,
+      )
+      expect(await tokenUpkeepManager.isTokenUpkeep(tokenUpkeepAddress)).to.be
+        .false
+      expect(await tokenUpkeepManager.tokenUpkeep(upkeepId)).to.equal(
+        AddressZero,
+      )
     })
 
     it('should not cancel upkeep before the buffer is reached', async () => {
@@ -291,6 +326,9 @@ describe('TokenUpkeepManager Unit Tests', function () {
         { length: tokensPerUpkeepLimit + 1 },
         () => ethers.Wallet.createRandom().address,
       )
+      for (const token of bulkFakeTokenAddresses) {
+        await voterMock.whitelistToken(token, true)
+      }
       await tokenUpkeepManager.registerTokens(bulkFakeTokenAddresses)
       expect(await tokenUpkeepManager.upkeepCount()).to.equal(2)
 
@@ -367,12 +405,6 @@ describe('TokenUpkeepManager Unit Tests', function () {
         .fetchPrice(token)
 
       expect(fetchedPrice).to.equal(1)
-    })
-
-    it('should only allow token upkeep to fetch price', async () => {
-      await expect(
-        tokenUpkeepManager.fetchPrice(tokenList[0]),
-      ).to.be.revertedWithCustomError(tokenUpkeepManager, 'UnauthorizedSender')
     })
   })
 
@@ -459,7 +491,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
       expect(await tokenUpkeepManager.tokenListLength()).to.equal(0)
     })
 
-    it.only('should clean up the token list within the gas limit', async () => {
+    it('should clean up the token list within the gas limit', async () => {
       const performUpkeepGasLimit = 5_000_000
       const maxTokensPerUpkeep = 340
 
@@ -468,12 +500,18 @@ describe('TokenUpkeepManager Unit Tests', function () {
         { length: maxTokensPerUpkeep / 2 },
         () => ethers.Wallet.createRandom().address,
       )
+      for (const token of bulkFakeTokenAddresses) {
+        await voterMock.whitelistToken(token, true)
+      }
       await tokenUpkeepManager.registerTokens(bulkFakeTokenAddresses)
       // split in two batches to avoid hitting the block gas limit
       const bulkFakeTokenAddresses2 = Array.from(
         { length: maxTokensPerUpkeep / 2 },
         () => ethers.Wallet.createRandom().address,
       )
+      for (const token of bulkFakeTokenAddresses2) {
+        await voterMock.whitelistToken(token, true)
+      }
       await tokenUpkeepManager.registerTokens(bulkFakeTokenAddresses2)
 
       // worst case scenario: deregiser second half of the tokens
@@ -482,10 +520,6 @@ describe('TokenUpkeepManager Unit Tests', function () {
 
       const tx = await tokenUpkeepManager.cleanupTokenList()
       const receipt = await tx.wait()
-
-      console.log(
-        `Gas used to cleanup ${maxTokensPerUpkeep} tokens: ${receipt.gasUsed.toString()}`,
-      )
 
       expect(receipt.gasUsed).to.be.lessThan(performUpkeepGasLimit)
     })
@@ -509,6 +543,9 @@ describe('TokenUpkeepManager Unit Tests', function () {
         { length: tokensPerUpkeepLimit * upkeepCount },
         () => ethers.Wallet.createRandom().address,
       )
+      for (const token of fakeTokenAddresses) {
+        await voterMock.whitelistToken(token, true)
+      }
       await tokenUpkeepManager.registerTokens(fakeTokenAddresses)
       await tokenUpkeepManager.deregisterTokens(fakeTokenAddresses)
 
@@ -594,6 +631,13 @@ describe('TokenUpkeepManager Unit Tests', function () {
         .withArgs(tokenList[2])
     })
 
+    it('should revert if registering a token that is not whitelisted', async () => {
+      const fakeToken = ethers.Wallet.createRandom().address
+      await expect(
+        tokenUpkeepManager.registerTokens([fakeToken]),
+      ).to.be.revertedWithCustomError(tokenUpkeepManager, 'TokenNotWhitelisted')
+    })
+
     it('should deregister tokens in bulk', async () => {
       await tokenUpkeepManager.registerTokens(tokenList.slice(0, 3))
 
@@ -636,6 +680,22 @@ describe('TokenUpkeepManager Unit Tests', function () {
       await tokenUpkeepManager.performUpkeep(registerPerformData)
 
       expect(await tokenUpkeepManager.tokenAt(0)).to.equal(tokenList[0])
+    })
+
+    it('should return a range of tokens', async () => {
+      const bulkFakeTokenAddresses = Array.from(
+        { length: 5 },
+        () => ethers.Wallet.createRandom().address,
+      )
+      for (const token of bulkFakeTokenAddresses) {
+        await voterMock.whitelistToken(token, true)
+      }
+      await tokenUpkeepManager.registerTokens(bulkFakeTokenAddresses)
+
+      const tokens = await tokenUpkeepManager.tokenList(0, 5)
+
+      expect(tokens).to.have.lengthOf(5)
+      expect(tokens).to.include.members(bulkFakeTokenAddresses)
     })
 
     it('should get the upkeep count', async () => {

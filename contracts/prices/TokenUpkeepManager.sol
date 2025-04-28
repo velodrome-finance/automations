@@ -7,6 +7,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {StableEnumerableSet} from "./libraries/StableEnumerableSet.sol";
 import {Log} from "@chainlink/contracts/src/v0.8/automation/interfaces/ILogAutomation.sol";
+import {IVoter} from "../../vendor/velodrome-contracts/contracts/interfaces/IVoter.sol";
 import {IKeeperRegistryMaster} from "@chainlink/contracts/src/v0.8/automation/interfaces/v2_1/IKeeperRegistryMaster.sol";
 import {IAutomationRegistrarV2_1} from "../interfaces/v2_1/IAutomationRegistrarV2_1.sol";
 import {IUpkeepBalanceMonitor} from "../interfaces/IUpkeepBalanceMonitor.sol";
@@ -26,16 +27,20 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     /// @inheritdoc ITokenUpkeepManager
     address public immutable override automationRegistrar;
     /// @inheritdoc ITokenUpkeepManager
+    address public immutable override voter;
+    /// @inheritdoc ITokenUpkeepManager
     address public override pricesOracle;
     /// @inheritdoc ITokenUpkeepManager
     address public override upkeepBalanceMonitor;
     /// @inheritdoc ITokenUpkeepManager
-    address public override trustedForwarder;
-
-    /// @inheritdoc ITokenUpkeepManager
     uint96 public override newUpkeepFundAmount;
     /// @inheritdoc ITokenUpkeepManager
+    address public override trustedForwarder;
+    /// @inheritdoc ITokenUpkeepManager
     uint32 public override newUpkeepGasLimit;
+
+    /// @inheritdoc ITokenUpkeepManager
+    mapping(uint256 => address) public override tokenUpkeep;
     /// @inheritdoc ITokenUpkeepManager
     mapping(address => bool) public override isTokenUpkeep;
 
@@ -56,6 +61,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         address _linkToken,
         address _keeperRegistry,
         address _automationRegistrar,
+        address _voter,
         address _pricesOracle,
         address _upkeepBalanceMonitor,
         uint96 _newUpkeepFundAmount,
@@ -64,6 +70,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         linkToken = _linkToken;
         keeperRegistry = _keeperRegistry;
         automationRegistrar = _automationRegistrar;
+        voter = _voter;
         pricesOracle = _pricesOracle;
         upkeepBalanceMonitor = _upkeepBalanceMonitor;
         newUpkeepFundAmount = _newUpkeepFundAmount;
@@ -87,9 +94,6 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
 
     /// @inheritdoc ITokenUpkeepManager
     function fetchPrice(address _token) external view override returns (uint256) {
-        if (!isTokenUpkeep[msg.sender]) {
-            revert UnauthorizedSender();
-        }
         address[] memory tokens = new address[](1);
         tokens[0] = _token;
         uint256[] memory prices = IPrices(pricesOracle).fetchPrices(tokens);
@@ -114,14 +118,31 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
 
     /// @inheritdoc ITokenUpkeepManager
     function registerTokens(address[] calldata _tokens) external override onlyOwner {
-        for (uint256 i = 0; i < _tokens.length; i++) {
+        uint256 length = _tokens.length;
+        address token;
+        for (uint256 i = 0; i < length; i++) {
+            token = _tokens[i];
+            if (_tokenList.contains(token)) {
+                revert TokenAlreadyRegistered();
+            }
+            if (!IVoter(voter).isWhitelistedToken(token)) {
+                revert TokenNotWhitelisted();
+            }
+        }
+        for (uint256 i = 0; i < length; i++) {
             _registerToken(_tokens[i]);
         }
     }
 
     /// @inheritdoc ITokenUpkeepManager
     function deregisterTokens(address[] calldata _tokens) external override onlyOwner {
-        for (uint256 i = 0; i < _tokens.length; i++) {
+        uint256 length = _tokens.length;
+        for (uint256 i = 0; i < length; i++) {
+            if (!_tokenList.contains(_tokens[i])) {
+                revert TokenNotRegistered();
+            }
+        }
+        for (uint256 i = 0; i < length; i++) {
             _deregisterToken(_tokens[i]);
         }
     }
@@ -140,13 +161,12 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
 
     /// @inheritdoc ITokenUpkeepManager
     function withdrawLinkBalance() external override onlyOwner {
-        address receiver = owner();
         uint256 balance = IERC20(linkToken).balanceOf(address(this));
         if (balance == 0) {
             revert NoLinkBalance();
         }
-        IERC20(linkToken).safeTransfer(receiver, balance);
-        emit LinkBalanceWithdrawn(receiver, balance);
+        IERC20(linkToken).safeTransfer(msg.sender, balance);
+        emit LinkBalanceWithdrawn(msg.sender, balance);
     }
 
     /// @inheritdoc ITokenUpkeepManager
@@ -216,6 +236,20 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     }
 
     /// @inheritdoc ITokenUpkeepManager
+    function tokenList(
+        uint256 _startIndex,
+        uint256 _endIndex
+    ) external view override returns (address[] memory tokens) {
+        uint256 length = _tokenList.length();
+        _endIndex = _endIndex > length ? length : _endIndex;
+        uint256 size = _endIndex - _startIndex;
+        tokens = new address[](size);
+        for (uint256 i = 0; i < size; i++) {
+            tokens[i] = _tokenList.at(_startIndex + i);
+        }
+    }
+
+    /// @inheritdoc ITokenUpkeepManager
     function tokenAt(uint256 _index) external view override returns (address) {
         return _tokenList.at(_index);
     }
@@ -254,6 +288,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         return _cancelledUpkeepIds.length();
     }
 
+    /// @dev Assumes that the token is not already registered
     function _registerToken(address _token) internal {
         uint256 _tokenCount = _tokenList.length();
         _tokenList.add(_token);
@@ -263,6 +298,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         emit TokenRegistered(_token);
     }
 
+    /// @dev Assumes that the token is already registered
     function _deregisterToken(address _token) internal {
         _tokenList.remove(_token);
         uint256 _tokenCount = _tokenList.lengthWithoutZeroes();
@@ -277,12 +313,12 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     function _registerTokenUpkeep() internal {
         uint256 startIndex = _getNextUpkeepStartIndex(upkeepIds.length);
         uint256 endIndex = startIndex + TOKENS_PER_UPKEEP;
-        address tokenUpkeep = address(new TokenUpkeep(startIndex, endIndex));
-        isTokenUpkeep[tokenUpkeep] = true;
+        address _tokenUpkeep = address(new TokenUpkeep(startIndex, endIndex));
+        isTokenUpkeep[_tokenUpkeep] = true;
         IAutomationRegistrarV2_1.RegistrationParams memory params = IAutomationRegistrarV2_1.RegistrationParams({
             name: UPKEEP_NAME,
             encryptedEmail: "",
-            upkeepContract: tokenUpkeep,
+            upkeepContract: _tokenUpkeep,
             gasLimit: newUpkeepGasLimit,
             adminAddress: address(this),
             triggerType: CONDITIONAL_TRIGGER_TYPE,
@@ -293,10 +329,11 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         });
         uint256 upkeepId = _registerUpkeep(params);
         upkeepIds.push(upkeepId);
+        tokenUpkeep[upkeepId] = _tokenUpkeep;
         address forwarder = IKeeperRegistryMaster(keeperRegistry).getForwarder(upkeepId);
-        TokenUpkeep(tokenUpkeep).setTrustedForwarder(forwarder);
+        TokenUpkeep(_tokenUpkeep).setTrustedForwarder(forwarder);
         IUpkeepBalanceMonitor(upkeepBalanceMonitor).addToWatchList(upkeepId);
-        emit TokenUpkeepRegistered(tokenUpkeep, upkeepId, startIndex, endIndex);
+        emit TokenUpkeepRegistered(_tokenUpkeep, upkeepId, startIndex, endIndex);
     }
 
     function _registerUpkeep(IAutomationRegistrarV2_1.RegistrationParams memory _params) internal returns (uint256) {
@@ -311,6 +348,8 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
 
     function _cancelTokenUpkeep(uint256 _upkeepId) internal {
         upkeepIds.pop();
+        delete isTokenUpkeep[tokenUpkeep[_upkeepId]];
+        delete tokenUpkeep[_upkeepId];
         _cancelledUpkeepIds.add(_upkeepId);
         IUpkeepBalanceMonitor(upkeepBalanceMonitor).removeFromWatchList(_upkeepId);
         IKeeperRegistryMaster(keeperRegistry).cancelUpkeep(_upkeepId);

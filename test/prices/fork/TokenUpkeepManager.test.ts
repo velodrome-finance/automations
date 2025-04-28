@@ -165,6 +165,7 @@ describe('TokenUpkeepManager Script Tests', function () {
       linkToken.address,
       keeperRegistry.address,
       automationRegistrar.address,
+      voter.address,
       pricesOracle.address,
       upkeepBalanceMonitor.address,
       newUpkeepFundAmount,
@@ -346,7 +347,7 @@ describe('TokenUpkeepManager Script Tests', function () {
       ...addKeeperTx,
       from: PRICES_ORACLE_OWNER_ADDRESS,
     })
-    // aslo set stable token to USDC
+    // set stable token to USDC
     const setStableTokenTx =
       await pricesOracle.populateTransaction.setStableToken(USDC_TOKEN_ADDRESS)
     await pricesOracleOwnerSigner.sendTransaction({
@@ -360,8 +361,8 @@ describe('TokenUpkeepManager Script Tests', function () {
       await tokenUpkeep.callStatic.checkUpkeep(HashZero)
 
     const expectedPerformData = ethers.utils.defaultAbiCoder.encode(
-      ['address', 'uint256'],
-      [VELO_TOKEN_ADDRESS, VELO_TOKEN_PRICE],
+      ['uint256', 'address', 'uint256'],
+      [0, VELO_TOKEN_ADDRESS, VELO_TOKEN_PRICE],
     )
 
     expect(upkeepNeeded).to.be.true

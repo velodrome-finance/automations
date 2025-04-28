@@ -24,6 +24,9 @@ interface ITokenUpkeepManager {
     error UnauthorizedSender();
     error AddressZeroNotAllowed();
     error InvalidAction();
+    error TokenNotRegistered();
+    error TokenAlreadyRegistered();
+    error TokenNotWhitelisted();
 
     enum PerformAction {
         RegisterToken,
@@ -39,6 +42,9 @@ interface ITokenUpkeepManager {
     /// @notice Automation registrar address
     function automationRegistrar() external view returns (address);
 
+    /// @notice Voter address
+    function voter() external view returns (address);
+
     /// @notice Prices contract address
     function pricesOracle() external view returns (address);
 
@@ -53,6 +59,11 @@ interface ITokenUpkeepManager {
 
     /// @notice Gas limit for new upkeeps
     function newUpkeepGasLimit() external view returns (uint32);
+
+    /// @notice Get token upkeep contract address
+    /// @param _upkeepId The upkeep ID
+    /// @return The token upkeep address
+    function tokenUpkeep(uint256 _upkeepId) external view returns (address);
 
     /// @notice Check if address is a token upkeep
     /// @param _address Address to check
@@ -126,6 +137,12 @@ interface ITokenUpkeepManager {
         Log calldata _log,
         bytes memory
     ) external view returns (bool _upkeepNeeded, bytes memory _performData);
+
+    /// @notice Get a range of token addresses
+    /// @param _startIndex Start index of the token list
+    /// @param _endIndex End index of the token list
+    /// @return Array of token addresses
+    function tokenList(uint256 _startIndex, uint256 _endIndex) external view returns (address[] memory);
 
     /// @notice Get token at specified index
     /// @param _index The index to query

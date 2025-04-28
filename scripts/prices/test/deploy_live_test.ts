@@ -95,6 +95,7 @@ async function main() {
     LINK_TOKEN_ADDRESS!,
     KEEPER_REGISTRY_ADDRESS!,
     AUTOMATION_REGISTRAR_ADDRESS!,
+    voterMock.address,
     pricesMock.address,
     upkeepBalanceMonitor.address,
     NEW_UPKEEP_FUND_AMOUNT!,
