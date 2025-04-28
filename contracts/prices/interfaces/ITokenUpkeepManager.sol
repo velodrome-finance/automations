@@ -87,11 +87,6 @@ interface ITokenUpkeepManager {
     /// @param _tokens Array of token addresses to deregister
     function deregisterTokens(address[] calldata _tokens) external;
 
-    /// @notice Cancel upkeeps
-    /// @param _startIndex Start index in the upkeeps array
-    /// @param _endIndex End index in the upkeeps array
-    function cancelUpkeeps(uint256 _startIndex, uint256 _endIndex) external;
-
     /// @notice Withdraw funds from cancelled upkeeps
     /// @param _startIndex Start index in the cancelled upkeeps array
     /// @param _endIndex End index in the cancelled upkeeps array

@@ -46,6 +46,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     EnumerableSet.UintSet private _cancelledUpkeepIds;
 
     uint256 private constant TOKENS_PER_UPKEEP = 100;
+    uint256 private constant UPKEEP_CANCEL_BUFFER = 20;
     uint8 private constant CONDITIONAL_TRIGGER_TYPE = 0;
     string private constant UPKEEP_NAME = "Token upkeep";
 
@@ -122,18 +123,6 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     function deregisterTokens(address[] calldata _tokens) external override onlyOwner {
         for (uint256 i = 0; i < _tokens.length; i++) {
             _deregisterToken(_tokens[i]);
-        }
-    }
-
-    /// @inheritdoc ITokenUpkeepManager
-    function cancelUpkeeps(uint256 _startIndex, uint256 _endIndex) external override onlyOwner {
-        uint256 length = upkeepIds.length;
-        _endIndex = _endIndex > length ? length : _endIndex;
-        if (_startIndex >= _endIndex) {
-            revert InvalidIndex();
-        }
-        for (uint256 i = _endIndex; i > _startIndex; i--) {
-            _cancelTokenUpkeep(upkeepIds[i - 1]);
         }
     }
 
@@ -266,9 +255,9 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     }
 
     function _registerToken(address _token) internal {
-        uint256 _tokenListLength = _tokenList.length();
+        uint256 _tokenCount = _tokenList.length();
         _tokenList.add(_token);
-        if (_tokenListLength % TOKENS_PER_UPKEEP == 0) {
+        if (_tokenCount % TOKENS_PER_UPKEEP == 0) {
             _registerTokenUpkeep();
         }
         emit TokenRegistered(_token);
@@ -276,6 +265,12 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
 
     function _deregisterToken(address _token) internal {
         _tokenList.remove(_token);
+        uint256 _tokenCount = _tokenList.lengthWithoutZeroes();
+        uint256 _currentUpkeep = upkeepIds.length - 1;
+        uint256 currentUpkeepStartIndex = _getNextUpkeepStartIndex(_currentUpkeep);
+        if (_tokenCount + UPKEEP_CANCEL_BUFFER <= currentUpkeepStartIndex || _tokenCount == 0) {
+            _cancelTokenUpkeep(upkeepIds[_currentUpkeep]);
+        }
         emit TokenDeregistered(_token);
     }
 
