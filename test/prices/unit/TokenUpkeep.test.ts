@@ -323,6 +323,26 @@ describe('TokenUpkeep Unit Tests', function () {
       expect(price).to.equal(1)
     })
 
+    it('should signal when the last index is reached', async function () {
+      for (let i = 0; i < tokenCount - 1; i++) {
+        const [_, performData] =
+          await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+        await tokenUpkeep.connect(accounts[0]).performUpkeep(performData)
+      }
+      const [_, performData] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+      const lastPerformTx = await tokenUpkeep
+        .connect(accounts[0])
+        .performUpkeep(performData)
+      const lastPerformReceipt = await lastPerformTx.wait()
+
+      const lastIndexReachedLog = findLog(
+        lastPerformReceipt,
+        tokenUpkeepManagerMock.interface.getEventTopic('LastIndexReached'),
+      )
+      expect(lastIndexReachedLog).to.exist
+    })
+
     it('should not store token price if already fetched', async function () {
       // simulate fetching first token price
       await pricesMock.storePrices([tokenList[0]], [1])

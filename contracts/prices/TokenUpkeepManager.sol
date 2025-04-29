@@ -43,6 +43,8 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     mapping(uint256 => address) public override tokenUpkeep;
     /// @inheritdoc ITokenUpkeepManager
     mapping(address => bool) public override isTokenUpkeep;
+    /// @inheritdoc ITokenUpkeepManager
+    mapping(uint256 => uint256) public override finishedUpkeeps;
 
     /// @inheritdoc ITokenUpkeepManager
     uint256[] public override upkeepIds;
@@ -101,7 +103,11 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     }
 
     /// @inheritdoc ITokenUpkeepManager
-    function storePrice(address _token, uint256 _price) external override returns (bool success) {
+    function storePriceAndCleanup(
+        address _token,
+        uint256 _price,
+        bool _isLastIndex
+    ) external override returns (bool stored) {
         if (!isTokenUpkeep[msg.sender]) {
             revert UnauthorizedSender();
         }
@@ -111,8 +117,15 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
             uint256[] memory prices = new uint256[](1);
             prices[0] = _price;
             IPrices(pricesOracle).storePrices(tokens, prices);
-            success = true;
+            stored = true;
             emit FetchedTokenPrice(_token, _price);
+        }
+        if (_isLastIndex) {
+            uint256 lastHour = (block.timestamp / 1 hours) * 1 hours;
+            finishedUpkeeps[lastHour] += 1;
+            if (finishedUpkeeps[lastHour] == upkeepIds.length) {
+                _cleanupTokenList();
+            }
         }
     }
 
@@ -171,8 +184,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
 
     /// @inheritdoc ITokenUpkeepManager
     function cleanupTokenList() external override onlyOwner {
-        _tokenList.cleanup();
-        emit TokenListCleaned();
+        _cleanupTokenList();
     }
 
     /// @inheritdoc ITokenUpkeepManager
@@ -354,6 +366,11 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         IUpkeepBalanceMonitor(upkeepBalanceMonitor).removeFromWatchList(_upkeepId);
         IKeeperRegistryMaster(keeperRegistry).cancelUpkeep(_upkeepId);
         emit TokenUpkeepCancelled(_upkeepId);
+    }
+
+    function _cleanupTokenList() internal {
+        _tokenList.cleanup();
+        emit TokenListCleaned();
     }
 
     function _withdrawUpkeep(uint256 _upkeepId) internal {

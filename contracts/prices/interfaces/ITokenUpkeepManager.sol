@@ -70,6 +70,11 @@ interface ITokenUpkeepManager {
     /// @return True if the address is a token upkeep contract
     function isTokenUpkeep(address _address) external view returns (bool);
 
+    /// @notice Number of finished upkeeps for a given hour
+    /// @param _lastHourTimestamp The last hour timestamp
+    /// @return The number of finished upkeeps
+    function finishedUpkeeps(uint256 _lastHourTimestamp) external view returns (uint256);
+
     /// @notice Get upkeep ID at index
     /// @param _index The index of the upkeep ID
     /// @return The upkeep ID
@@ -84,11 +89,14 @@ interface ITokenUpkeepManager {
     /// @return Price of the token
     function fetchPrice(address _token) external view returns (uint256);
 
-    /// @notice Store token price (called by token upkeeps)
+    /// @notice Store token price and cleanup when needed
+    /// @dev Called by token upkeep contracts
+    /// @dev Performs token list cleanup on the last token
     /// @param _token Address of the token
     /// @param _price Price of the token
+    /// @param _isLastIndex True if this is the last index in a token upkeep range
     /// @return True if the price was successfully stored
-    function storePrice(address _token, uint256 _price) external returns (bool);
+    function storePriceAndCleanup(address _token, uint256 _price, bool _isLastIndex) external returns (bool);
 
     /// @notice Register multiple tokens
     /// @param _tokens Array of token addresses to register
