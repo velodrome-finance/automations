@@ -154,6 +154,8 @@ describe('TokenUpkeep Unit Tests', function () {
         const [_, performData] =
           await tokenUpkeep.callStatic.checkUpkeep(HashZero)
 
+        expect(await tokenUpkeep.currentIndex()).to.equal(i)
+
         const performTx = await tokenUpkeep
           .connect(accounts[0])
           .performUpkeep(performData)
