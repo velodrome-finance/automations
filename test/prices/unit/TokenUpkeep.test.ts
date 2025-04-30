@@ -150,7 +150,7 @@ describe('TokenUpkeep Unit Tests', function () {
   })
 
   describe('Perform Upkeep', function () {
-    it('should perform upkeep when token need to be processed', async function () {
+    it('should perform upkeep when tokens need to be processed', async function () {
       const [_, performData] =
         await tokenUpkeep.callStatic.checkUpkeep(HashZero)
 
@@ -171,6 +171,8 @@ describe('TokenUpkeep Unit Tests', function () {
       for (let i = 0; i < tokenCount; i++) {
         const [_, performData] =
           await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+        expect(await tokenUpkeep.currentIndex()).to.equal(i)
 
         const performTx = await tokenUpkeep
           .connect(accounts[0])
@@ -208,6 +210,8 @@ describe('TokenUpkeep Unit Tests', function () {
       for (let i = 0; i < tokenCount; i++) {
         const [_, performData] =
           await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+        expect(await tokenUpkeep.currentIndex()).to.equal(i)
 
         const performTx = tokenUpkeep
           .connect(accounts[0])
@@ -255,6 +259,8 @@ describe('TokenUpkeep Unit Tests', function () {
         const [_, performData] =
           await tokenUpkeep.callStatic.checkUpkeep(HashZero)
 
+        expect(await tokenUpkeep.currentIndex()).to.equal(i)
+
         const performTx = tokenUpkeep
           .connect(accounts[0])
           .performUpkeep(performData)
@@ -285,8 +291,14 @@ describe('TokenUpkeep Unit Tests', function () {
       for (let i = 0; i < tokenCount; i++) {
         const [_, performData] =
           await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+        expect(await tokenUpkeep.currentIndex()).to.equal(i)
         await tokenUpkeep.connect(accounts[0]).performUpkeep(performData)
       }
+
+      // check that current index is reset to start index
+      expect(await tokenUpkeep.currentIndex()).to.equal(
+        await tokenUpkeep.startIndex(),
+      )
 
       // check that upkeep is not needed
       const [checkUpkeep, performData] =
@@ -445,7 +457,7 @@ describe('TokenUpkeep Unit Tests', function () {
 
       await tokenUpkeep.setTrustedForwarder(trustedForwarder)
 
-      expect(await tokenUpkeep.trustedForwarder()).to.equal
+      expect(await tokenUpkeep.trustedForwarder()).to.equal(trustedForwarder)
     })
 
     it('should allow only trusted forwarder to perform upkeep', async function () {
