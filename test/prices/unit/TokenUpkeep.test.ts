@@ -194,6 +194,8 @@ describe('TokenUpkeep Unit Tests', function () {
         const [_, performData] =
           await tokenUpkeep.callStatic.checkUpkeep(HashZero)
 
+        expect(await tokenUpkeep.currentIndex()).to.equal(i)
+
         const performTx = tokenUpkeep
           .connect(accounts[0])
           .performUpkeep(performData)
@@ -240,6 +242,8 @@ describe('TokenUpkeep Unit Tests', function () {
         const [_, performData] =
           await tokenUpkeep.callStatic.checkUpkeep(HashZero)
 
+        expect(await tokenUpkeep.currentIndex()).to.equal(i)
+
         const performTx = tokenUpkeep
           .connect(accounts[0])
           .performUpkeep(performData)
@@ -270,8 +274,14 @@ describe('TokenUpkeep Unit Tests', function () {
       for (let i = 0; i < tokenCount; i++) {
         const [_, performData] =
           await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+        expect(await tokenUpkeep.currentIndex()).to.equal(i)
         await tokenUpkeep.connect(accounts[0]).performUpkeep(performData)
       }
+
+      // check that current index is reset to start index
+      expect(await tokenUpkeep.currentIndex()).to.equal(
+        await tokenUpkeep.startIndex(),
+      )
 
       // check that upkeep is not needed
       const [checkUpkeep, performData] =
@@ -329,6 +339,8 @@ describe('TokenUpkeep Unit Tests', function () {
       for (let i = 0; i < tokenCount; i++) {
         const [_, performData] =
           await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+        expect(await tokenUpkeep.currentIndex()).to.equal(i)
 
         const performTx = tokenUpkeep
           .connect(accounts[0])
