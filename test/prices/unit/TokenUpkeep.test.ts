@@ -369,7 +369,7 @@ describe('TokenUpkeep Unit Tests', function () {
 
       await tokenUpkeep.setTrustedForwarder(trustedForwarder)
 
-      expect(await tokenUpkeep.trustedForwarder()).to.equal
+      expect(await tokenUpkeep.trustedForwarder()).to.equal(trustedForwarder)
     })
 
     it('should allow only trusted forwarder to perform upkeep', async function () {
