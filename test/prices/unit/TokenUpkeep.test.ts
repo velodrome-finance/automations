@@ -132,7 +132,7 @@ describe('TokenUpkeep Unit Tests', function () {
   })
 
   describe('Perform Upkeep', function () {
-    it('should perform upkeep when token need to be processed', async function () {
+    it('should perform upkeep when tokens need to be processed', async function () {
       const [_, performData] =
         await tokenUpkeep.callStatic.checkUpkeep(HashZero)
 
