@@ -4,12 +4,24 @@ This repository contains the scripts designed to automate the Velodrome ecosyste
 
 ## Components
 
+### Emissions
+
 - **GaugeUpkeepManager**: This contract is responsible for registering and deregistering scheduled distribute call upkeeps for a gauge. It is registered as an upkeep itself with the following triggers:
   - Log triggers (from the `Voter` contract)
     - `GaugeCreated`: Registers a new gauge in the upkeep manager when it is created.
     - `GaugeKilled`: Deregisters an existing gauge from the upkeep manager when it is killed.
     - `GaugeRevived`: Registers a gauge in the upkeep manager when it is revived.
 - **GaugeUpkeep**: This contract is the actual upkeep that calls the `distribute` function on gauges. It iterates over a range of gauge IDs and is triggered on an interval.
+
+### Prices
+
+- **TokenUpkeepManager**: This contract is responsible for managing a whitelist of tokens and their corresponding upkeeps. It registers and deregisters upkeeps for token price updates. It is registered as an upkeep itself with the following trigger:
+  - Log trigger (from the `Voter` contract)
+    - `WhitelistToken`: Registers or deregisters a token in the upkeep manager when it is whitelisted or removed from the whitelist.
+- **TokenUpkeep**: This contract is the actual upkeep that calls the `fetchPrices` function on tokens. It iterates over a range of token IDs and is triggered on an interval.
+
+### Utility
+
 - **UpkeepBalanceMonitor**: This is a utility contract that watches the balances of all active gauge upkeeps and triggers top-up transactions when the balance falls below a certain threshold.
 
 ## Installation
@@ -91,3 +103,21 @@ npx hardhat run scripts/<version>/register_log_upkeeps.ts --network <network>
 **Note:** Make sure the account running the script has enough LINK to pay for the initial funding of each upkeep registration determined by the `LOG_UPKEEP_FUND_AMOUNT` and `LOG_UPKEEP_GAS_LIMIT` environment variables.
 
 3. Transfer LINK tokens to the `GaugeUpkeepManager` contract for new gauge upkeep registrations. The amount of LINK required is determined by the `NEW_UPKEEP_FUND_AMOUNT` environment variable.
+
+### Token Upkeep Manager
+
+1. Deploy and configure `TokenUpkeepManager` contract by running:
+
+```bash
+npx hardhat run scripts/prices/deploy_upkeep_manager.ts --network <network>
+```
+
+2. Register log trigger upkeep for the deployed `TokenUpkeepManager` contract and set the trusted forwarder:
+
+```bash
+npx hardhat run scripts/prices/register_log_upkeep.ts --network <network>
+```
+
+**Note:** Make sure the account running the script has enough LINK to pay for the initial upkeep registration determined by the `LOG_UPKEEP_FUND_AMOUNT` and `LOG_UPKEEP_GAS_LIMIT` environment variables.
+
+3. Transfer LINK tokens to the `TokenUpkeepManager` contract for new token upkeep registrations. The amount of LINK required is determined by the `NEW_UPKEEP_FUND_AMOUNT` environment variable.
