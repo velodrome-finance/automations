@@ -55,18 +55,27 @@ library StableEnumerableSet {
      * present.
      */
     function _remove(Set storage set, bytes32 value) private returns (bool) {
+        // We read and store the value's index to prevent multiple reads from the same storage slot
         uint256 valueIndex = set._indexes[value];
         if (valueIndex == 0) {
             return false; // not present
         }
 
-        // Calculate the actual index in the array and zero it out
-        uint256 idx = valueIndex - 1;
-        set._values[idx] = bytes32(0);
+        // Calculate the actual index
+        uint256 toDeleteIndex = valueIndex - 1;
+        uint256 lastIndex = set._values.length - 1;
+
+        if (toDeleteIndex == lastIndex) {
+            // If it's the last element, just pop it
+            set._values.pop();
+        } else {
+            // Zero the element being removed
+            set._values[toDeleteIndex] = bytes32(0);
+            // Track the freed slot
+            set._freeIndexes.push(toDeleteIndex);
+        }
         // Remove from indexes
         delete set._indexes[value];
-        // Track the freed slot
-        set._freeIndexes.push(idx);
 
         return true;
     }
