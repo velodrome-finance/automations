@@ -26,8 +26,6 @@ library StableEnumerableSet {
         // Position of the value in the `values` array, plus 1 because index 0
         // means a value is not in the set.
         mapping(bytes32 => uint256) _indexes;
-        // Number of zeroes in the array
-        uint256 _zeroes;
         // Indices of slots that currently hold zero (freed positions)
         uint256[] _freeIndexes;
     }
@@ -69,8 +67,6 @@ library StableEnumerableSet {
         delete set._indexes[value];
         // Track the freed slot
         set._freeIndexes.push(idx);
-        // Increment the number of zeroes
-        set._zeroes++;
 
         return true;
     }
@@ -81,7 +77,7 @@ library StableEnumerableSet {
      * Once done, the array’s length will shrink to reflect only valid elements.
      */
     function _cleanup(Set storage set) private {
-        if (set._zeroes == 0) {
+        if (set._freeIndexes.length == 0) {
             return; // nothing to do
         }
         bytes32[] storage store = set._values;
@@ -119,8 +115,6 @@ library StableEnumerableSet {
             set._indexes[lastVal] = freeSlot + 1; // index is +1 encoded
             store.pop();
         }
-        // Reset the free slots and zeroes count
-        set._zeroes = 0;
     }
 
     /**
@@ -141,7 +135,7 @@ library StableEnumerableSet {
      * @dev Returns the number of values on the set, excluding zeroes. O(1).
      */
     function _lengthWithoutZeroes(Set storage set) private view returns (uint256) {
-        return set._values.length - set._zeroes;
+        return set._values.length - set._freeIndexes.length;
     }
 
     /**

@@ -849,6 +849,31 @@ describe('TokenUpkeepManager Unit Tests', function () {
 
       expect(receipt.gasUsed).to.be.lessThan(performUpkeepGasLimit)
     })
+
+    it('shoud not cleanup the token list if no tokens were removed', async () => {
+      const tokenCount = 50
+      const bulkFakeTokenAddresses = Array.from(
+        { length: tokenCount },
+        () => ethers.Wallet.createRandom().address,
+      )
+      for (const token of bulkFakeTokenAddresses) {
+        await voterMock.whitelistToken(token, true)
+      }
+
+      // register a large number of tokens
+      await tokenUpkeepManager.registerTokens(bulkFakeTokenAddresses)
+
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(tokenCount)
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenCount)
+
+      // cleanup token list
+      const tx = await tokenUpkeepManager.cleanupTokenList()
+
+      await expect(tx).to.emit(tokenUpkeepManager, 'TokenListCleaned')
+
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenCount)
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(tokenCount)
+    })
   })
 
   describe('Withdraw token upkeep', function () {
