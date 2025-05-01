@@ -91,19 +91,30 @@ library StableEnumerableSet {
             // Pop the last recorded free slot for O(1) access
             uint256 freeSlot = free[free.length - 1];
             free.pop();
+            // Start from the end of the array
+            uint256 lastIndex = store.length - 1;
+            bytes32 lastVal = store[lastIndex];
+            if (lastVal == bytes32(0)) {
+                // If the last value is zero, we can just pop it
+                store.pop();
+                // Check if the free slot is still valid
+                if (freeSlot < store.length) {
+                    // Re-queue the free slot for the next iteration
+                    free.push(freeSlot);
+                }
+                continue;
+            }
             // If the freeSlot index is now out of bounds, it was already handled by
             // a previous iteration’s swap/pop.
             if (freeSlot >= store.length) {
                 continue;
             }
-            uint256 lastIndex = store.length - 1;
             // If the free slot is already the last element, just remove it.
             if (freeSlot == lastIndex) {
                 store.pop();
                 continue;
             }
             // Move the last element into the free slot, update its index, then pop.
-            bytes32 lastVal = store[lastIndex];
             store[freeSlot] = lastVal;
             set._indexes[lastVal] = freeSlot + 1; // index is +1 encoded
             store.pop();

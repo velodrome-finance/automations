@@ -547,6 +547,276 @@ describe('TokenUpkeepManager Unit Tests', function () {
       expect(await tokenUpkeepManager.tokenListLength()).to.equal(0)
     })
 
+    it('should clean up the token list when all tokens are deregistered', async () => {
+      const tokenCount = 50
+      const bulkFakeTokenAddresses = Array.from(
+        { length: tokenCount },
+        () => ethers.Wallet.createRandom().address,
+      )
+      for (const token of bulkFakeTokenAddresses) {
+        await voterMock.whitelistToken(token, true)
+      }
+
+      // register a large number of tokens
+      await tokenUpkeepManager.registerTokens(bulkFakeTokenAddresses)
+
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(tokenCount)
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenCount)
+
+      // deregister all tokens
+      await tokenUpkeepManager.deregisterTokens(bulkFakeTokenAddresses)
+
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(tokenCount)
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(0)
+
+      // cleanup token list
+      const tx = await tokenUpkeepManager.cleanupTokenList()
+
+      await expect(tx).to.emit(tokenUpkeepManager, 'TokenListCleaned')
+
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(0)
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(0)
+    })
+
+    it('should clean up the token list when first tokens are removed in ascending order', async () => {
+      const tokenCount = 50
+      const bulkFakeTokenAddresses = Array.from(
+        { length: tokenCount },
+        () => ethers.Wallet.createRandom().address,
+      )
+      for (const token of bulkFakeTokenAddresses) {
+        await voterMock.whitelistToken(token, true)
+      }
+
+      // register a large number of tokens
+      await tokenUpkeepManager.registerTokens(bulkFakeTokenAddresses)
+
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(tokenCount)
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenCount)
+
+      // deregister all tokens in ascending order
+      await tokenUpkeepManager.deregisterTokens(
+        bulkFakeTokenAddresses.slice(0, 25),
+      )
+
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(tokenCount)
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenCount / 2)
+
+      // cleanup token list
+      const tx = await tokenUpkeepManager.cleanupTokenList()
+
+      await expect(tx).to.emit(tokenUpkeepManager, 'TokenListCleaned')
+
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenCount / 2)
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(
+        tokenCount / 2,
+      )
+
+      // check if all remaining tokens are in the token list
+      const tokenList = await tokenUpkeepManager.tokenList(0, 25)
+      const remainingTokens = bulkFakeTokenAddresses.slice(25)
+      expect(tokenList).to.deep.equal(remainingTokens)
+    })
+
+    it('should clean up the token list when last tokens are removed in descending order', async () => {
+      const tokenCount = 50
+      const bulkFakeTokenAddresses = Array.from(
+        { length: tokenCount },
+        () => ethers.Wallet.createRandom().address,
+      )
+      for (const token of bulkFakeTokenAddresses) {
+        await voterMock.whitelistToken(token, true)
+      }
+
+      // register a large number of tokens
+      await tokenUpkeepManager.registerTokens(bulkFakeTokenAddresses)
+
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(tokenCount)
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenCount)
+
+      // deregister all tokens in descending order
+      for (let i = tokenCount - 1; i >= tokenCount / 2; i--) {
+        await tokenUpkeepManager.deregisterTokens([bulkFakeTokenAddresses[i]])
+      }
+
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(tokenCount)
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenCount / 2)
+
+      // cleanup token list
+      const tx = await tokenUpkeepManager.cleanupTokenList()
+
+      await expect(tx).to.emit(tokenUpkeepManager, 'TokenListCleaned')
+
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenCount / 2)
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(
+        tokenCount / 2,
+      )
+
+      // check if all remaining tokens are in the token list
+      const tokenList = await tokenUpkeepManager.tokenList(0, tokenCount / 2)
+      const remainingTokens = bulkFakeTokenAddresses.slice(0, tokenCount / 2)
+      expect(tokenList).to.deep.equal(remainingTokens)
+    })
+
+    it('should clean up the token list when tokens are removed in random order', async () => {
+      const tokenCount = 50
+      const bulkFakeTokenAddresses = Array.from(
+        { length: tokenCount },
+        () => ethers.Wallet.createRandom().address,
+      )
+      for (const token of bulkFakeTokenAddresses) {
+        await voterMock.whitelistToken(token, true)
+      }
+
+      // register a large number of tokens
+      await tokenUpkeepManager.registerTokens(bulkFakeTokenAddresses)
+
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(tokenCount)
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenCount)
+
+      // deregister half of the tokens in random order
+      const randomIndexes = new Set<number>()
+      while (randomIndexes.size < tokenCount / 2) {
+        const randomIndex = Math.floor(Math.random() * tokenCount)
+        if (!randomIndexes.has(randomIndex)) {
+          randomIndexes.add(randomIndex)
+          await tokenUpkeepManager.deregisterTokens([
+            bulkFakeTokenAddresses[randomIndex],
+          ])
+        }
+      }
+
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(tokenCount)
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenCount / 2)
+
+      // cleanup token list
+      const tx = await tokenUpkeepManager.cleanupTokenList()
+
+      await expect(tx).to.emit(tokenUpkeepManager, 'TokenListCleaned')
+
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenCount / 2)
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(
+        tokenCount / 2,
+      )
+
+      // check if all remaining tokens are in the token list
+      const tokenList = await tokenUpkeepManager.tokenList(0, tokenCount / 2)
+      const remainingTokens = bulkFakeTokenAddresses.filter(
+        (_, index) => !randomIndexes.has(index),
+      )
+      expect(remainingTokens.length).to.equal(tokenCount / 2)
+      for (let i = 0; i < tokenCount / 2; i++) {
+        expect(tokenList).to.include(remainingTokens[i])
+      }
+    })
+
+    it('should cleanup the token list when tokens are removed in consequitive batches', async () => {
+      const tokenCount = 50
+      const bulkFakeTokenAddresses = Array.from(
+        { length: tokenCount },
+        () => ethers.Wallet.createRandom().address,
+      )
+      for (const token of bulkFakeTokenAddresses) {
+        await voterMock.whitelistToken(token, true)
+      }
+
+      // register a large number of tokens
+      await tokenUpkeepManager.registerTokens(bulkFakeTokenAddresses)
+
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(tokenCount)
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenCount)
+
+      // deregister half of the tokens in consequitive batches
+      const remoedTokens = new Set<string>()
+      const batchSize = 5
+      for (let i = 0; i < tokenCount; i += batchSize) {
+        // skip every other batch
+        if (i % (batchSize * 2) === 0) continue
+        const tokensToRemove = bulkFakeTokenAddresses.slice(i, i + batchSize)
+        await tokenUpkeepManager.deregisterTokens(tokensToRemove)
+        for (const token of tokensToRemove) {
+          remoedTokens.add(token)
+        }
+      }
+
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(tokenCount)
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenCount / 2)
+
+      // cleanup token list
+      const tx = await tokenUpkeepManager.cleanupTokenList()
+
+      await expect(tx).to.emit(tokenUpkeepManager, 'TokenListCleaned')
+
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenCount / 2)
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(
+        tokenCount / 2,
+      )
+
+      // check if all remaining tokens are in the token list
+      const tokenList = await tokenUpkeepManager.tokenList(0, tokenCount / 2)
+      const remainingTokens = bulkFakeTokenAddresses.filter(
+        (_, index) => !remoedTokens.has(bulkFakeTokenAddresses[index]),
+      )
+      expect(remainingTokens.length).to.equal(tokenCount / 2)
+      for (let i = 0; i < tokenCount / 2; i++) {
+        expect(tokenList).to.include(remainingTokens[i])
+      }
+    })
+
+    it('should cleanup the token list when the index before last token is removed', async () => {
+      const tokenCount = 50
+      const bulkFakeTokenAddresses = Array.from(
+        { length: tokenCount },
+        () => ethers.Wallet.createRandom().address,
+      )
+      for (const token of bulkFakeTokenAddresses) {
+        await voterMock.whitelistToken(token, true)
+      }
+
+      // register a large number of tokens
+      await tokenUpkeepManager.registerTokens(bulkFakeTokenAddresses)
+
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(tokenCount)
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenCount)
+
+      // deregister the token before the last token
+      // so that during cleanup when the last token is popped
+      // the new last token will be zero
+      await tokenUpkeepManager.deregisterTokens([
+        bulkFakeTokenAddresses[tokenCount - 2],
+      ])
+      // deregister first half of the tokens
+      await tokenUpkeepManager.deregisterTokens(
+        bulkFakeTokenAddresses.slice(0, tokenCount / 2),
+      )
+
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(tokenCount)
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenCount / 2 - 1)
+
+      // cleanup token list
+      const tx = await tokenUpkeepManager.cleanupTokenList()
+
+      await expect(tx).to.emit(tokenUpkeepManager, 'TokenListCleaned')
+
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenCount / 2 - 1)
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(
+        tokenCount / 2 - 1,
+      )
+
+      // check if all remaining tokens are in the token list
+      const tokenList = await tokenUpkeepManager.tokenList(
+        0,
+        tokenCount / 2 - 1,
+      )
+      const remainingTokens = bulkFakeTokenAddresses.filter(
+        (_, index) => index !== tokenCount - 2 && index >= tokenCount / 2,
+      )
+      expect(remainingTokens.length).to.equal(tokenCount / 2 - 1)
+      for (let i = 0; i < tokenCount / 2 - 1; i++) {
+        expect(tokenList).to.include(remainingTokens[i])
+      }
+    })
+
     it('should clean up the token list within the gas limit', async () => {
       const performUpkeepGasLimit = 5_000_000
       const maxTokensCleanup = 150
