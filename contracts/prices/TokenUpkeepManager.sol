@@ -52,6 +52,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     StableEnumerableSet.AddressSet internal _tokenList;
     EnumerableSet.UintSet private _cancelledUpkeepIds;
 
+    uint256 private constant FETCH_INTERVAL = 1 hours;
     uint256 private constant TOKENS_PER_UPKEEP = 100;
     uint256 private constant UPKEEP_CANCEL_BUFFER = 20;
     uint8 private constant CONDITIONAL_TRIGGER_TYPE = 0;
@@ -121,7 +122,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
             emit FetchedTokenPrice(_token, _price);
         }
         if (_isLastIndex) {
-            uint256 lastHour = (block.timestamp / 1 hours) * 1 hours;
+            uint256 lastHour = (block.timestamp / FETCH_INTERVAL) * FETCH_INTERVAL;
             finishedUpkeeps[lastHour] += 1;
             if (finishedUpkeeps[lastHour] == upkeepIds.length) {
                 _cleanupTokenList();
