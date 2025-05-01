@@ -606,7 +606,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
       expect(await tokenUpkeepManager.tokenListLength()).to.equal(tokenCount)
       expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenCount)
 
-      // deregister all tokens in ascending order
+      // deregister fist half of the tokens in ascending order
       await tokenUpkeepManager.deregisterTokens(
         bulkFakeTokenAddresses.slice(0, 25),
       )
@@ -688,7 +688,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
       expect(await tokenUpkeepManager.tokenListLength()).to.equal(tokenCount)
       expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenCount)
 
-      // deregister all tokens in ascending order
+      // deregister second half of the tokens in ascending order
       await tokenUpkeepManager.deregisterTokens(
         bulkFakeTokenAddresses.slice(25),
       )
@@ -731,7 +731,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
       expect(await tokenUpkeepManager.tokenListLength()).to.equal(tokenCount)
       expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenCount)
 
-      // deregister all tokens in descending order
+      // deregister second half of the tokens in descending order
       for (let i = tokenCount - 1; i >= tokenCount / 2; i--) {
         await tokenUpkeepManager.deregisterTokens([bulkFakeTokenAddresses[i]])
       }
@@ -775,15 +775,14 @@ describe('TokenUpkeepManager Unit Tests', function () {
       expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenCount)
 
       // deregister half of the tokens in random order
-      const randomIndexes = new Set<number>()
-      while (randomIndexes.size < tokenCount / 2) {
-        const randomIndex = Math.floor(Math.random() * tokenCount)
-        if (!randomIndexes.has(randomIndex)) {
-          randomIndexes.add(randomIndex)
-          await tokenUpkeepManager.deregisterTokens([
-            bulkFakeTokenAddresses[randomIndex],
-          ])
-        }
+      const randomIndexes = new Set<number>([
+        4, 43, 37, 2, 42, 40, 30, 21, 33, 6, 19, 23, 29, 31, 9, 20, 18, 35, 15,
+        32, 47, 24, 0, 14, 41,
+      ])
+      for (const index of randomIndexes) {
+        await tokenUpkeepManager.deregisterTokens([
+          bulkFakeTokenAddresses[index],
+        ])
       }
 
       expect(await tokenUpkeepManager.tokenListLength()).to.equal(tokenCount)
