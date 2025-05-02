@@ -85,11 +85,12 @@ library StableEnumerableSet {
      * Once done, the array’s length will shrink to reflect only valid elements.
      */
     function _cleanup(Set storage set) private {
-        if (set._freeIndexes.length == 0) {
-            return; // nothing to do
+        uint256[] storage free = set._freeIndexes;
+        // Nothing to do if there are no free slots
+        if (free.length == 0) {
+            return;
         }
         bytes32[] storage store = set._values;
-        uint256[] storage free = set._freeIndexes;
         // Process free slots until none remain
         while (free.length > 0) {
             // Pop the last recorded free slot for O(1) access
