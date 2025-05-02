@@ -809,7 +809,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
       }
     })
 
-    it('should cleanup the token list when tokens are removed in consequitive batches', async () => {
+    it('should cleanup the token list when tokens are removed in consecutive batches', async () => {
       const tokenCount = 50
       const bulkFakeTokenAddresses = Array.from(
         { length: tokenCount },
@@ -825,7 +825,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
       expect(await tokenUpkeepManager.tokenListLength()).to.equal(tokenCount)
       expect(await tokenUpkeepManager.tokenCount()).to.equal(tokenCount)
 
-      // deregister half of the tokens in consequitive batches
+      // deregister half of the tokens in consecutive batches
       const remoedTokens = new Set<string>()
       const batchSize = 5
       for (let i = 0; i < tokenCount; i += batchSize) {
@@ -952,7 +952,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
       expect(receipt.gasUsed).to.be.lessThan(performUpkeepGasLimit)
     })
 
-    it('shoud not cleanup the token list if no tokens were removed', async () => {
+    it('should not cleanup the token list if no tokens were removed', async () => {
       const tokenCount = 50
       const bulkFakeTokenAddresses = Array.from(
         { length: tokenCount },
