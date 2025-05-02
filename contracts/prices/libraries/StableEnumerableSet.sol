@@ -63,14 +63,13 @@ library StableEnumerableSet {
 
         // Calculate the actual index
         uint256 toDeleteIndex = valueIndex - 1;
-        uint256 lastIndex = set._values.length - 1;
 
-        if (toDeleteIndex == lastIndex) {
+        if (toDeleteIndex == set._values.length - 1) {
             // If it's the last element, just pop it
             set._values.pop();
         } else {
             // Zero the element being removed
-            set._values[toDeleteIndex] = bytes32(0);
+            delete set._values[toDeleteIndex];
             // Track the freed slot
             set._freeIndexes.push(toDeleteIndex);
         }
