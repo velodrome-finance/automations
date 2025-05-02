@@ -36,11 +36,14 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
         uint256 _endIndex = _adjustedEndIndex();
         (uint256 _currentIndex, address token, uint256 price) = abi.decode(_performData, (uint256, address, uint256));
 
-        if (lastRun + FETCH_INTERVAL > block.timestamp || _currentIndex > _endIndex || token == address(0)) {
+        if (lastRun + FETCH_INTERVAL > block.timestamp || _currentIndex > _endIndex) {
             revert UpkeepNotNeeded();
         }
         bool isLastIndex = _currentIndex == _endIndex - 1;
-        bool success = ITokenUpkeepManager(tokenUpkeepManager).storePriceAndCleanup(token, price, isLastIndex);
+        bool success;
+        if (token != address(0)) {
+            success = ITokenUpkeepManager(tokenUpkeepManager).storePriceAndCleanup(token, price, isLastIndex);
+        }
 
         if (isLastIndex) {
             currentIndex = startIndex;
@@ -72,6 +75,7 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
             if (token != address(0)) {
                 return (true, abi.encode(index, token, price));
             }
+            return (true, abi.encode(_endIndex - 1, address(0), 0));
         }
     }
 

@@ -120,15 +120,19 @@ describe('TokenUpkeep Unit Tests', function () {
       expect(performData).to.equal('0x')
     })
 
-    it('should not trigger upkeep with only zero address tokens', async function () {
-      // remove all tokens from list so they become zero address
+    it('should trigger upkeep index reset when there are no non-zero tokens', async function () {
       await tokenUpkeepManagerMock.removeTokenList()
 
       const [upkeepNeeded, performData] =
         await tokenUpkeep.callStatic.checkUpkeep(HashZero)
 
-      expect(upkeepNeeded).to.be.false
-      expect(performData).to.equal('0x')
+      expect(upkeepNeeded).to.be.true
+      expect(performData).to.equal(
+        ethers.utils.defaultAbiCoder.encode(
+          ['uint256', 'address', 'uint256'],
+          [tokenCount - 2, ethers.constants.AddressZero, 0],
+        ),
+      )
     })
 
     it('should skip zero address tokens', async function () {
@@ -448,6 +452,33 @@ describe('TokenUpkeep Unit Tests', function () {
 
       expect(checkUpkeep).to.be.false
       expect(performData).to.equal('0x')
+    })
+
+    it('should reset current index when there are no non-zero tokens', async function () {
+      // remove all tokens from list so they become zero address
+      await tokenUpkeepManagerMock.removeTokenList()
+
+      const [_, performData] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+      const performTx = await tokenUpkeep
+        .connect(accounts[0])
+        .performUpkeep(performData)
+      const performReceipt = await performTx.wait()
+      const upkeepPerformedLog = findLog(
+        performReceipt,
+        tokenUpkeep.interface.getEventTopic('TokenUpkeepPerformed'),
+      )
+      expect(upkeepPerformedLog).to.exist
+
+      const [index, stored] =
+        tokenUpkeep.interface.parseLog(upkeepPerformedLog).args
+
+      expect(index).to.equal(tokenCount - 2)
+      expect(stored).to.be.false
+      expect(await tokenUpkeep.currentIndex()).to.equal(
+        await tokenUpkeep.startIndex(),
+      )
     })
   })
 
