@@ -96,11 +96,18 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     }
 
     /// @inheritdoc ITokenUpkeepManager
-    function fetchPrice(address _token) external view override returns (uint256) {
-        address[] memory tokens = new address[](1);
-        tokens[0] = _token;
-        uint256[] memory prices = IPrices(pricesOracle).fetchPrices(tokens);
-        return prices[0];
+    function fetchFirstNonZeroToken(
+        uint256 _startIndex,
+        uint256 _endIndex
+    ) external view override returns (address token, uint256 index, uint256 price) {
+        for (uint256 i = _startIndex; i < _endIndex; i++) {
+            token = _tokenList.at(i);
+            if (token != address(0)) {
+                index = i;
+                price = _fetchPrice(token);
+                return (token, index, price);
+            }
+        }
     }
 
     /// @inheritdoc ITokenUpkeepManager
@@ -299,6 +306,13 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     /// @inheritdoc ITokenUpkeepManager
     function cancelledUpkeepCount() external view override returns (uint256) {
         return _cancelledUpkeepIds.length();
+    }
+
+    function _fetchPrice(address _token) internal view returns (uint256) {
+        address[] memory tokens = new address[](1);
+        tokens[0] = _token;
+        uint256[] memory prices = IPrices(pricesOracle).fetchPrices(tokens);
+        return prices[0];
     }
 
     /// @dev Assumes that the token is not already registered

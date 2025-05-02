@@ -84,10 +84,17 @@ interface ITokenUpkeepManager {
     /// @param _performData Encoded data for the operation
     function performUpkeep(bytes calldata _performData) external;
 
-    /// @notice Fetch token price
-    /// @param _token Address of the token
-    /// @return Price of the token
-    function fetchPrice(address _token) external view returns (uint256);
+    /// @notice Fetch the first non-zero token price
+    /// @dev Called by token upkeep contracts
+    /// @param _startIndex Start index in the token list
+    /// @param _endIndex End index in the token list
+    /// @return _token Address of the token
+    /// @return _index Index of the token in the list
+    /// @return _price Price of the token
+    function fetchFirstNonZeroToken(
+        uint256 _startIndex,
+        uint256 _endIndex
+    ) external view returns (address _token, uint256 _index, uint256 _price);
 
     /// @notice Store token price and cleanup when needed
     /// @dev Called by token upkeep contracts

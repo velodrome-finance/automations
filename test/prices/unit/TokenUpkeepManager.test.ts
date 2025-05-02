@@ -374,37 +374,40 @@ describe('TokenUpkeepManager Unit Tests', function () {
 
   describe('Fetch token price', function () {
     it('should fetch token price', async () => {
-      // register token upkeep
-      const registerTx =
-        await tokenUpkeepManager.performUpkeep(registerPerformData)
-      const registerReceipt = await registerTx.wait()
+      await tokenUpkeepManager.performUpkeep(registerPerformData)
 
-      // get token upkeep address
-      const registerLog = findLog(
-        registerReceipt,
-        tokenUpkeepManager.interface.getEventTopic('TokenUpkeepRegistered'),
-      )
-      const [tokenUpkeepAddress] =
-        tokenUpkeepManager.interface.parseLog(registerLog).args
+      const [token, index, price] =
+        await tokenUpkeepManager.fetchFirstNonZeroToken(0, 1)
 
-      // impersonate token upkeep
-      await network.provider.request({
-        method: 'hardhat_impersonateAccount',
-        params: [tokenUpkeepAddress],
-      })
-      const impersonatedSigner = ethers.provider.getSigner(tokenUpkeepAddress)
-      await network.provider.send('hardhat_setBalance', [
-        tokenUpkeepAddress,
-        '0xffffffffffffffff',
-      ])
+      expect(token).to.equal(tokenList[0])
+      expect(index).to.equal(0)
+      expect(price).to.equal(1)
+    })
 
-      // fetch price via token upkeep
-      const token = tokenList[0]
-      const fetchedPrice = await tokenUpkeepManager
-        .connect(impersonatedSigner)
-        .fetchPrice(token)
+    it('should fetch the first non-zero token price', async () => {
+      await tokenUpkeepManager.registerTokens(tokenList)
 
-      expect(fetchedPrice).to.equal(1)
+      // deregister all tokens except the last one
+      await tokenUpkeepManager.deregisterTokens(tokenList.slice(0, -1))
+
+      const [token, index, price] =
+        await tokenUpkeepManager.fetchFirstNonZeroToken(0, tokenList.length)
+
+      expect(token).to.equal(tokenList[tokenList.length - 1])
+      expect(index).to.equal(tokenList.length - 1)
+      expect(price).to.equal(1)
+    })
+
+    it('should not fetch token price if there are no non-zero tokens', async () => {
+      await tokenUpkeepManager.registerTokens(tokenList)
+      await tokenUpkeepManager.deregisterTokens(tokenList)
+
+      const [token, index, price] =
+        await tokenUpkeepManager.fetchFirstNonZeroToken(0, tokenList.length - 1)
+
+      expect(token).to.equal(AddressZero)
+      expect(index).to.equal(0)
+      expect(price).to.equal(0)
     })
   })
 
