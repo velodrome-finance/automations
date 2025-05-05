@@ -120,7 +120,7 @@ describe('TokenUpkeep Unit Tests', function () {
       expect(performData).to.equal('0x')
     })
 
-    it('should trigger upkeep index reset when there are no non-zero tokens', async function () {
+    it('should trigger upkeep index reset when there are only zero address tokens', async function () {
       await tokenUpkeepManagerMock.removeTokenList()
 
       const [upkeepNeeded, performData] =
@@ -454,7 +454,7 @@ describe('TokenUpkeep Unit Tests', function () {
       expect(performData).to.equal('0x')
     })
 
-    it('should reset current index when there are no non-zero tokens', async function () {
+    it('should reset current index when there are only zero address tokens', async function () {
       // remove all tokens from list so they become zero address
       await tokenUpkeepManagerMock.removeTokenList()
 
