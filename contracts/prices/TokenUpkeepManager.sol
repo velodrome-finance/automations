@@ -99,13 +99,14 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     function fetchFirstPrice(
         uint256 _startIndex,
         uint256 _endIndex
-    ) external view override returns (address token, uint256 index, uint256 price) {
+    ) external view override returns (address, uint256, uint256) {
+        address token;
+        uint256 price;
         for (uint256 i = _startIndex; i < _endIndex; i++) {
             token = _tokenList.at(i);
             if (token != address(0)) {
-                index = i;
                 price = _fetchPrice(token);
-                return (token, index, price);
+                return (token, i, price);
             }
         }
     }
