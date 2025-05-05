@@ -376,8 +376,10 @@ describe('TokenUpkeepManager Unit Tests', function () {
     it('should fetch token price', async () => {
       await tokenUpkeepManager.performUpkeep(registerPerformData)
 
-      const [token, index, price] =
-        await tokenUpkeepManager.fetchFirstNonZeroToken(0, 1)
+      const [token, index, price] = await tokenUpkeepManager.fetchFirstPrice(
+        0,
+        1,
+      )
 
       expect(token).to.equal(tokenList[0])
       expect(index).to.equal(0)
@@ -390,8 +392,10 @@ describe('TokenUpkeepManager Unit Tests', function () {
       // deregister all tokens except the last one
       await tokenUpkeepManager.deregisterTokens(tokenList.slice(0, -1))
 
-      const [token, index, price] =
-        await tokenUpkeepManager.fetchFirstNonZeroToken(0, tokenList.length)
+      const [token, index, price] = await tokenUpkeepManager.fetchFirstPrice(
+        0,
+        tokenList.length,
+      )
 
       expect(token).to.equal(tokenList[tokenList.length - 1])
       expect(index).to.equal(tokenList.length - 1)
@@ -402,8 +406,10 @@ describe('TokenUpkeepManager Unit Tests', function () {
       await tokenUpkeepManager.registerTokens(tokenList)
       await tokenUpkeepManager.deregisterTokens(tokenList)
 
-      const [token, index, price] =
-        await tokenUpkeepManager.fetchFirstNonZeroToken(0, tokenList.length - 1)
+      const [token, index, price] = await tokenUpkeepManager.fetchFirstPrice(
+        0,
+        tokenList.length - 1,
+      )
 
       expect(token).to.equal(AddressZero)
       expect(index).to.equal(0)

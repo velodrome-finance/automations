@@ -69,8 +69,10 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
             uint256 _currentIndex = currentIndex;
             uint256 _endIndex = _adjustedEndIndex();
 
-            (address token, uint256 index, uint256 price) = ITokenUpkeepManager(tokenUpkeepManager)
-                .fetchFirstNonZeroToken(_currentIndex, _endIndex);
+            (address token, uint256 index, uint256 price) = ITokenUpkeepManager(tokenUpkeepManager).fetchFirstPrice(
+                _currentIndex,
+                _endIndex
+            );
 
             if (token != address(0)) {
                 return (true, abi.encode(index, token, price));

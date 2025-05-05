@@ -91,7 +91,7 @@ interface ITokenUpkeepManager {
     /// @return _token Address of the token
     /// @return _index Index of the token in the list
     /// @return _price Price of the token
-    function fetchFirstNonZeroToken(
+    function fetchFirstPrice(
         uint256 _startIndex,
         uint256 _endIndex
     ) external view returns (address _token, uint256 _index, uint256 _price);
