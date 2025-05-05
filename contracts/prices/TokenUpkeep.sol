@@ -74,10 +74,13 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
                 _endIndex
             );
 
-            if (token != address(0)) {
-                return (true, abi.encode(index, token, price));
-            }
-            return (true, abi.encode(_endIndex - 1, address(0), 0));
+            // If a valid token is found, encode its info for processing.
+            // Otherwise, encode the last index with zeros to advance the current index
+            // and complete the processing cycle even when no tokens need updating.
+            return
+                token != address(0)
+                    ? (true, abi.encode(index, token, price))
+                    : (true, abi.encode(_endIndex - 1, address(0), 0));
         }
     }
 
