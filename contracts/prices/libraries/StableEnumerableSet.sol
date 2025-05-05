@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: MIT
-// OpenZeppelin Contracts (last updated v4.9.0) (utils/structs/EnumerableSet.sol)
-// This file was procedurally generated from scripts/generate/templates/EnumerableSet.js.
-
 pragma solidity ^0.8.0;
 
 /**
- * @dev Library for managing sets of primitive types, with a custom "soft remove" mechanism:
+ * @dev EnumerableSet library modified from OpenZeppelin (v4.9.0) to support a custom "soft remove" mechanism.
  *
  * - Instead of "swap and pop", _remove() sets the slot to zero but keeps the array length the same.
  * - A _cleanup() call later compacts out all zero slots and rebuilds the indexes mapping.
