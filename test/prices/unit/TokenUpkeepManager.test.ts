@@ -448,7 +448,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
       const price = ethers.utils.parseEther('1')
       const storeTx = await tokenUpkeepManager
         .connect(impersonatedSigner)
-        .storePrice(token, price)
+        .storePriceAndCleanup(token, price, false)
 
       await expect(storeTx)
         .to.emit(tokenUpkeepManager, 'FetchedTokenPrice')
@@ -467,11 +467,66 @@ describe('TokenUpkeepManager Unit Tests', function () {
       expect(storedPrice).to.equal(price)
     })
 
+    it('should clean up the token list at the last token', async () => {
+      // register token upkeep
+      const registerTx =
+        await tokenUpkeepManager.performUpkeep(registerPerformData)
+      const registerReceipt = await registerTx.wait()
+
+      // register one more token
+      await tokenUpkeepManager.registerTokens([tokenList[1]])
+
+      // get token upkeep address
+      const registerLog = findLog(
+        registerReceipt,
+        tokenUpkeepManager.interface.getEventTopic('TokenUpkeepRegistered'),
+      )
+      const [tokenUpkeepAddress] =
+        tokenUpkeepManager.interface.parseLog(registerLog).args
+      // impersonate token upkeep
+      await network.provider.request({
+        method: 'hardhat_impersonateAccount',
+        params: [tokenUpkeepAddress],
+      })
+      const impersonatedSigner = ethers.provider.getSigner(tokenUpkeepAddress)
+      await network.provider.send('hardhat_setBalance', [
+        tokenUpkeepAddress,
+        '0xffffffffffffffff',
+      ])
+
+      // store price via token upkeep
+      const token = tokenList[0]
+      const price = ethers.utils.parseEther('1')
+      const storeTx = await tokenUpkeepManager
+        .connect(impersonatedSigner)
+        .storePriceAndCleanup(token, price, false)
+
+      await expect(storeTx)
+        .to.emit(tokenUpkeepManager, 'FetchedTokenPrice')
+        .withArgs(token, price)
+
+      await expect(storeTx).to.not.emit(tokenUpkeepManager, 'TokenListCleaned')
+
+      // store price for the last token
+      const token2 = tokenList[1]
+      const price2 = ethers.utils.parseEther('1')
+      const storeTx2 = await tokenUpkeepManager
+        .connect(impersonatedSigner)
+        .storePriceAndCleanup(token2, price2, true)
+
+      await expect(storeTx2)
+        .to.emit(tokenUpkeepManager, 'FetchedTokenPrice')
+        .withArgs(token2, price2)
+
+      await expect(storeTx2).to.emit(tokenUpkeepManager, 'TokenListCleaned')
+    })
+
     it('should only allow token upkeep to store price', async () => {
       await expect(
-        tokenUpkeepManager.storePrice(
+        tokenUpkeepManager.storePriceAndCleanup(
           tokenList[0],
           ethers.utils.parseEther('1'),
+          false,
         ),
       ).to.be.revertedWithCustomError(tokenUpkeepManager, 'UnauthorizedSender')
     })

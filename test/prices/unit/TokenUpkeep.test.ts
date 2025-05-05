@@ -339,7 +339,7 @@ describe('TokenUpkeep Unit Tests', function () {
       expect(price).to.equal(1)
     })
 
-    it('should finalize token upkeep when last index is reached', async function () {
+    it('should signal when the last index is reached', async function () {
       for (let i = 0; i < tokenCount - 1; i++) {
         const [_, performData] =
           await tokenUpkeep.callStatic.checkUpkeep(HashZero)
@@ -352,11 +352,11 @@ describe('TokenUpkeep Unit Tests', function () {
         .performUpkeep(performData)
       const lastPerformReceipt = await lastPerformTx.wait()
 
-      const finishedUpkeepLog = findLog(
+      const lastIndexReachedLog = findLog(
         lastPerformReceipt,
-        tokenUpkeepManagerMock.interface.getEventTopic('FinishedUpkeep'),
+        tokenUpkeepManagerMock.interface.getEventTopic('LastIndexReached'),
       )
-      expect(finishedUpkeepLog).to.exist
+      expect(lastIndexReachedLog).to.exist
     })
 
     it('should finalize token upkeep when there are only zero address tokens', async function () {

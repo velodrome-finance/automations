@@ -112,7 +112,11 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     }
 
     /// @inheritdoc ITokenUpkeepManager
-    function storePrice(address _token, uint256 _price) external override returns (bool stored) {
+    function storePriceAndCleanup(
+        address _token,
+        uint256 _price,
+        bool _isLastIndex
+    ) external override returns (bool stored) {
         if (!isTokenUpkeep[msg.sender]) {
             revert UnauthorizedSender();
         }
@@ -125,6 +129,10 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
             stored = true;
             emit FetchedTokenPrice(_token, _price);
         }
+        if (_isLastIndex) {
+            uint256 lastRun = (block.timestamp / FETCH_INTERVAL) * FETCH_INTERVAL;
+            _finishUpkeepAndCleanup(lastRun);
+        }
     }
 
     /// @inheritdoc ITokenUpkeepManager
@@ -132,10 +140,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         if (!isTokenUpkeep[msg.sender]) {
             revert UnauthorizedSender();
         }
-        finishedUpkeeps[_lastRun] += 1;
-        if (finishedUpkeeps[_lastRun] == upkeepIds.length) {
-            _cleanupTokenList();
-        }
+        _finishUpkeepAndCleanup(_lastRun);
     }
 
     /// @inheritdoc ITokenUpkeepManager
@@ -382,6 +387,13 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         IUpkeepBalanceMonitor(upkeepBalanceMonitor).removeFromWatchList(_upkeepId);
         IKeeperRegistryMaster(keeperRegistry).cancelUpkeep(_upkeepId);
         emit TokenUpkeepCancelled(_upkeepId);
+    }
+
+    function _finishUpkeepAndCleanup(uint256 _lastRun) internal {
+        finishedUpkeeps[_lastRun] += 1;
+        if (finishedUpkeeps[_lastRun] == upkeepIds.length) {
+            _cleanupTokenList();
+        }
     }
 
     function _cleanupTokenList() internal {
