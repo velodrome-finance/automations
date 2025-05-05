@@ -66,11 +66,10 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
     /// @inheritdoc ITokenUpkeep
     function checkUpkeep(bytes calldata) external view override returns (bool upkeepNeeded, bytes memory performData) {
         if (lastRun + FETCH_INTERVAL < block.timestamp) {
-            uint256 _currentIndex = currentIndex;
             uint256 _endIndex = _adjustedEndIndex();
 
             (address token, uint256 index, uint256 price) = ITokenUpkeepManager(tokenUpkeepManager).fetchFirstPrice(
-                _currentIndex,
+                currentIndex,
                 _endIndex
             );
 
