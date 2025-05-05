@@ -101,14 +101,14 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         uint256 _endIndex
     ) external view override returns (address, uint256, uint256) {
         address token;
-        uint256 price;
         for (uint256 i = _startIndex; i < _endIndex; i++) {
             token = _tokenList.at(i);
             if (token != address(0)) {
-                price = _fetchPrice(token);
+                uint256 price = _fetchPrice(token);
                 return (token, i, price);
             }
         }
+        return (address(0), 0, 0);
     }
 
     /// @inheritdoc ITokenUpkeepManager
