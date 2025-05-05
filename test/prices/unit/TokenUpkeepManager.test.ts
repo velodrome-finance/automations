@@ -448,7 +448,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
       const price = ethers.utils.parseEther('1')
       const storeTx = await tokenUpkeepManager
         .connect(impersonatedSigner)
-        .storePriceAndCleanup(token, price, false)
+        .storePrice(token, price)
 
       await expect(storeTx)
         .to.emit(tokenUpkeepManager, 'FetchedTokenPrice')
@@ -467,14 +467,22 @@ describe('TokenUpkeepManager Unit Tests', function () {
       expect(storedPrice).to.equal(price)
     })
 
-    it('should clean up the token list at the last token', async () => {
+    it('should only allow token upkeep to store price', async () => {
+      await expect(
+        tokenUpkeepManager.storePrice(
+          tokenList[0],
+          ethers.utils.parseEther('1'),
+        ),
+      ).to.be.revertedWithCustomError(tokenUpkeepManager, 'UnauthorizedSender')
+    })
+  })
+
+  describe('Finish upkeep', function () {
+    it('should clean up the token list when all upkeeps are finished', async () => {
       // register token upkeep
       const registerTx =
         await tokenUpkeepManager.performUpkeep(registerPerformData)
       const registerReceipt = await registerTx.wait()
-
-      // register one more token
-      await tokenUpkeepManager.registerTokens([tokenList[1]])
 
       // get token upkeep address
       const registerLog = findLog(
@@ -495,40 +503,19 @@ describe('TokenUpkeepManager Unit Tests', function () {
         '0xffffffffffffffff',
       ])
 
-      // store price via token upkeep
-      const token = tokenList[0]
-      const price = ethers.utils.parseEther('1')
-      const storeTx = await tokenUpkeepManager
-        .connect(impersonatedSigner)
-        .storePriceAndCleanup(token, price, false)
+      const block = await ethers.provider.getBlock('latest')
+      const lastHour = Math.floor(block.timestamp / 3600) * 3600
 
-      await expect(storeTx)
-        .to.emit(tokenUpkeepManager, 'FetchedTokenPrice')
-        .withArgs(token, price)
-
-      await expect(storeTx).to.not.emit(tokenUpkeepManager, 'TokenListCleaned')
-
-      // store price for the last token
-      const token2 = tokenList[1]
-      const price2 = ethers.utils.parseEther('1')
-      const storeTx2 = await tokenUpkeepManager
-        .connect(impersonatedSigner)
-        .storePriceAndCleanup(token2, price2, true)
-
-      await expect(storeTx2)
-        .to.emit(tokenUpkeepManager, 'FetchedTokenPrice')
-        .withArgs(token2, price2)
-
-      await expect(storeTx2).to.emit(tokenUpkeepManager, 'TokenListCleaned')
+      await expect(
+        tokenUpkeepManager
+          .connect(impersonatedSigner)
+          .finishUpkeepAndCleanup(lastHour),
+      ).to.emit(tokenUpkeepManager, 'TokenListCleaned')
     })
 
-    it('should only allow token upkeep to store price', async () => {
+    it('should not allow non-trusted forwarder to finish upkeep', async () => {
       await expect(
-        tokenUpkeepManager.storePriceAndCleanup(
-          tokenList[0],
-          ethers.utils.parseEther('1'),
-          false,
-        ),
+        tokenUpkeepManager.connect(accounts[1]).finishUpkeepAndCleanup(0),
       ).to.be.revertedWithCustomError(tokenUpkeepManager, 'UnauthorizedSender')
     })
   })

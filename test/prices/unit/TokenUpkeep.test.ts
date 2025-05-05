@@ -339,7 +339,7 @@ describe('TokenUpkeep Unit Tests', function () {
       expect(price).to.equal(1)
     })
 
-    it('should signal when the last index is reached', async function () {
+    it('should finalize token upkeep when last index is reached', async function () {
       for (let i = 0; i < tokenCount - 1; i++) {
         const [_, performData] =
           await tokenUpkeep.callStatic.checkUpkeep(HashZero)
@@ -352,11 +352,49 @@ describe('TokenUpkeep Unit Tests', function () {
         .performUpkeep(performData)
       const lastPerformReceipt = await lastPerformTx.wait()
 
-      const lastIndexReachedLog = findLog(
+      const finishedUpkeepLog = findLog(
         lastPerformReceipt,
-        tokenUpkeepManagerMock.interface.getEventTopic('LastIndexReached'),
+        tokenUpkeepManagerMock.interface.getEventTopic('FinishedUpkeep'),
       )
-      expect(lastIndexReachedLog).to.exist
+      expect(finishedUpkeepLog).to.exist
+    })
+
+    it('should finalize token upkeep when there are only zero address tokens', async function () {
+      // remove all tokens from list so they become zero address
+      await tokenUpkeepManagerMock.removeTokenList()
+
+      expect(await tokenUpkeep.currentIndex()).to.equal(
+        await tokenUpkeep.startIndex(),
+      )
+      expect(await tokenUpkeepManagerMock.tokenCount()).to.equal(0)
+      expect(await tokenUpkeepManagerMock.tokenListLength()).to.equal(
+        tokenCount - 1,
+      )
+
+      const [_, performData] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+      expect(performData).to.equal(
+        ethers.utils.defaultAbiCoder.encode(
+          ['uint256', 'address', 'uint256'],
+          [tokenCount - 2, ethers.constants.AddressZero, 0],
+        ),
+      )
+
+      const performTx = await tokenUpkeep
+        .connect(accounts[0])
+        .performUpkeep(performData)
+      const performReceipt = await performTx.wait()
+
+      const finishedUpkeepLog = findLog(
+        performReceipt,
+        tokenUpkeepManagerMock.interface.getEventTopic('FinishedUpkeep'),
+      )
+      expect(finishedUpkeepLog).to.exist
+
+      expect(await tokenUpkeep.currentIndex()).to.equal(
+        await tokenUpkeep.startIndex(),
+      )
     })
 
     it('should not store token price if already fetched', async function () {

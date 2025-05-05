@@ -112,11 +112,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     }
 
     /// @inheritdoc ITokenUpkeepManager
-    function storePriceAndCleanup(
-        address _token,
-        uint256 _price,
-        bool _isLastIndex
-    ) external override returns (bool stored) {
+    function storePrice(address _token, uint256 _price) external override returns (bool stored) {
         if (!isTokenUpkeep[msg.sender]) {
             revert UnauthorizedSender();
         }
@@ -129,12 +125,16 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
             stored = true;
             emit FetchedTokenPrice(_token, _price);
         }
-        if (_isLastIndex) {
-            uint256 lastHour = (block.timestamp / FETCH_INTERVAL) * FETCH_INTERVAL;
-            finishedUpkeeps[lastHour] += 1;
-            if (finishedUpkeeps[lastHour] == upkeepIds.length) {
-                _cleanupTokenList();
-            }
+    }
+
+    /// @inheritdoc ITokenUpkeepManager
+    function finishUpkeepAndCleanup(uint256 _lastRun) external override {
+        if (!isTokenUpkeep[msg.sender]) {
+            revert UnauthorizedSender();
+        }
+        finishedUpkeeps[_lastRun] += 1;
+        if (finishedUpkeeps[_lastRun] == upkeepIds.length) {
+            _cleanupTokenList();
         }
     }
 

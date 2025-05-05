@@ -12,7 +12,7 @@ contract TokenUpkeepManagerMock {
     StableEnumerableSet.AddressSet internal _tokenList;
 
     event FetchedTokenPrice(address indexed token, uint256 price);
-    event LastIndexReached();
+    event FinishedUpkeep();
 
     constructor(address _pricesOracle) {
         pricesOracle = _pricesOracle;
@@ -52,14 +52,15 @@ contract TokenUpkeepManagerMock {
         }
     }
 
-    function storePriceAndCleanup(address _token, uint256 _price, bool _isLastIndex) external returns (bool success) {
+    function storePrice(address _token, uint256 _price) external returns (bool success) {
         if (PricesMock(pricesOracle).latest(_token, block.timestamp) == 0) {
             success = true;
             emit FetchedTokenPrice(_token, _price);
         }
-        if (_isLastIndex) {
-            emit LastIndexReached();
-        }
+    }
+
+    function finishUpkeepAndCleanup(uint256 _lastRun) external {
+        emit FinishedUpkeep();
     }
 
     function tokenAt(uint256 index) external view returns (address) {

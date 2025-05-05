@@ -96,14 +96,17 @@ interface ITokenUpkeepManager {
         uint256 _endIndex
     ) external view returns (address _token, uint256 _index, uint256 _price);
 
-    /// @notice Store token price and cleanup when needed
+    /// @notice Store token price
     /// @dev Called by token upkeep contracts
-    /// @dev Performs token list cleanup on the last token
     /// @param _token Address of the token
     /// @param _price Price of the token
-    /// @param _isLastIndex True if this is the last index in a token upkeep range
     /// @return True if the price was successfully stored
-    function storePriceAndCleanup(address _token, uint256 _price, bool _isLastIndex) external returns (bool);
+    function storePrice(address _token, uint256 _price) external returns (bool);
+
+    /// @notice Mark upkeep as finished and clean up the token list when all upkeeps are done
+    /// @dev Called by token upkeep contracts
+    /// @param _lastRun The last hour timestamp when the upkeep was run
+    function finishUpkeepAndCleanup(uint256 _lastRun) external;
 
     /// @notice Register multiple tokens
     /// @param _tokens Array of token addresses to register
