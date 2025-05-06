@@ -473,8 +473,14 @@ describe('TokenUpkeepManager Unit Tests', function () {
         await tokenUpkeepManager.performUpkeep(registerPerformData)
       const registerReceipt = await registerTx.wait()
 
-      // register one more token
-      await tokenUpkeepManager.registerTokens([tokenList[1]])
+      // register more tokens
+      await tokenUpkeepManager.registerTokens([tokenList[1], tokenList[2]])
+
+      // deregister one token to trigger cleanup
+      await tokenUpkeepManager.deregisterTokens([tokenList[1]])
+
+      expect(await tokenUpkeepManager.tokenCount()).to.equal(2)
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(3)
 
       // get token upkeep address
       const registerLog = findLog(
@@ -519,6 +525,10 @@ describe('TokenUpkeepManager Unit Tests', function () {
         .withArgs(token2, price2)
 
       await expect(storeTx2).to.emit(tokenUpkeepManager, 'TokenListCleaned')
+
+      expect(await tokenUpkeepManager.tokenListLength()).to.equal(
+        await tokenUpkeepManager.tokenCount(),
+      )
     })
 
     it('should only allow token upkeep to store price', async () => {
