@@ -397,6 +397,103 @@ describe('TokenUpkeep Unit Tests', function () {
       )
     })
 
+    it('should finalize token upkeep when the list is partially filled with zero address tokens', async function () {
+      // remove tokens consecutively from the middle of the list
+      await tokenUpkeepManagerMock.removeFromTokenList(tokenList[3])
+      await tokenUpkeepManagerMock.removeFromTokenList(tokenList[4])
+      await tokenUpkeepManagerMock.removeFromTokenList(tokenList[5])
+
+      expect(await tokenUpkeep.currentIndex()).to.equal(
+        await tokenUpkeep.startIndex(),
+      )
+      expect(await tokenUpkeepManagerMock.tokenCount()).to.equal(tokenCount - 3)
+      expect(await tokenUpkeepManagerMock.tokenListLength()).to.equal(
+        tokenCount,
+      )
+
+      // process first tokens
+      for (let i = 0; i < 3; i++) {
+        const [_, performData] =
+          await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+        await tokenUpkeep.connect(accounts[0]).performUpkeep(performData)
+      }
+
+      // check that current index is incremented
+      expect(await tokenUpkeep.currentIndex()).to.equal(3)
+
+      // process the rest of the tokens except the last one
+      for (let i = 0; i < 3; i++) {
+        const [_, performData] =
+          await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+        await tokenUpkeep.connect(accounts[0]).performUpkeep(performData)
+      }
+
+      // check that current index is incremented
+      expect(await tokenUpkeep.currentIndex()).to.equal(tokenCount - 1)
+
+      // process the last token
+      const [_, performData] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+      const performTx = await tokenUpkeep
+        .connect(accounts[0])
+        .performUpkeep(performData)
+      const performReceipt = await performTx.wait()
+
+      const lastIndexReachedLog = findLog(
+        performReceipt,
+        tokenUpkeepManagerMock.interface.getEventTopic('LastIndexReached'),
+      )
+      expect(lastIndexReachedLog).to.exist
+
+      expect(await tokenUpkeep.currentIndex()).to.equal(
+        await tokenUpkeep.startIndex(),
+      )
+    })
+
+    it('should finalize token upkeep when the last token in the list is zero address', async function () {
+      // add a new token to the list so the last one in the range is not popped when removed
+      const newToken = ethers.Wallet.createRandom().address
+      await tokenUpkeepManagerMock.setTokenList([newToken])
+
+      // remove the last token from the range so it becomes zero address
+      await tokenUpkeepManagerMock.removeFromTokenList(tokenList[9])
+
+      // check that the last token is zero address
+      expect(await tokenUpkeepManagerMock.tokenAt(9)).to.equal(
+        ethers.constants.AddressZero,
+      )
+
+      // process all tokens except the last one
+      for (let i = 0; i < tokenCount - 1; i++) {
+        const [_, performData] =
+          await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+        await tokenUpkeep.connect(accounts[0]).performUpkeep(performData)
+      }
+
+      // check that current index is incremented
+      expect(await tokenUpkeep.currentIndex()).to.equal(tokenCount - 1)
+
+      // process the last token which is zero address
+      const [_, performData] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+      const performTx = await tokenUpkeep
+        .connect(accounts[0])
+        .performUpkeep(performData)
+      const performReceipt = await performTx.wait()
+
+      // check that upkeep is finished even if the last token is zero address
+      const finishedUpkeepLog = findLog(
+        performReceipt,
+        tokenUpkeepManagerMock.interface.getEventTopic('FinishedUpkeep'),
+      )
+      expect(finishedUpkeepLog).to.exist
+
+      expect(await tokenUpkeep.currentIndex()).to.equal(
+        await tokenUpkeep.startIndex(),
+      )
+    })
+
     it('should not store token price if already fetched', async function () {
       // simulate fetching first token price
       await pricesMock.storePrices([tokenList[0]], [1])
