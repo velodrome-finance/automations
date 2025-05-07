@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {StableEnumerableSet} from "../libraries/StableEnumerableSet.sol";
 import {PricesMock} from "./PricesMock.sol";
 
 contract TokenUpkeepManagerMock {
-    using EnumerableSet for EnumerableSet.AddressSet;
+    using StableEnumerableSet for StableEnumerableSet.AddressSet;
 
     address public pricesOracle;
 
-    EnumerableSet.AddressSet internal _tokenList;
+    StableEnumerableSet.AddressSet internal _tokenList;
 
     event FetchedTokenPrice(address indexed token, uint256 price);
+    event LastIndexReached();
+    event FinishedUpkeep();
 
     constructor(address _pricesOracle) {
         pricesOracle = _pricesOracle;
@@ -24,23 +26,45 @@ contract TokenUpkeepManagerMock {
     }
 
     function removeTokenList() external {
-        while (_tokenList.length() > 0) {
-            _tokenList.remove(_tokenList.at(_tokenList.length() - 1));
+        address[] memory current = _tokenList.values();
+        for (uint256 i = 0; i < current.length; i++) {
+            _tokenList.remove(current[i]);
         }
     }
 
-    function fetchPriceByIndex(uint256 _tokenIndex) external view returns (address token, uint256 price) {
-        token = _tokenList.at(_tokenIndex);
-        address[] memory tokens = new address[](1);
-        tokens[0] = token;
-        price = PricesMock(pricesOracle).fetchPrices(tokens)[0];
+    function removeFromTokenList(address _token) external {
+        _tokenList.remove(_token);
     }
 
-    function storePrice(address _token, uint256 _price) external returns (bool success) {
+    function fetchFirstPrice(
+        uint256 _startIndex,
+        uint256 _endIndex
+    ) external view returns (address token, uint256 index, uint256 price) {
+        for (uint256 i = _startIndex; i < _endIndex; i++) {
+            token = _tokenList.at(i);
+            if (token != address(0)) {
+                index = i;
+                // Fetch price from the oracle
+                address[] memory tokens = new address[](1);
+                tokens[0] = token;
+                price = PricesMock(pricesOracle).fetchPrices(tokens)[0];
+                return (token, i, price);
+            }
+        }
+    }
+
+    function storePriceAndCleanup(address _token, uint256 _price, bool _isLastIndex) external returns (bool success) {
         if (PricesMock(pricesOracle).latest(_token, block.timestamp) == 0) {
             success = true;
             emit FetchedTokenPrice(_token, _price);
         }
+        if (_isLastIndex) {
+            emit LastIndexReached();
+        }
+    }
+
+    function finishUpkeepAndCleanup(uint256 _lastRun) external {
+        emit FinishedUpkeep();
     }
 
     function tokenAt(uint256 index) external view returns (address) {
@@ -48,6 +72,10 @@ contract TokenUpkeepManagerMock {
     }
 
     function tokenCount() external view returns (uint256) {
+        return _tokenList.lengthWithoutZeroes();
+    }
+
+    function tokenListLength() external view returns (uint256) {
         return _tokenList.length();
     }
 }

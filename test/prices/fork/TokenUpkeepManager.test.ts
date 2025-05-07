@@ -361,8 +361,8 @@ describe('TokenUpkeepManager Script Tests', function () {
       await tokenUpkeep.callStatic.checkUpkeep(HashZero)
 
     const expectedPerformData = ethers.utils.defaultAbiCoder.encode(
-      ['address', 'uint256'],
-      [VELO_TOKEN_ADDRESS, VELO_TOKEN_PRICE],
+      ['uint256', 'address', 'uint256'],
+      [0, VELO_TOKEN_ADDRESS, VELO_TOKEN_PRICE],
     )
 
     expect(upkeepNeeded).to.be.true

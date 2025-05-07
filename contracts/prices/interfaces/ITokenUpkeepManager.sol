@@ -16,6 +16,7 @@ interface ITokenUpkeepManager {
     event UpkeepBalanceMonitorSet(address indexed upkeepBalanceMonitor);
     event PricesOracleSet(address indexed pricesOracle);
     event FetchedTokenPrice(address indexed token, uint256 price);
+    event TokenListCleaned();
 
     error AutoApproveDisabled();
     error NoLinkBalance();
@@ -69,6 +70,11 @@ interface ITokenUpkeepManager {
     /// @return True if the address is a token upkeep contract
     function isTokenUpkeep(address _address) external view returns (bool);
 
+    /// @notice Number of finished upkeeps for a given hour
+    /// @param _lastHourTimestamp The last hour timestamp
+    /// @return The number of finished upkeeps
+    function finishedUpkeeps(uint256 _lastHourTimestamp) external view returns (uint256);
+
     /// @notice Get upkeep ID at index
     /// @param _index The index of the upkeep ID
     /// @return The upkeep ID
@@ -78,17 +84,30 @@ interface ITokenUpkeepManager {
     /// @param _performData Encoded data for the operation
     function performUpkeep(bytes calldata _performData) external;
 
-    /// @notice Fetch token price at a specific index
-    /// @param _tokenIndex The index of the token
+    /// @notice Fetch the first non-zero token price
+    /// @dev Called by token upkeep contracts
+    /// @param _startIndex Start index in the token list
+    /// @param _endIndex End index in the token list
     /// @return _token Address of the token
+    /// @return _index Index of the token in the list
     /// @return _price Price of the token
-    function fetchPriceByIndex(uint256 _tokenIndex) external view returns (address _token, uint256 _price);
+    function fetchFirstPrice(
+        uint256 _startIndex,
+        uint256 _endIndex
+    ) external view returns (address _token, uint256 _index, uint256 _price);
 
-    /// @notice Store token price (called by token upkeeps)
+    /// @notice Store token price and cleanup when needed
+    /// @dev Called by token upkeep contracts
+    /// @dev Performs token list cleanup on the last token
     /// @param _token Address of the token
     /// @param _price Price of the token
     /// @return True if the price was successfully stored
-    function storePrice(address _token, uint256 _price) external returns (bool);
+    function storePriceAndCleanup(address _token, uint256 _price, bool _isLastIndex) external returns (bool);
+
+    /// @notice Mark upkeep as finished and clean up the token list when all upkeeps are done
+    /// @dev Called by token upkeep contracts
+    /// @param _lastRun The last hour timestamp when the upkeep was run
+    function finishUpkeepAndCleanup(uint256 _lastRun) external;
 
     /// @notice Register multiple tokens
     /// @param _tokens Array of token addresses to register
@@ -105,6 +124,9 @@ interface ITokenUpkeepManager {
 
     /// @notice Withdraw LINK balance from the contract
     function withdrawLinkBalance() external;
+
+    /// @notice Cleanup token list by removing empty slots
+    function cleanupTokenList() external;
 
     /// @notice Set gas limit for new upkeeps
     /// @param _newUpkeepGasLimit New gas limit value
@@ -149,6 +171,10 @@ interface ITokenUpkeepManager {
     /// @notice Get count of registered tokens
     /// @return Number of tokens registered
     function tokenCount() external view returns (uint256);
+
+    /// @notice Get the raw length of the token list
+    /// @return Length of the token list including the empty slots
+    function tokenListLength() external view returns (uint256);
 
     /// @notice Get count of registered token upkeeps
     /// @return Number of token upkeeps registered

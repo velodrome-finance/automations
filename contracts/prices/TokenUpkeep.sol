@@ -33,19 +33,24 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
     function performUpkeep(bytes calldata _performData) external override {
         if (msg.sender != trustedForwarder) revert UnauthorizedSender();
 
-        uint256 _currentIndex = currentIndex;
         uint256 _endIndex = _adjustedEndIndex();
-        if (!_upkeepNeeded(_currentIndex, _endIndex)) revert UpkeepNotNeeded();
+        (uint256 _currentIndex, address token, uint256 price) = abi.decode(_performData, (uint256, address, uint256));
 
-        (address token, uint256 price) = abi.decode(_performData, (address, uint256));
-        bool success = ITokenUpkeepManager(tokenUpkeepManager).storePrice(token, price);
+        if (lastRun + FETCH_INTERVAL > block.timestamp || _currentIndex > _endIndex) {
+            revert UpkeepNotNeeded();
+        }
+        bool isLastIndex = _currentIndex == _endIndex - 1;
+        bool success;
+        if (token != address(0)) {
+            success = ITokenUpkeepManager(tokenUpkeepManager).storePriceAndCleanup(token, price, isLastIndex);
+        }
 
-        uint256 nextIndex = _currentIndex + 1;
-        if (nextIndex == _endIndex) {
+        if (isLastIndex) {
             currentIndex = startIndex;
             lastRun = (block.timestamp / FETCH_INTERVAL) * FETCH_INTERVAL;
+            if (token == address(0)) ITokenUpkeepManager(tokenUpkeepManager).finishUpkeepAndCleanup(lastRun);
         } else {
-            currentIndex = nextIndex;
+            currentIndex = _currentIndex + 1;
         }
         emit TokenUpkeepPerformed(_currentIndex, success);
     }
@@ -61,19 +66,26 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
 
     /// @inheritdoc ITokenUpkeep
     function checkUpkeep(bytes calldata) external view override returns (bool upkeepNeeded, bytes memory performData) {
-        uint256 _currentIndex = currentIndex;
-        if (_upkeepNeeded(_currentIndex, _adjustedEndIndex())) {
-            (address token, uint256 price) = ITokenUpkeepManager(tokenUpkeepManager).fetchPriceByIndex(_currentIndex);
-            return (true, abi.encode(token, price));
+        if (lastRun + FETCH_INTERVAL < block.timestamp) {
+            uint256 _endIndex = _adjustedEndIndex();
+
+            (address token, uint256 index, uint256 price) = ITokenUpkeepManager(tokenUpkeepManager).fetchFirstPrice(
+                currentIndex,
+                _endIndex
+            );
+
+            // If a valid token is found, encode its info for processing.
+            // Otherwise, encode the last index with zeros to advance the current index
+            // and complete the processing cycle even when no tokens need updating.
+            return
+                token != address(0)
+                    ? (true, abi.encode(index, token, price))
+                    : (true, abi.encode(_endIndex - 1, address(0), 0));
         }
     }
 
-    function _upkeepNeeded(uint256 _currentIndex, uint256 _endIndex) internal view returns (bool) {
-        return lastRun + FETCH_INTERVAL < block.timestamp && _currentIndex < _endIndex;
-    }
-
     function _adjustedEndIndex() internal view returns (uint256) {
-        uint256 tokenCount = ITokenUpkeepManager(tokenUpkeepManager).tokenCount();
-        return tokenCount < endIndex ? tokenCount : endIndex;
+        uint256 listLength = ITokenUpkeepManager(tokenUpkeepManager).tokenListLength();
+        return listLength < endIndex ? listLength : endIndex;
     }
 }

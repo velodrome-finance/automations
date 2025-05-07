@@ -5,6 +5,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {StableEnumerableSet} from "./libraries/StableEnumerableSet.sol";
 import {Log} from "@chainlink/contracts/src/v0.8/automation/interfaces/ILogAutomation.sol";
 import {IVoter} from "../../vendor/velodrome-contracts/contracts/interfaces/IVoter.sol";
 import {IKeeperRegistryMaster} from "@chainlink/contracts/src/v0.8/automation/interfaces/v2_1/IKeeperRegistryMaster.sol";
@@ -16,7 +17,7 @@ import {ITokenUpkeepManager} from "./interfaces/ITokenUpkeepManager.sol";
 
 contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     using SafeERC20 for IERC20;
-    using EnumerableSet for EnumerableSet.AddressSet;
+    using StableEnumerableSet for StableEnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.UintSet;
 
     /// @inheritdoc ITokenUpkeepManager
@@ -42,13 +43,16 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     mapping(uint256 => address) public override tokenUpkeep;
     /// @inheritdoc ITokenUpkeepManager
     mapping(address => bool) public override isTokenUpkeep;
+    /// @inheritdoc ITokenUpkeepManager
+    mapping(uint256 => uint256) public override finishedUpkeeps;
 
     /// @inheritdoc ITokenUpkeepManager
     uint256[] public override upkeepIds;
 
-    EnumerableSet.AddressSet internal _tokenList;
+    StableEnumerableSet.AddressSet internal _tokenList;
     EnumerableSet.UintSet private _cancelledUpkeepIds;
 
+    uint256 private constant FETCH_INTERVAL = 1 hours;
     uint256 private constant TOKENS_PER_UPKEEP = 100;
     uint256 private constant UPKEEP_CANCEL_BUFFER = 20;
     uint8 private constant CONDITIONAL_TRIGGER_TYPE = 0;
@@ -92,16 +96,26 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     }
 
     /// @inheritdoc ITokenUpkeepManager
-    function fetchPriceByIndex(uint256 _tokenIndex) external view override returns (address token, uint256 price) {
-        token = _tokenList.at(_tokenIndex);
-        address[] memory tokens = new address[](1);
-        tokens[0] = token;
-        uint256[] memory prices = IPrices(pricesOracle).fetchPrices(tokens);
-        price = prices[0];
+    function fetchFirstPrice(
+        uint256 _startIndex,
+        uint256 _endIndex
+    ) external view override returns (address, uint256, uint256) {
+        address token;
+        for (uint256 i = _startIndex; i < _endIndex; i++) {
+            token = _tokenList.at(i);
+            if (token != address(0)) {
+                return (token, i, _fetchPrice(token));
+            }
+        }
+        return (address(0), 0, 0);
     }
 
     /// @inheritdoc ITokenUpkeepManager
-    function storePrice(address _token, uint256 _price) external override returns (bool success) {
+    function storePriceAndCleanup(
+        address _token,
+        uint256 _price,
+        bool _isLastIndex
+    ) external override returns (bool stored) {
         if (!isTokenUpkeep[msg.sender]) {
             revert UnauthorizedSender();
         }
@@ -111,9 +125,21 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
             uint256[] memory prices = new uint256[](1);
             prices[0] = _price;
             IPrices(pricesOracle).storePrices(tokens, prices);
-            success = true;
+            stored = true;
             emit FetchedTokenPrice(_token, _price);
         }
+        if (_isLastIndex) {
+            uint256 lastRun = (block.timestamp / FETCH_INTERVAL) * FETCH_INTERVAL;
+            _finishUpkeepAndCleanup(lastRun);
+        }
+    }
+
+    /// @inheritdoc ITokenUpkeepManager
+    function finishUpkeepAndCleanup(uint256 _lastRun) external override {
+        if (!isTokenUpkeep[msg.sender]) {
+            revert UnauthorizedSender();
+        }
+        _finishUpkeepAndCleanup(_lastRun);
     }
 
     /// @inheritdoc ITokenUpkeepManager
@@ -167,6 +193,11 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         }
         IERC20(linkToken).safeTransfer(msg.sender, balance);
         emit LinkBalanceWithdrawn(msg.sender, balance);
+    }
+
+    /// @inheritdoc ITokenUpkeepManager
+    function cleanupTokenList() external override onlyOwner {
+        _cleanupTokenList();
     }
 
     /// @inheritdoc ITokenUpkeepManager
@@ -249,8 +280,13 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     }
 
     /// @inheritdoc ITokenUpkeepManager
-    function tokenCount() external view override returns (uint256) {
+    function tokenListLength() external view override returns (uint256) {
         return _tokenList.length();
+    }
+
+    /// @inheritdoc ITokenUpkeepManager
+    function tokenCount() external view override returns (uint256) {
+        return _tokenList.lengthWithoutZeroes();
     }
 
     /// @inheritdoc ITokenUpkeepManager
@@ -277,6 +313,13 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         return _cancelledUpkeepIds.length();
     }
 
+    function _fetchPrice(address _token) internal view returns (uint256) {
+        address[] memory tokens = new address[](1);
+        tokens[0] = _token;
+        uint256[] memory prices = IPrices(pricesOracle).fetchPrices(tokens);
+        return prices[0];
+    }
+
     /// @dev Assumes that the token is not already registered
     function _registerToken(address _token) internal {
         uint256 _tokenCount = _tokenList.length();
@@ -290,7 +333,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     /// @dev Assumes that the token is already registered
     function _deregisterToken(address _token) internal {
         _tokenList.remove(_token);
-        uint256 _tokenCount = _tokenList.length();
+        uint256 _tokenCount = _tokenList.lengthWithoutZeroes();
         uint256 _currentUpkeep = upkeepIds.length - 1;
         uint256 currentUpkeepStartIndex = _getNextUpkeepStartIndex(_currentUpkeep);
         if (_tokenCount + UPKEEP_CANCEL_BUFFER <= currentUpkeepStartIndex || _tokenCount == 0) {
@@ -343,6 +386,18 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         IUpkeepBalanceMonitor(upkeepBalanceMonitor).removeFromWatchList(_upkeepId);
         IKeeperRegistryMaster(keeperRegistry).cancelUpkeep(_upkeepId);
         emit TokenUpkeepCancelled(_upkeepId);
+    }
+
+    function _finishUpkeepAndCleanup(uint256 _lastRun) internal {
+        finishedUpkeeps[_lastRun]++;
+        if (finishedUpkeeps[_lastRun] == upkeepIds.length) {
+            _cleanupTokenList();
+        }
+    }
+
+    function _cleanupTokenList() internal {
+        _tokenList.cleanup();
+        emit TokenListCleaned();
     }
 
     function _withdrawUpkeep(uint256 _upkeepId) internal {
