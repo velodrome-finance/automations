@@ -104,8 +104,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         for (uint256 i = _startIndex; i < _endIndex; i++) {
             token = _tokenList.at(i);
             if (token != address(0)) {
-                uint256 price = _fetchPrice(token);
-                return (token, i, price);
+                return (token, i, _fetchPrice(token));
             }
         }
         return (address(0), 0, 0);
@@ -390,7 +389,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     }
 
     function _finishUpkeepAndCleanup(uint256 _lastRun) internal {
-        finishedUpkeeps[_lastRun] += 1;
+        finishedUpkeeps[_lastRun]++;
         if (finishedUpkeeps[_lastRun] == upkeepIds.length) {
             _cleanupTokenList();
         }
