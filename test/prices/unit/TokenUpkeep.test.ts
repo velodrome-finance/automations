@@ -494,6 +494,57 @@ describe('TokenUpkeep Unit Tests', function () {
       )
     })
 
+    it('should finalize token upkeep when there are multiple zero address tokens at the end', async function () {
+      // add a new token to the list so the last one in the range is not popped when removed
+      const newToken = ethers.Wallet.createRandom().address
+      await tokenUpkeepManagerMock.setTokenList([newToken])
+
+      // remove the last three tokens from the range so they become zero address
+      await tokenUpkeepManagerMock.removeFromTokenList(tokenList[7])
+      await tokenUpkeepManagerMock.removeFromTokenList(tokenList[8])
+      await tokenUpkeepManagerMock.removeFromTokenList(tokenList[9])
+
+      // check that the last three tokens are zero address
+      expect(await tokenUpkeepManagerMock.tokenAt(7)).to.equal(
+        ethers.constants.AddressZero,
+      )
+      expect(await tokenUpkeepManagerMock.tokenAt(8)).to.equal(
+        ethers.constants.AddressZero,
+      )
+      expect(await tokenUpkeepManagerMock.tokenAt(9)).to.equal(
+        ethers.constants.AddressZero,
+      )
+
+      // process all tokens except the last three
+      for (let i = 0; i < tokenCount - 3; i++) {
+        const [_, performData] =
+          await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+        await tokenUpkeep.connect(accounts[0]).performUpkeep(performData)
+      }
+
+      // check that current index is incremented
+      expect(await tokenUpkeep.currentIndex()).to.equal(tokenCount - 3)
+
+      // process the last iteration which is all zero address tokens
+      const [_, performData] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+      const performTx = await tokenUpkeep
+        .connect(accounts[0])
+        .performUpkeep(performData)
+      const performReceipt = await performTx.wait()
+
+      // check that upkeep is finished even if the last tokens are zero address
+      const finishedUpkeepLog = findLog(
+        performReceipt,
+        tokenUpkeepManagerMock.interface.getEventTopic('FinishedUpkeep'),
+      )
+      expect(finishedUpkeepLog).to.exist
+
+      expect(await tokenUpkeep.currentIndex()).to.equal(
+        await tokenUpkeep.startIndex(),
+      )
+    })
+
     it('should not store token price if already fetched', async function () {
       // simulate fetching first token price
       await pricesMock.storePrices([tokenList[0]], [1])
