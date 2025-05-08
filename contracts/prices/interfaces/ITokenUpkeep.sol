@@ -21,6 +21,9 @@ interface ITokenUpkeep {
     /// @notice The current index of token to be processed
     function currentIndex() external view returns (uint256);
 
+    /// @notice The current fetch interval in seconds for the upkeep
+    function currentInterval() external view returns (uint256);
+
     /// @notice The last hour timestamp when the upkeep was performed
     function lastRun() external view returns (uint256);
 

@@ -73,8 +73,8 @@ describe('TokenUpkeep Unit Tests', function () {
 
     // create sample perform data
     samplePerformData = ethers.utils.defaultAbiCoder.encode(
-      ['uint256', 'address', 'uint256'],
-      [0, tokenList[0], 1],
+      ['uint256', 'uint256', 'address', 'uint256'],
+      [0, fetchInterval, tokenList[0], 1],
     )
   })
 
@@ -132,7 +132,72 @@ describe('TokenUpkeep Unit Tests', function () {
         await tokenUpkeep.callStatic.checkUpkeep(HashZero)
 
       expect(upkeepNeeded2).to.be.true
-      expect(performData2).to.equal(samplePerformData)
+      expect(performData2).to.equal(
+        ethers.utils.defaultAbiCoder.encode(
+          ['uint256', 'uint256', 'address', 'uint256'],
+          [0, 2 * fetchInterval, tokenList[0], 1],
+        ),
+      )
+    })
+
+    it('should trigger upkeep correctly when interval was updated during fetching', async function () {
+      // perform upkeep for half of the tokens in range
+      for (let i = 0; i < tokenCount / 2; i++) {
+        const [_, performData] =
+          await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+        await tokenUpkeep.connect(accounts[0]).performUpkeep(performData)
+      }
+
+      // check that current index is incremented
+      expect(await tokenUpkeep.currentIndex()).to.equal(tokenCount / 2)
+
+      // increase interval to 2 hours
+      await pricesMock.setTimeWindow(2 * fetchInterval)
+
+      // perform upkeep for the rest of the tokens in range
+      for (let i = tokenCount / 2; i < tokenCount; i++) {
+        const [_, performData] =
+          await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+        // check that upkeep uses the current interval
+        expect(performData).to.equal(
+          ethers.utils.defaultAbiCoder.encode(
+            ['uint256', 'uint256', 'address', 'uint256'],
+            [i, fetchInterval, tokenList[i], 1],
+          ),
+        )
+
+        await tokenUpkeep.connect(accounts[0]).performUpkeep(performData)
+      }
+
+      // check that current index is reset to start index
+      expect(await tokenUpkeep.currentIndex()).to.equal(
+        await tokenUpkeep.startIndex(),
+      )
+
+      // simulate old interval passing
+      await time.increase(fetchInterval)
+
+      // check that upkeep is not needed
+      const [checkUpkeep, performData] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+      expect(checkUpkeep).to.be.false
+      expect(performData).to.equal('0x')
+
+      // simulate new interval passing
+      await time.increase(fetchInterval)
+
+      const [checkUpkeep2, performData2] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+      expect(checkUpkeep2).to.be.true
+      expect(performData2).to.equal(
+        ethers.utils.defaultAbiCoder.encode(
+          ['uint256', 'uint256', 'address', 'uint256'],
+          [0, 2 * fetchInterval, tokenList[0], 1],
+        ),
+      )
     })
 
     it('should not trigger upkeep when tokens are already processed', async function () {
@@ -159,8 +224,8 @@ describe('TokenUpkeep Unit Tests', function () {
       expect(upkeepNeeded).to.be.true
       expect(performData).to.equal(
         ethers.utils.defaultAbiCoder.encode(
-          ['uint256', 'address', 'uint256'],
-          [tokenCount - 2, ethers.constants.AddressZero, 0],
+          ['uint256', 'uint256', 'address', 'uint256'],
+          [tokenCount - 2, fetchInterval, ethers.constants.AddressZero, 0],
         ),
       )
     })
@@ -175,8 +240,8 @@ describe('TokenUpkeep Unit Tests', function () {
       // the perform data should be for the next token in the list
       expect(performData).to.equal(
         ethers.utils.defaultAbiCoder.encode(
-          ['uint256', 'address', 'uint256'],
-          [1, tokenList[1], 1],
+          ['uint256', 'uint256', 'address', 'uint256'],
+          [1, fetchInterval, tokenList[1], 1],
         ),
       )
       expect(upkeepNeeded).to.be.true
@@ -389,9 +454,14 @@ describe('TokenUpkeep Unit Tests', function () {
       expect(checkUpkeepAfter).to.be.false
       expect(performDataAfter).to.equal('0x')
 
+      const newPerformData = ethers.utils.defaultAbiCoder.encode(
+        ['uint256', 'uint256', 'address', 'uint256'],
+        [0, 2 * fetchInterval, tokenList[0], 1],
+      )
+
       // try to perform upkeep again before interval has passed
       await expect(
-        tokenUpkeep.connect(accounts[0]).performUpkeep(samplePerformData),
+        tokenUpkeep.connect(accounts[0]).performUpkeep(newPerformData),
       ).to.be.revertedWithCustomError(tokenUpkeep, 'UpkeepNotNeeded')
 
       // simulate interval passing again
@@ -401,7 +471,60 @@ describe('TokenUpkeep Unit Tests', function () {
         await tokenUpkeep.callStatic.checkUpkeep(HashZero)
 
       expect(checkUpkeepAfter2).to.equal(true)
-      expect(performDataAfter2).to.equal(samplePerformData)
+      expect(performDataAfter2).to.equal(newPerformData)
+    })
+
+    it('should process tokens when interval is updated during fetching', async function () {
+      // perform upkeep for half of the tokens in range
+      for (let i = 0; i < tokenCount / 2; i++) {
+        const [_, performData] =
+          await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+        await tokenUpkeep.connect(accounts[0]).performUpkeep(performData)
+      }
+
+      // check that current index is incremented
+      expect(await tokenUpkeep.currentIndex()).to.equal(tokenCount / 2)
+
+      // increase interval to 2 hours
+      await pricesMock.setTimeWindow(2 * fetchInterval)
+
+      // perform upkeep for the rest of the tokens in range
+      for (let i = tokenCount / 2; i < tokenCount; i++) {
+        const [_, performData] =
+          await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+        // check that upkeep uses the current interval
+        expect(performData).to.equal(
+          ethers.utils.defaultAbiCoder.encode(
+            ['uint256', 'uint256', 'address', 'uint256'],
+            [i, fetchInterval, tokenList[i], 1],
+          ),
+        )
+
+        // interval should not be updated yet
+        expect(await tokenUpkeep.currentInterval()).to.equal(fetchInterval)
+
+        await tokenUpkeep.connect(accounts[0]).performUpkeep(performData)
+      }
+
+      // check that current index is reset to start index
+      expect(await tokenUpkeep.currentIndex()).to.equal(
+        await tokenUpkeep.startIndex(),
+      )
+
+      // interval should not be updated before the next run
+      expect(await tokenUpkeep.currentInterval()).to.equal(fetchInterval)
+
+      // simulate new interval passing
+      await time.increase(2 * fetchInterval)
+
+      // run the first token again
+      const [_, performData2] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+      await tokenUpkeep.connect(accounts[0]).performUpkeep(performData2)
+
+      // check that the interval is updated
+      expect(await tokenUpkeep.currentInterval()).to.equal(2 * fetchInterval)
     })
 
     it('should store fetched token price via token upkeep manager', async function () {
@@ -463,8 +586,8 @@ describe('TokenUpkeep Unit Tests', function () {
 
       expect(performData).to.equal(
         ethers.utils.defaultAbiCoder.encode(
-          ['uint256', 'address', 'uint256'],
-          [tokenCount - 2, ethers.constants.AddressZero, 0],
+          ['uint256', 'uint256', 'address', 'uint256'],
+          [tokenCount - 2, fetchInterval, ethers.constants.AddressZero, 0],
         ),
       )
 
