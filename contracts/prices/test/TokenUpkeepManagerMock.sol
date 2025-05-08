@@ -45,10 +45,7 @@ contract TokenUpkeepManagerMock {
             if (token != address(0)) {
                 index = i;
                 // Fetch price from the oracle
-                address[] memory tokens = new address[](1);
-                tokens[0] = token;
-                price = PricesMock(pricesOracle).fetchPrices(tokens)[0];
-                return (token, i, price);
+                return (token, i, PricesMock(pricesOracle).fetchPrice(token));
             }
         }
     }

@@ -104,7 +104,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         for (uint256 i = _startIndex; i < _endIndex; i++) {
             token = _tokenList.at(i);
             if (token != address(0)) {
-                return (token, i, _fetchPrice(token));
+                return (token, i, IPrices(pricesOracle).fetchPrice(token));
             }
         }
         return (address(0), 0, 0);
@@ -120,11 +120,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
             revert UnauthorizedSender();
         }
         if (IPrices(pricesOracle).latest(_token, block.timestamp) == 0) {
-            address[] memory tokens = new address[](1);
-            tokens[0] = _token;
-            uint256[] memory prices = new uint256[](1);
-            prices[0] = _price;
-            IPrices(pricesOracle).storePrices(tokens, prices);
+            IPrices(pricesOracle).storePrice(_token, _price);
             stored = true;
             emit FetchedTokenPrice(_token, _price);
         }
@@ -311,13 +307,6 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     /// @inheritdoc ITokenUpkeepManager
     function cancelledUpkeepCount() external view override returns (uint256) {
         return _cancelledUpkeepIds.length();
-    }
-
-    function _fetchPrice(address _token) internal view returns (uint256) {
-        address[] memory tokens = new address[](1);
-        tokens[0] = _token;
-        uint256[] memory prices = IPrices(pricesOracle).fetchPrices(tokens);
-        return prices[0];
     }
 
     /// @dev Assumes that the token is not already registered
