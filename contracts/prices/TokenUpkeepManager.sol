@@ -52,7 +52,6 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     StableEnumerableSet.AddressSet internal _tokenList;
     EnumerableSet.UintSet private _cancelledUpkeepIds;
 
-    uint256 private constant FETCH_INTERVAL = 1 hours;
     uint256 private constant TOKENS_PER_UPKEEP = 100;
     uint256 private constant UPKEEP_CANCEL_BUFFER = 20;
     uint8 private constant CONDITIONAL_TRIGGER_TYPE = 0;
@@ -129,7 +128,8 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
             emit FetchedTokenPrice(_token, _price);
         }
         if (_isLastIndex) {
-            uint256 lastRun = (block.timestamp / FETCH_INTERVAL) * FETCH_INTERVAL;
+            uint256 fetchInterval = IPrices(pricesOracle).timeWindow();
+            uint256 lastRun = (block.timestamp / fetchInterval) * fetchInterval;
             _finishUpkeepAndCleanup(lastRun);
         }
     }
@@ -311,6 +311,11 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     /// @inheritdoc ITokenUpkeepManager
     function cancelledUpkeepCount() external view override returns (uint256) {
         return _cancelledUpkeepIds.length();
+    }
+
+    /// @inheritdoc ITokenUpkeepManager
+    function fetchInterval() external view override returns (uint256) {
+        return IPrices(pricesOracle).timeWindow();
     }
 
     function _fetchPrice(address _token) internal view returns (uint256) {

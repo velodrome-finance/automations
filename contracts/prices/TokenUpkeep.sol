@@ -20,8 +20,6 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
     /// @inheritdoc ITokenUpkeep
     address public override trustedForwarder;
 
-    uint256 private constant FETCH_INTERVAL = 1 hours;
-
     constructor(uint256 _startIndex, uint256 _endIndex) {
         tokenUpkeepManager = msg.sender;
         startIndex = _startIndex;
@@ -35,8 +33,9 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
 
         uint256 _endIndex = _adjustedEndIndex();
         (uint256 _currentIndex, address token, uint256 price) = abi.decode(_performData, (uint256, address, uint256));
+        uint256 fetchInterval = _fetchInterval();
 
-        if (lastRun + FETCH_INTERVAL > block.timestamp || _currentIndex > _endIndex) {
+        if (lastRun + fetchInterval > block.timestamp || _currentIndex > _endIndex) {
             revert UpkeepNotNeeded();
         }
         bool isLastIndex = _currentIndex == _endIndex - 1;
@@ -47,7 +46,7 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
 
         if (isLastIndex) {
             currentIndex = startIndex;
-            lastRun = (block.timestamp / FETCH_INTERVAL) * FETCH_INTERVAL;
+            lastRun = (block.timestamp / fetchInterval) * fetchInterval;
             if (token == address(0)) ITokenUpkeepManager(tokenUpkeepManager).finishUpkeepAndCleanup(lastRun);
         } else {
             currentIndex = _currentIndex + 1;
@@ -66,7 +65,7 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
 
     /// @inheritdoc ITokenUpkeep
     function checkUpkeep(bytes calldata) external view override returns (bool upkeepNeeded, bytes memory performData) {
-        if (lastRun + FETCH_INTERVAL < block.timestamp) {
+        if (lastRun + _fetchInterval() < block.timestamp) {
             uint256 _endIndex = _adjustedEndIndex();
 
             (address token, uint256 index, uint256 price) = ITokenUpkeepManager(tokenUpkeepManager).fetchFirstPrice(
@@ -87,5 +86,9 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
     function _adjustedEndIndex() internal view returns (uint256) {
         uint256 listLength = ITokenUpkeepManager(tokenUpkeepManager).tokenListLength();
         return listLength < endIndex ? listLength : endIndex;
+    }
+
+    function _fetchInterval() internal view returns (uint256) {
+        return ITokenUpkeepManager(tokenUpkeepManager).fetchInterval();
     }
 }

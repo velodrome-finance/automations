@@ -105,6 +105,36 @@ describe('TokenUpkeep Unit Tests', function () {
       expect(performData).to.equal(samplePerformData)
     })
 
+    it('should trigger upkeep correctly when interval was updated', async function () {
+      // perform upkeep for all tokens in range
+      for (let i = 0; i < tokenCount; i++) {
+        const [_, performData] =
+          await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+        await tokenUpkeep.connect(accounts[0]).performUpkeep(performData)
+      }
+
+      // simulate interval passing
+      await time.increase(fetchInterval)
+
+      // increase interval to 2 hours
+      await pricesMock.setTimeWindow(2 * fetchInterval)
+
+      const [upkeepNeeded, performData] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+      expect(upkeepNeeded).to.be.false
+      expect(performData).to.equal('0x')
+
+      // simulate interval passing
+      await time.increase(fetchInterval)
+
+      const [upkeepNeeded2, performData2] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+      expect(upkeepNeeded2).to.be.true
+      expect(performData2).to.equal(samplePerformData)
+    })
+
     it('should not trigger upkeep when tokens are already processed', async function () {
       // perform upkeep for all tokens in range
       for (let i = 0; i < tokenCount; i++) {
@@ -290,7 +320,7 @@ describe('TokenUpkeep Unit Tests', function () {
       expect(performData).to.equal('0x')
     })
 
-    it('should not perform upkeep after all tokens are processed', async function () {
+    it('should process tokens on interval', async function () {
       // perform upkeep for all tokens in range
       for (let i = 0; i < tokenCount; i++) {
         const [_, performData] =
@@ -315,6 +345,63 @@ describe('TokenUpkeep Unit Tests', function () {
       await expect(
         tokenUpkeep.connect(accounts[0]).performUpkeep(samplePerformData),
       ).to.be.revertedWithCustomError(tokenUpkeep, 'UpkeepNotNeeded')
+
+      // simulate interval passing
+      await time.increase(fetchInterval)
+
+      const [checkUpkeepAfter, performDataAfter] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+      expect(checkUpkeepAfter).to.be.true
+      expect(performDataAfter).to.equal(samplePerformData)
+    })
+
+    it('should process tokens when interval is updated', async function () {
+      // perform upkeep for all tokens in range
+      for (let i = 0; i < tokenCount; i++) {
+        const [_, performData] =
+          await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+        expect(await tokenUpkeep.currentIndex()).to.equal(i)
+        await tokenUpkeep.connect(accounts[0]).performUpkeep(performData)
+      }
+
+      // check that current index is reset to start index
+      expect(await tokenUpkeep.currentIndex()).to.equal(
+        await tokenUpkeep.startIndex(),
+      )
+
+      // check that upkeep is not needed
+      const [checkUpkeep, performData] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+      expect(checkUpkeep).to.be.false
+      expect(performData).to.equal('0x')
+
+      // simulate interval passing
+      await time.increase(fetchInterval)
+
+      // increase interval to 2 hours
+      await pricesMock.setTimeWindow(2 * fetchInterval)
+
+      const [checkUpkeepAfter, performDataAfter] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+      expect(checkUpkeepAfter).to.be.false
+      expect(performDataAfter).to.equal('0x')
+
+      // try to perform upkeep again before interval has passed
+      await expect(
+        tokenUpkeep.connect(accounts[0]).performUpkeep(samplePerformData),
+      ).to.be.revertedWithCustomError(tokenUpkeep, 'UpkeepNotNeeded')
+
+      // simulate interval passing again
+      await time.increase(fetchInterval)
+
+      const [checkUpkeepAfter2, performDataAfter2] =
+        await tokenUpkeep.callStatic.checkUpkeep(HashZero)
+
+      expect(checkUpkeepAfter2).to.equal(true)
+      expect(performDataAfter2).to.equal(samplePerformData)
     })
 
     it('should store fetched token price via token upkeep manager', async function () {
