@@ -119,8 +119,9 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         if (!isTokenUpkeep[msg.sender]) {
             revert UnauthorizedSender();
         }
-        if (IPrices(pricesOracle).latest(_token, block.timestamp) == 0) {
-            IPrices(pricesOracle).storePrice(_token, _price);
+        address _pricesOracle = pricesOracle;
+        if (IPrices(_pricesOracle).latest(_token, block.timestamp) == 0) {
+            IPrices(_pricesOracle).storePrice(_token, _price);
             stored = true;
             emit FetchedTokenPrice(_token, _price);
         }
