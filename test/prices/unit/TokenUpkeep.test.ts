@@ -337,6 +337,11 @@ describe('TokenUpkeep Unit Tests', function () {
 
       expect(token).to.equal(tokenList[0])
       expect(price).to.equal(1)
+
+      const timestamp = await time.latest()
+      const storedPrice = await pricesMock.latest(tokenList[0], timestamp)
+
+      expect(storedPrice).to.equal(1)
     })
 
     it('should signal when the last index is reached', async function () {
