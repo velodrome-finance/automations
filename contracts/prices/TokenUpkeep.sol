@@ -49,15 +49,12 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
             success = ITokenUpkeepManager(_tokenUpkeepManager).storePriceAndCleanup(token, price, isLastIndex);
         }
 
-        uint256 _startIndex = startIndex;
-        if (currentIndex == _startIndex) {
-            currentInterval = ITokenUpkeepManager(_tokenUpkeepManager).fetchInterval();
-        }
         if (isLastIndex) {
-            currentIndex = _startIndex;
+            currentIndex = startIndex;
             lastRun = (block.timestamp / _currentInterval) * _currentInterval;
             if (token == address(0)) ITokenUpkeepManager(_tokenUpkeepManager).finishUpkeepAndCleanup(lastRun);
         } else {
+            if (currentIndex == startIndex) currentInterval = ITokenUpkeepManager(_tokenUpkeepManager).fetchInterval();
             currentIndex = _currentIndex + 1;
         }
         emit TokenUpkeepPerformed(_currentIndex, success);
