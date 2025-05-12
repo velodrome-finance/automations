@@ -44,18 +44,19 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
         }
         bool isLastIndex = _currentIndex == _endIndex - 1;
         bool success;
+        address _tokenUpkeepManager = tokenUpkeepManager;
         if (token != address(0)) {
-            success = ITokenUpkeepManager(tokenUpkeepManager).storePriceAndCleanup(token, price, isLastIndex);
+            success = ITokenUpkeepManager(_tokenUpkeepManager).storePriceAndCleanup(token, price, isLastIndex);
         }
 
         uint256 _startIndex = startIndex;
         if (currentIndex == _startIndex) {
-            currentInterval = _fetchInterval();
+            currentInterval = ITokenUpkeepManager(_tokenUpkeepManager).fetchInterval();
         }
         if (isLastIndex) {
             currentIndex = _startIndex;
             lastRun = (block.timestamp / _currentInterval) * _currentInterval;
-            if (token == address(0)) ITokenUpkeepManager(tokenUpkeepManager).finishUpkeepAndCleanup(lastRun);
+            if (token == address(0)) ITokenUpkeepManager(_tokenUpkeepManager).finishUpkeepAndCleanup(lastRun);
         } else {
             currentIndex = _currentIndex + 1;
         }
@@ -73,13 +74,17 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
 
     /// @inheritdoc ITokenUpkeep
     function checkUpkeep(bytes calldata) external view override returns (bool upkeepNeeded, bytes memory performData) {
+        address _tokenUpkeepManager = tokenUpkeepManager;
         uint256 _currentIndex = currentIndex;
-        uint256 fetchInterval = _currentIndex > startIndex ? currentInterval : _fetchInterval();
+
+        uint256 fetchInterval = _currentIndex > startIndex
+            ? currentInterval
+            : ITokenUpkeepManager(_tokenUpkeepManager).fetchInterval();
 
         if (lastRun + fetchInterval < block.timestamp) {
             uint256 _endIndex = _adjustedEndIndex();
 
-            (address token, uint256 index, uint256 price) = ITokenUpkeepManager(tokenUpkeepManager).fetchFirstPrice(
+            (address token, uint256 index, uint256 price) = ITokenUpkeepManager(_tokenUpkeepManager).fetchFirstPrice(
                 _currentIndex,
                 _endIndex
             );
@@ -97,9 +102,5 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
     function _adjustedEndIndex() internal view returns (uint256) {
         uint256 listLength = ITokenUpkeepManager(tokenUpkeepManager).tokenListLength();
         return listLength < endIndex ? listLength : endIndex;
-    }
-
-    function _fetchInterval() internal view returns (uint256) {
-        return ITokenUpkeepManager(tokenUpkeepManager).fetchInterval();
     }
 }
