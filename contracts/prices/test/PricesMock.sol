@@ -10,7 +10,7 @@ contract PricesMock {
         return prices[_token][(_timestamp / 1 hours) * 1 hours];
     }
 
-    function fetchPrice(address tokens) external view returns (uint256 price) {
+    function fetchPrice(address _token) external view returns (uint256) {
         return 1;
     }
 
