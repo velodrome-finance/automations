@@ -33,12 +33,12 @@ export const KEEPER_REGISTRY_ADDRESS =
 export const LINK_TOKEN_ADDRESS = '0x350a791Bfc2C21F9Ed5d10980Dad2e2638ffa7f6'
 export const VOTER_ADDRESS = '0x41C914ee0c7E1A5edCD0295623e6dC557B5aBf3C'
 export const PRICES_ORACLE_ADDRESS =
-  '0x02C759B646e420a310d8c6B719D7abD96E622832'
+  '0x1447721108462075aEd82f835d06FBb57E3d2f6D'
 export const PRICES_ORACLE_OWNER_ADDRESS =
   '0x667EddE578BA64B5d9DeeaF3DB6d46506460a7A7'
 export const USDC_TOKEN_ADDRESS = '0x0b2c639c533813f4aa9d7837caf62653d097ff85'
 export const VELO_TOKEN_ADDRESS = '0x9560e827aF36c94D2Ac33a39bCE1Fe78631088Db'
-export const VELO_TOKEN_PRICE = '48083'
+export const VELO_TOKEN_PRICE = '71523'
 export const LINK_HOLDER_ADDRESS = '0x166C794d890dD91bBe71F304ecA660E1c4892CBB'
 
 const { AddressZero, HashZero, MaxUint256 } = ethers.constants
@@ -352,6 +352,13 @@ describe('TokenUpkeepManager Script Tests', function () {
       await pricesOracle.populateTransaction.setStableToken(USDC_TOKEN_ADDRESS)
     await pricesOracleOwnerSigner.sendTransaction({
       ...setStableTokenTx,
+      from: PRICES_ORACLE_OWNER_ADDRESS,
+    })
+    // set time window to 1 hour
+    const setTimeWindowTx =
+      await pricesOracle.populateTransaction.setTimeWindow(3600)
+    await pricesOracleOwnerSigner.sendTransaction({
+      ...setTimeWindowTx,
       from: PRICES_ORACLE_OWNER_ADDRESS,
     })
     await stopImpersonatingAccount(PRICES_ORACLE_OWNER_ADDRESS)

@@ -11,4 +11,6 @@ interface IPrices {
     function addKeeper(address _keeper) external;
 
     function setStableToken(address _stableToken) external;
+
+    function setTimeWindow(uint256 _timeWindow) external;
 }
