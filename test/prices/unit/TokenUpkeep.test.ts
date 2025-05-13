@@ -547,6 +547,11 @@ describe('TokenUpkeep Unit Tests', function () {
 
       expect(token).to.equal(tokenList[0])
       expect(price).to.equal(1)
+
+      const timestamp = await time.latest()
+      const storedPrice = await pricesMock.latest(tokenList[0], timestamp)
+
+      expect(storedPrice).to.equal(1)
     })
 
     it('should signal when the last index is reached', async function () {
@@ -757,7 +762,7 @@ describe('TokenUpkeep Unit Tests', function () {
 
     it('should not store token price if already fetched', async function () {
       // simulate fetching first token price
-      await pricesMock.storePrices([tokenList[0]], [1])
+      await pricesMock.storePrice(tokenList[0], 1)
 
       const [_, performData] =
         await tokenUpkeep.callStatic.checkUpkeep(HashZero)
@@ -811,7 +816,7 @@ describe('TokenUpkeep Unit Tests', function () {
     it('should continue fetching tokens after skipping one', async function () {
       // simulate fetching token price in the middle of the range
       const fetchedTokenIndex = 5
-      await pricesMock.storePrices([tokenList[fetchedTokenIndex]], [1])
+      await pricesMock.storePrice(tokenList[fetchedTokenIndex], 1)
 
       let fetchedTokensCount = 0
       for (let i = 0; i < tokenCount; i++) {

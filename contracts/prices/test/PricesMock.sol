@@ -12,19 +12,13 @@ contract PricesMock {
         return prices[_token][(_timestamp / 1 hours) * 1 hours];
     }
 
-    function fetchPrices(address[] calldata _tokens) external view returns (uint256[] memory _prices) {
-        _prices = new uint256[](_tokens.length);
-        for (uint256 i = 0; i < _tokens.length; i++) {
-            _prices[i] = 1;
-        }
+    function fetchPrice(address _token) external view returns (uint256) {
+        return 1;
     }
 
-    function storePrices(address[] calldata _tokens, uint256[] calldata _prices) external {
-        require(_tokens.length == _prices.length, "PricesMock: invalid input length");
-        for (uint256 i = 0; i < _tokens.length; i++) {
-            prices[_tokens[i]][(block.timestamp / 1 hours) * 1 hours] = _prices[i];
-            emit Price(_tokens[i], _prices[i]);
-        }
+    function storePrice(address _token, uint256 _price) external {
+        prices[_token][(block.timestamp / 1 hours) * 1 hours] = _price;
+        emit Price(_token, _price);
     }
 
     function setTimeWindow(uint256 _timeWindow) external {

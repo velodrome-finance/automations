@@ -6,11 +6,13 @@ interface IPrices {
 
     function timeWindow() external view returns (uint256);
 
-    function fetchPrices(address[] calldata _tokens) external view returns (uint256[] memory _prices);
+    function fetchPrice(address _token) external view returns (uint256 _price);
 
-    function storePrices(address[] calldata _tokens, uint256[] calldata _prices) external;
+    function storePrice(address _token, uint256 _price) external;
 
     function addKeeper(address _keeper) external;
 
     function setStableToken(address _stableToken) external;
+
+    function setTimeWindow(uint256 _timeWindow) external;
 }
