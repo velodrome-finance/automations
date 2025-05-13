@@ -36,25 +36,19 @@ contract TokenUpkeepManagerMock {
         _tokenList.remove(_token);
     }
 
-    function fetchFirstPrice(
-        uint256 _startIndex,
-        uint256 _endIndex
-    ) external view returns (address token, uint256 index, uint256 price) {
+    function fetchFirstPrice(uint256 _startIndex, uint256 _endIndex) external view returns (address, uint256, uint256) {
         for (uint256 i = _startIndex; i < _endIndex; i++) {
-            token = _tokenList.at(i);
+            address token = _tokenList.at(i);
             if (token != address(0)) {
-                index = i;
-                // Fetch price from the oracle
-                address[] memory tokens = new address[](1);
-                tokens[0] = token;
-                price = PricesMock(pricesOracle).fetchPrices(tokens)[0];
-                return (token, i, price);
+                return (token, i, PricesMock(pricesOracle).fetchPrice(token));
             }
         }
+        return (address(0), 0, 0);
     }
 
     function storePriceAndCleanup(address _token, uint256 _price, bool _isLastIndex) external returns (bool success) {
         if (PricesMock(pricesOracle).latest(_token, block.timestamp) == 0) {
+            PricesMock(pricesOracle).storePrice(_token, _price);
             success = true;
             emit FetchedTokenPrice(_token, _price);
         }
