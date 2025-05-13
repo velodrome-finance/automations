@@ -44,17 +44,16 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
         }
         bool isLastIndex = _currentIndex == _endIndex - 1;
         bool success;
-        address _tokenUpkeepManager = tokenUpkeepManager;
         if (token != address(0)) {
-            success = ITokenUpkeepManager(_tokenUpkeepManager).storePriceAndCleanup(token, price, isLastIndex);
+            success = ITokenUpkeepManager(tokenUpkeepManager).storePriceAndCleanup(token, price, isLastIndex);
         }
 
         if (isLastIndex) {
             currentIndex = startIndex;
             lastRun = (block.timestamp / _currentInterval) * _currentInterval;
-            if (token == address(0)) ITokenUpkeepManager(_tokenUpkeepManager).finishUpkeepAndCleanup(lastRun);
+            if (token == address(0)) ITokenUpkeepManager(tokenUpkeepManager).finishUpkeepAndCleanup(lastRun);
         } else {
-            if (currentIndex == startIndex) currentInterval = ITokenUpkeepManager(_tokenUpkeepManager).fetchInterval();
+            if (currentIndex == startIndex) currentInterval = ITokenUpkeepManager(tokenUpkeepManager).fetchInterval();
             currentIndex = _currentIndex + 1;
         }
         emit TokenUpkeepPerformed(_currentIndex, success);
@@ -71,17 +70,15 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
 
     /// @inheritdoc ITokenUpkeep
     function checkUpkeep(bytes calldata) external view override returns (bool upkeepNeeded, bytes memory performData) {
-        address _tokenUpkeepManager = tokenUpkeepManager;
         uint256 _currentIndex = currentIndex;
-
         uint256 fetchInterval = _currentIndex > startIndex
             ? currentInterval
-            : ITokenUpkeepManager(_tokenUpkeepManager).fetchInterval();
+            : ITokenUpkeepManager(tokenUpkeepManager).fetchInterval();
 
         if (lastRun + fetchInterval < block.timestamp) {
             uint256 _endIndex = _adjustedEndIndex();
 
-            (address token, uint256 index, uint256 price) = ITokenUpkeepManager(_tokenUpkeepManager).fetchFirstPrice(
+            (address token, uint256 index, uint256 price) = ITokenUpkeepManager(tokenUpkeepManager).fetchFirstPrice(
                 _currentIndex,
                 _endIndex
             );
