@@ -16,11 +16,11 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
     /// @inheritdoc ITokenUpkeep
     uint256 public override currentIndex;
     /// @inheritdoc ITokenUpkeep
+    uint256 public override currentInterval;
+    /// @inheritdoc ITokenUpkeep
     uint256 public override lastRun;
     /// @inheritdoc ITokenUpkeep
     address public override trustedForwarder;
-
-    uint256 private constant FETCH_INTERVAL = 1 hours;
 
     constructor(uint256 _startIndex, uint256 _endIndex) {
         tokenUpkeepManager = msg.sender;
@@ -34,9 +34,12 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
         if (msg.sender != trustedForwarder) revert UnauthorizedSender();
 
         uint256 _endIndex = _adjustedEndIndex();
-        (uint256 _currentIndex, address token, uint256 price) = abi.decode(_performData, (uint256, address, uint256));
+        (uint256 _currentIndex, uint256 _currentInterval, address token, uint256 price) = abi.decode(
+            _performData,
+            (uint256, uint256, address, uint256)
+        );
 
-        if (lastRun + FETCH_INTERVAL > block.timestamp || _currentIndex > _endIndex) {
+        if (lastRun + _currentInterval > block.timestamp || _currentIndex > _endIndex) {
             revert UpkeepNotNeeded();
         }
         bool isLastIndex = _currentIndex == _endIndex - 1;
@@ -47,9 +50,10 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
 
         if (isLastIndex) {
             currentIndex = startIndex;
-            lastRun = (block.timestamp / FETCH_INTERVAL) * FETCH_INTERVAL;
+            lastRun = (block.timestamp / _currentInterval) * _currentInterval;
             if (token == address(0)) ITokenUpkeepManager(tokenUpkeepManager).finishUpkeepAndCleanup(lastRun);
         } else {
+            if (currentIndex == startIndex) currentInterval = ITokenUpkeepManager(tokenUpkeepManager).fetchInterval();
             currentIndex = _currentIndex + 1;
         }
         emit TokenUpkeepPerformed(_currentIndex, success);
@@ -66,11 +70,16 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
 
     /// @inheritdoc ITokenUpkeep
     function checkUpkeep(bytes calldata) external view override returns (bool upkeepNeeded, bytes memory performData) {
-        if (lastRun + FETCH_INTERVAL < block.timestamp) {
+        uint256 _currentIndex = currentIndex;
+        uint256 fetchInterval = _currentIndex > startIndex
+            ? currentInterval
+            : ITokenUpkeepManager(tokenUpkeepManager).fetchInterval();
+
+        if (lastRun + fetchInterval < block.timestamp) {
             uint256 _endIndex = _adjustedEndIndex();
 
             (address token, uint256 index, uint256 price) = ITokenUpkeepManager(tokenUpkeepManager).fetchFirstPrice(
-                currentIndex,
+                _currentIndex,
                 _endIndex
             );
 
@@ -79,8 +88,8 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
             // and complete the processing cycle even when no tokens need updating.
             return
                 token != address(0)
-                    ? (true, abi.encode(index, token, price))
-                    : (true, abi.encode(_endIndex - 1, address(0), 0));
+                    ? (true, abi.encode(index, fetchInterval, token, price))
+                    : (true, abi.encode(_endIndex - 1, fetchInterval, address(0), 0));
         }
     }
 

@@ -189,4 +189,9 @@ interface ITokenUpkeepManager {
     /// @notice Gets the number of cancelled upkeeps pending withdrawal
     /// @return Number of cancelled upkeeps
     function cancelledUpkeepCount() external view returns (uint256);
+
+    /// @notice Gets the interval for fetching prices
+    /// @return The interval in seconds
+    /// @dev This is the time window set in the prices oracle contract
+    function fetchInterval() external view returns (uint256);
 }

@@ -2,6 +2,8 @@
 pragma solidity 0.8.6;
 
 contract PricesMock {
+    uint256 public timeWindow = 1 hours;
+
     mapping(address => mapping(uint256 => uint256)) public prices;
 
     event Price(address indexed token, uint256 price);
@@ -17,5 +19,9 @@ contract PricesMock {
     function storePrice(address _token, uint256 _price) external {
         prices[_token][(block.timestamp / 1 hours) * 1 hours] = _price;
         emit Price(_token, _price);
+    }
+
+    function setTimeWindow(uint256 _timeWindow) external {
+        timeWindow = _timeWindow;
     }
 }

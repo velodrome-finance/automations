@@ -72,4 +72,8 @@ contract TokenUpkeepManagerMock {
     function tokenListLength() external view returns (uint256) {
         return _tokenList.length();
     }
+
+    function fetchInterval() external view returns (uint256) {
+        return PricesMock(pricesOracle).timeWindow();
+    }
 }

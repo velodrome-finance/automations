@@ -355,8 +355,9 @@ describe('TokenUpkeepManager Script Tests', function () {
       from: PRICES_ORACLE_OWNER_ADDRESS,
     })
     // set time window to 1 hour
+    const timeWindow = 3600
     const setTimeWindowTx =
-      await pricesOracle.populateTransaction.setTimeWindow(3600)
+      await pricesOracle.populateTransaction.setTimeWindow(timeWindow)
     await pricesOracleOwnerSigner.sendTransaction({
       ...setTimeWindowTx,
       from: PRICES_ORACLE_OWNER_ADDRESS,
@@ -368,8 +369,8 @@ describe('TokenUpkeepManager Script Tests', function () {
       await tokenUpkeep.callStatic.checkUpkeep(HashZero)
 
     const expectedPerformData = ethers.utils.defaultAbiCoder.encode(
-      ['uint256', 'address', 'uint256'],
-      [0, VELO_TOKEN_ADDRESS, VELO_TOKEN_PRICE],
+      ['uint256', 'uint256', 'address', 'uint256'],
+      [0, timeWindow, VELO_TOKEN_ADDRESS, VELO_TOKEN_PRICE],
     )
 
     expect(upkeepNeeded).to.be.true
