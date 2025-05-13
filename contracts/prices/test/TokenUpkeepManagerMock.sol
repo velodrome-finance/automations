@@ -36,10 +36,7 @@ contract TokenUpkeepManagerMock {
         _tokenList.remove(_token);
     }
 
-    function fetchFirstPrice(
-        uint256 _startIndex,
-        uint256 _endIndex
-    ) external view returns (address, uint256, uint256) {
+    function fetchFirstPrice(uint256 _startIndex, uint256 _endIndex) external view returns (address, uint256, uint256) {
         for (uint256 i = _startIndex; i < _endIndex; i++) {
             address token = _tokenList.at(i);
             if (token != address(0)) {
