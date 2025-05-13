@@ -680,25 +680,25 @@ describe('TokenUpkeep Unit Tests', function () {
       const nextHour = Math.ceil(currentTime / fetchInterval) * fetchInterval
       await time.setNextBlockTimestamp(nextHour)
 
-      // Perform upkeep for half of the tokens in range
+      // perform upkeep for half of the tokens in range
       for (let i = 0; i < tokenCount / 2; i++) {
         const [_, performData] =
           await tokenUpkeep.callStatic.checkUpkeep(HashZero)
         await tokenUpkeep.connect(accounts[0]).performUpkeep(performData)
       }
 
-      // Check that current index is incremented
+      // check that current index is incremented
       expect(await tokenUpkeep.currentIndex()).to.equal(tokenCount / 2)
 
-      // Decrease interval to 30 minutes
+      // decrease interval to 30 minutes
       await pricesMock.setTimeWindow(fetchInterval / 2)
 
-      // Perform upkeep for the rest of the tokens in range
+      // perform upkeep for the rest of the tokens in range
       for (let i = tokenCount / 2; i < tokenCount; i++) {
         const [_, performData] =
           await tokenUpkeep.callStatic.checkUpkeep(HashZero)
 
-        // Check that upkeep uses the current interval
+        // check that upkeep uses the current interval
         expect(performData).to.equal(
           ethers.utils.defaultAbiCoder.encode(
             ['uint256', 'uint256', 'address', 'uint256'],
@@ -709,20 +709,20 @@ describe('TokenUpkeep Unit Tests', function () {
         await tokenUpkeep.connect(accounts[0]).performUpkeep(performData)
       }
 
-      // Check that current index is reset to start index
+      // check that current index is reset to start index
       expect(await tokenUpkeep.currentIndex()).to.equal(
         await tokenUpkeep.startIndex(),
       )
 
-      // Simulate new decreased interval passing
+      // simulate new decreased interval passing
       await time.increase(fetchInterval / 2)
 
-      // Run the first token again
+      // run the first token again
       const [_, performData2] =
         await tokenUpkeep.callStatic.checkUpkeep(HashZero)
       await tokenUpkeep.connect(accounts[0]).performUpkeep(performData2)
 
-      // Check that the interval is updated
+      // check that the interval is updated
       expect(await tokenUpkeep.currentInterval()).to.equal(fetchInterval / 2)
     })
 
