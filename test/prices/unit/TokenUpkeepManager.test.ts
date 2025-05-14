@@ -36,6 +36,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
   const upkeepManagerFundAmount = ethers.utils.parseEther('1')
   const upkeepFundAmount = ethers.utils.parseEther('0.1')
   const tokensPerUpkeepLimit = 100
+  const fetchInterval = 3600
   const upkeepCancelBuffer = 20
   const upkeepGasLimit = 500000
   const upkeepId = BigNumber.from(1)
@@ -448,7 +449,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
       const price = ethers.utils.parseEther('1')
       const storeTx = await tokenUpkeepManager
         .connect(impersonatedSigner)
-        .storePriceAndCleanup(token, price, false)
+        .storePriceAndCleanup(token, price, fetchInterval, false)
 
       await expect(storeTx)
         .to.emit(tokenUpkeepManager, 'FetchedTokenPrice')
@@ -505,7 +506,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
       const price = ethers.utils.parseEther('1')
       const storeTx = await tokenUpkeepManager
         .connect(impersonatedSigner)
-        .storePriceAndCleanup(token, price, false)
+        .storePriceAndCleanup(token, price, fetchInterval, false)
 
       await expect(storeTx)
         .to.emit(tokenUpkeepManager, 'FetchedTokenPrice')
@@ -518,7 +519,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
       const price2 = ethers.utils.parseEther('1')
       const storeTx2 = await tokenUpkeepManager
         .connect(impersonatedSigner)
-        .storePriceAndCleanup(token2, price2, true)
+        .storePriceAndCleanup(token2, price2, fetchInterval, true)
 
       await expect(storeTx2)
         .to.emit(tokenUpkeepManager, 'FetchedTokenPrice')
@@ -536,6 +537,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
         tokenUpkeepManager.storePriceAndCleanup(
           tokenList[0],
           ethers.utils.parseEther('1'),
+          fetchInterval,
           false,
         ),
       ).to.be.revertedWithCustomError(tokenUpkeepManager, 'UnauthorizedSender')

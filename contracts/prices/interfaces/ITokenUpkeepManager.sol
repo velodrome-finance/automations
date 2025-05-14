@@ -101,8 +101,14 @@ interface ITokenUpkeepManager {
     /// @dev Performs token list cleanup on the last token
     /// @param _token Address of the token
     /// @param _price Price of the token
+    /// @param _fetchInterval Fetch interval for the current iteration
     /// @return True if the price was successfully stored
-    function storePriceAndCleanup(address _token, uint256 _price, bool _isLastIndex) external returns (bool);
+    function storePriceAndCleanup(
+        address _token,
+        uint256 _price,
+        uint256 _fetchInterval,
+        bool _isLastIndex
+    ) external returns (bool);
 
     /// @notice Mark upkeep as finished and clean up the token list when all upkeeps are done
     /// @dev Called by token upkeep contracts

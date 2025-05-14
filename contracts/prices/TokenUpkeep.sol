@@ -44,7 +44,12 @@ contract TokenUpkeep is ITokenUpkeep {
         bool isLastIndex = _currentIndex == _endIndex - 1;
         bool success;
         if (token != address(0)) {
-            success = ITokenUpkeepManager(tokenUpkeepManager).storePriceAndCleanup(token, price, isLastIndex);
+            success = ITokenUpkeepManager(tokenUpkeepManager).storePriceAndCleanup(
+                token,
+                price,
+                _currentInterval,
+                isLastIndex
+            );
         }
 
         if (currentIndex == startIndex) {

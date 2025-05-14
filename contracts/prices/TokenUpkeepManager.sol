@@ -113,6 +113,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     function storePriceAndCleanup(
         address _token,
         uint256 _price,
+        uint256 _fetchInterval,
         bool _isLastIndex
     ) external override returns (bool stored) {
         if (!isTokenUpkeep[msg.sender]) {
@@ -125,8 +126,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
             emit FetchedTokenPrice(_token, _price);
         }
         if (_isLastIndex) {
-            uint256 fetchInterval = IPrices(pricesOracle).timeWindow();
-            uint256 lastRun = (block.timestamp / fetchInterval) * fetchInterval;
+            uint256 lastRun = (block.timestamp / _fetchInterval) * _fetchInterval;
             _finishUpkeepAndCleanup(lastRun);
         }
     }
