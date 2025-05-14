@@ -77,7 +77,7 @@ library StableEnumerableSet {
     }
 
     /**
-     * @dev Compacts out all zero addresses/values and rebuilds the `_indexes` map to match.
+     * @dev Compacts out all zero values and rebuilds the `_indexes` map to match.
      * This is an O(n) operation, where n is the number of removed elements.
      * Once done, the array’s length will shrink to reflect only valid elements.
      */
