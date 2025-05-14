@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ITokenUpkeep} from "./interfaces/ITokenUpkeep.sol";
 import {ITokenUpkeepManager} from "./interfaces/ITokenUpkeepManager.sol";
 
-contract TokenUpkeep is ITokenUpkeep, Ownable {
+contract TokenUpkeep is ITokenUpkeep {
     /// @inheritdoc ITokenUpkeep
     address public immutable override tokenUpkeepManager;
     /// @inheritdoc ITokenUpkeep
@@ -60,7 +59,10 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
     }
 
     /// @inheritdoc ITokenUpkeep
-    function setTrustedForwarder(address _trustedForwarder) external override onlyOwner {
+    function setTrustedForwarder(address _trustedForwarder) external override {
+        if (msg.sender != tokenUpkeepManager) {
+            revert UnauthorizedSender();
+        }
         if (_trustedForwarder == address(0)) {
             revert AddressZeroNotAllowed();
         }
