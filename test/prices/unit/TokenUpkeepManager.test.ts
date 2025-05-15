@@ -1,6 +1,7 @@
 import { expect } from 'chai'
 import { ethers, network } from 'hardhat'
 import { BigNumber } from 'ethers'
+import { time } from '@nomicfoundation/hardhat-network-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import {
   IERC20,
@@ -12,7 +13,6 @@ import {
   VoterMock,
 } from '../../../typechain-types'
 import { findLog } from '../../utils'
-import { time } from '@nomicfoundation/hardhat-network-helpers'
 
 const { AddressZero, HashZero } = ethers.constants
 
