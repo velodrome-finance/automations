@@ -6,68 +6,43 @@
 import * as fs from 'fs'
 import * as path from 'path'
 import { ethers } from 'hardhat'
-import * as assert from 'assert'
 import * as dotenv from 'dotenv'
 import { Contract } from 'ethers'
-import { SugarAbi } from './abi'
+import { GaugeSugarAbi } from './gaugeSugarAbi'
 
 // Load environment variables
 dotenv.config()
 
-const VOTER_ADDRESS = process.env.VOTER_ADDRESS
-const SUGAR_ADDRESS = process.env.SUGAR_ADDRESS
-
-assert.ok(VOTER_ADDRESS, 'VOTER_ADDRESS is required')
-assert.ok(SUGAR_ADDRESS, 'SUGAR_ADDRESS is required')
-
-const MAX_POOLS = 8000
-
-export async function getPools(lpSugar: Contract, chunkSize = 75) {
-  const allPools: any[] = []
-  const promises: Promise<void>[] = []
-  for (let startIndex = 0; startIndex < MAX_POOLS; startIndex += chunkSize) {
-    const endIndex = Math.min(startIndex + chunkSize, MAX_POOLS)
-    promises.push(
-      // eslint-disable-next-line no-async-promise-executor
-      new Promise(async (resolve, reject) => {
-        try {
-          const pools = await lpSugar.forSwaps(
-            endIndex - startIndex,
-            startIndex,
-          )
-          allPools.push(
-            ...pools.map(
-              ([_lp, _type, _token0, _token1, _factory, _pool_fee]) => _lp,
-            ),
-          )
-          resolve()
-        } catch (err) {
-          reject(err)
-        }
-      }),
-    )
-  }
-  await Promise.all(promises)
-  return allPools
-}
-
-async function getGauges(voter: Contract, pools: string[]): Promise<string[]> {
+async function getGauges(gaugeSugar: Contract, poolFactories: string[], batchSize = 50): Promise<[string[], number[]]> {
   let gauges: string[] = []
-  for (const pool of pools) {
-    console.log('Fetching gauge for pool', pool)
-    const gauge = await voter.gauges(pool)
-    console.log('Gauge found:', gauge)
-    if (gauge != ethers.constants.AddressZero) {
-      const isAlive = await voter.isAlive(gauge)
-      if (isAlive) {
-        gauges.push(gauge)
-        console.log('Gauge is alive:', gauge)
+  let failedBatches: number[] = []
+
+  for (const poolFactoryAddr of poolFactories) {
+    const poolFactory: Contract = await ethers.getContractAt('IPoolFactory', poolFactoryAddr)
+
+    let length = 0;
+    try {
+        length = await poolFactory.allPoolsLength()
+    } catch (err) {
+        console.error(`Error fetching length for PoolFactory ${poolFactory.address}:`, err)
+        break
+    }
+
+    for(let i = 0; i < length; i += batchSize) {
+      try {
+        let gaugeBatch: string[] = await gaugeSugar.fetchGauges(poolFactory.address, i, batchSize);
+        gaugeBatch = gaugeBatch.filter((gauge) => gauge !== ethers.constants.AddressZero)
+        gauges.push(...gaugeBatch)
+      } catch (err) {
+        console.error(`Error fetching gauges for Batch with Offset ${i}:`, err)
+        failedBatches.push(i)
       }
     }
-    // sleep for 3 seconds to avoid rate limiting
-    await new Promise((resolve) => setTimeout(resolve, 3000))
+
   }
-  return gauges
+  console.log(gauges)
+
+  return [gauges, failedBatches]
 }
 
 function logGauges(gauges: string[]) {
@@ -101,6 +76,37 @@ function logGauges(gauges: string[]) {
   })
 }
 
+function logFailedBatches(failedBatches: number[]) {
+  // Define the target directory and file path
+  const directoryPath = 'logs'
+  const filePath = path.join(directoryPath, 'failedBatches.json')
+  if (!fs.existsSync(directoryPath)) {
+    fs.mkdirSync(directoryPath) // Create the directory if it doesn't exist
+  }
+  // Read the existing failedBatches file
+  let existingBatches: number[] = []
+  if (fs.existsSync(filePath)) {
+    try {
+      const content = fs.readFileSync(filePath, 'utf8')
+      existingBatches = JSON.parse(content)
+    } catch (err) {
+      console.error('Error reading existing failedBatches file:', err)
+    }
+  }
+  // Combine existing pool list with new failedBatches and remove duplicates
+  const combinedBatches = existingBatches.concat(failedBatches)
+  const uniqueBatches = [...new Set(combinedBatches)]
+  // Write the JSON content to the file
+  const jsonContent = JSON.stringify(uniqueBatches, null, 2)
+  fs.writeFile(filePath, jsonContent, 'utf8', (err) => {
+    if (err) {
+      console.error('Error writing to file', err)
+      return
+    }
+    console.log(`Logs successfully written to ${filePath}.`)
+  })
+}
+
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
   // line interface.
@@ -109,16 +115,25 @@ async function main() {
   // manually to make sure everything is compiled
   // await hre.run('compile');
 
-  const voter: Contract = await ethers.getContractAt('Voter', VOTER_ADDRESS!)
-  const lpSugar: Contract = await ethers.getContractAt(
-    JSON.parse(SugarAbi),
-    SUGAR_ADDRESS!,
+  // NOTE: OP Constants
+  const gaugeSugarAddr: string = "0x3855A2BF3E0eDb4CB9a6AfA67c39DC4475D7A805"
+  const poolFactories: string[] = ['0xF1046053aa5682b4F9a81b5481394DA16BE5FF5a', '0xCc0bDDB707055e04e497aB22a59c2aF4391cd12F']
+
+  // // NOTE: Base Constants
+  // const gaugeSugarAddr: string = "0x1338649Ba8DDf05f445693B6F6efd96735f9031e"
+  // const poolFactories: string[] = ['0x420DD381b31aEf6683db6B902084cB0FFECe40Da', '0x5e7BB104d84c7CB9B682AaC2F3d509f5F406809A']
+
+  const gaugeSugar: Contract = await ethers.getContractAt(
+    JSON.parse(GaugeSugarAbi),
+    gaugeSugarAddr,
   )
-  console.log('Fetching pools...')
-  const pools: string[] = await getPools(lpSugar)
   console.log('Fetching gauges...')
-  const gauges: string[] = await getGauges(voter, pools)
+  const [gauges, failedBatches]: [string[], number[]] = await getGauges(gaugeSugar, poolFactories)
+  console.log("Gauge Count: ", gauges.length);
   logGauges(gauges)
+  if (failedBatches.length > 0) {
+    logFailedBatches(failedBatches)
+  }
 }
 
 // We recommend this pattern to be able to use async/await everywhere
