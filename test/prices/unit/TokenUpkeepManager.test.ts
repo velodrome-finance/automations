@@ -580,6 +580,10 @@ describe('TokenUpkeepManager Unit Tests', function () {
       expect(await tokenUpkeepManager.tokenListLength()).to.equal(
         await tokenUpkeepManager.tokenCount(),
       )
+
+      const currentTime = await time.latest()
+      const lastRun = Math.floor(currentTime / fetchInterval) * fetchInterval
+      expect(await tokenUpkeepManager.finishedUpkeeps(lastRun)).to.equal(1)
     })
 
     it('should only allow token upkeep to store price', async () => {
