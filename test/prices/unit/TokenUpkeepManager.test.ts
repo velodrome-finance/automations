@@ -1,6 +1,7 @@
 import { expect } from 'chai'
 import { ethers, network } from 'hardhat'
 import { BigNumber } from 'ethers'
+import { time } from '@nomicfoundation/hardhat-network-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import {
   IERC20,
@@ -36,6 +37,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
   const upkeepManagerFundAmount = ethers.utils.parseEther('1')
   const upkeepFundAmount = ethers.utils.parseEther('0.1')
   const tokensPerUpkeepLimit = 100
+  const fetchInterval = 3600
   const upkeepCancelBuffer = 20
   const upkeepGasLimit = 500000
   const upkeepId = BigNumber.from(1)
@@ -448,7 +450,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
       const price = ethers.utils.parseEther('1')
       const storeTx = await tokenUpkeepManager
         .connect(impersonatedSigner)
-        .storePriceAndCleanup(token, price, false)
+        .storePriceAndCleanup(token, price, fetchInterval, false)
 
       await expect(storeTx)
         .to.emit(tokenUpkeepManager, 'FetchedTokenPrice')
@@ -465,6 +467,55 @@ describe('TokenUpkeepManager Unit Tests', function () {
 
       expect(storedToken).to.equal(token)
       expect(storedPrice).to.equal(price)
+    })
+
+    it('should store token price with fetch interval independent of the prices contract', async () => {
+      // register token upkeep
+      const registerTx =
+        await tokenUpkeepManager.performUpkeep(registerPerformData)
+      const registerReceipt = await registerTx.wait()
+
+      // get token upkeep address
+      const registerLog = findLog(
+        registerReceipt,
+        tokenUpkeepManager.interface.getEventTopic('TokenUpkeepRegistered'),
+      )
+      const [tokenUpkeepAddress] =
+        tokenUpkeepManager.interface.parseLog(registerLog).args
+
+      // impersonate token upkeep
+      await network.provider.request({
+        method: 'hardhat_impersonateAccount',
+        params: [tokenUpkeepAddress],
+      })
+      const impersonatedSigner = ethers.provider.getSigner(tokenUpkeepAddress)
+      await network.provider.send('hardhat_setBalance', [
+        tokenUpkeepAddress,
+        '0xffffffffffffffff',
+      ])
+
+      // check that upkeep is not finished
+      const currentTime = await time.latest()
+      const lastRun = Math.floor(currentTime / fetchInterval) * fetchInterval
+      expect(await tokenUpkeepManager.finishedUpkeeps(lastRun)).to.equal(0)
+
+      // update fetch interval in prices mock
+      const newFetchInterval = 2 * fetchInterval
+      await pricesMock.setTimeWindow(newFetchInterval)
+
+      // store price via token upkeep
+      const token = tokenList[0]
+      const price = ethers.utils.parseEther('1')
+      const storeTx = await tokenUpkeepManager
+        .connect(impersonatedSigner)
+        .storePriceAndCleanup(token, price, fetchInterval, true)
+
+      await expect(storeTx)
+        .to.emit(tokenUpkeepManager, 'FetchedTokenPrice')
+        .withArgs(token, price)
+
+      // check that the current fetch interval is used for the finished upkeep
+      expect(await tokenUpkeepManager.finishedUpkeeps(lastRun)).to.equal(1)
     })
 
     it('should clean up the token list at the last token', async () => {
@@ -505,7 +556,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
       const price = ethers.utils.parseEther('1')
       const storeTx = await tokenUpkeepManager
         .connect(impersonatedSigner)
-        .storePriceAndCleanup(token, price, false)
+        .storePriceAndCleanup(token, price, fetchInterval, false)
 
       await expect(storeTx)
         .to.emit(tokenUpkeepManager, 'FetchedTokenPrice')
@@ -518,7 +569,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
       const price2 = ethers.utils.parseEther('1')
       const storeTx2 = await tokenUpkeepManager
         .connect(impersonatedSigner)
-        .storePriceAndCleanup(token2, price2, true)
+        .storePriceAndCleanup(token2, price2, fetchInterval, true)
 
       await expect(storeTx2)
         .to.emit(tokenUpkeepManager, 'FetchedTokenPrice')
@@ -529,6 +580,10 @@ describe('TokenUpkeepManager Unit Tests', function () {
       expect(await tokenUpkeepManager.tokenListLength()).to.equal(
         await tokenUpkeepManager.tokenCount(),
       )
+
+      const currentTime = await time.latest()
+      const lastRun = Math.floor(currentTime / fetchInterval) * fetchInterval
+      expect(await tokenUpkeepManager.finishedUpkeeps(lastRun)).to.equal(1)
     })
 
     it('should only allow token upkeep to store price', async () => {
@@ -536,6 +591,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
         tokenUpkeepManager.storePriceAndCleanup(
           tokenList[0],
           ethers.utils.parseEther('1'),
+          fetchInterval,
           false,
         ),
       ).to.be.revertedWithCustomError(tokenUpkeepManager, 'UnauthorizedSender')

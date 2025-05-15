@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ITokenUpkeep} from "./interfaces/ITokenUpkeep.sol";
 import {ITokenUpkeepManager} from "./interfaces/ITokenUpkeepManager.sol";
 
-contract TokenUpkeep is ITokenUpkeep, Ownable {
+contract TokenUpkeep is ITokenUpkeep {
     /// @inheritdoc ITokenUpkeep
     address public immutable override tokenUpkeepManager;
     /// @inheritdoc ITokenUpkeep
@@ -45,22 +44,32 @@ contract TokenUpkeep is ITokenUpkeep, Ownable {
         bool isLastIndex = _currentIndex == _endIndex - 1;
         bool success;
         if (token != address(0)) {
-            success = ITokenUpkeepManager(tokenUpkeepManager).storePriceAndCleanup(token, price, isLastIndex);
+            success = ITokenUpkeepManager(tokenUpkeepManager).storePriceAndCleanup(
+                token,
+                price,
+                _currentInterval,
+                isLastIndex
+            );
         }
 
+        if (currentIndex == startIndex) {
+            currentInterval = ITokenUpkeepManager(tokenUpkeepManager).fetchInterval();
+        }
         if (isLastIndex) {
             currentIndex = startIndex;
             lastRun = (block.timestamp / _currentInterval) * _currentInterval;
             if (token == address(0)) ITokenUpkeepManager(tokenUpkeepManager).finishUpkeepAndCleanup(lastRun);
         } else {
-            if (currentIndex == startIndex) currentInterval = ITokenUpkeepManager(tokenUpkeepManager).fetchInterval();
             currentIndex = _currentIndex + 1;
         }
         emit TokenUpkeepPerformed(_currentIndex, success);
     }
 
     /// @inheritdoc ITokenUpkeep
-    function setTrustedForwarder(address _trustedForwarder) external override onlyOwner {
+    function setTrustedForwarder(address _trustedForwarder) external override {
+        if (msg.sender != tokenUpkeepManager) {
+            revert UnauthorizedSender();
+        }
         if (_trustedForwarder == address(0)) {
             revert AddressZeroNotAllowed();
         }

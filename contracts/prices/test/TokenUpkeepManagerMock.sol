@@ -46,7 +46,12 @@ contract TokenUpkeepManagerMock {
         return (address(0), 0, 0);
     }
 
-    function storePriceAndCleanup(address _token, uint256 _price, bool _isLastIndex) external returns (bool success) {
+    function storePriceAndCleanup(
+        address _token,
+        uint256 _price,
+        uint256 _fetchInterval,
+        bool _isLastIndex
+    ) external returns (bool success) {
         if (PricesMock(pricesOracle).latest(_token, block.timestamp) == 0) {
             PricesMock(pricesOracle).storePrice(_token, _price);
             success = true;
