@@ -119,15 +119,15 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         if (!isTokenUpkeep[msg.sender]) {
             revert UnauthorizedSender();
         }
+        uint256 timestamp = (block.timestamp / _fetchInterval) * _fetchInterval;
         address _pricesOracle = pricesOracle;
-        if (IPrices(_pricesOracle).latest(_token, block.timestamp) == 0) {
-            IPrices(_pricesOracle).storePrice(_token, _price);
+        if (IPrices(_pricesOracle).latest(_token, block.timestamp, _fetchInterval) == 0) {
+            IPrices(_pricesOracle).storePrice(_token, _price, timestamp);
             stored = true;
             emit FetchedTokenPrice(_token, _price);
         }
         if (_isLastIndex) {
-            uint256 lastRun = (block.timestamp / _fetchInterval) * _fetchInterval;
-            _finishUpkeepAndCleanup(lastRun);
+            _finishUpkeepAndCleanup(timestamp);
         }
     }
 
