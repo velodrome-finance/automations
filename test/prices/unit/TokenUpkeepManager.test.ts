@@ -12,6 +12,7 @@ import {
   VoterMock,
 } from '../../../typechain-types'
 import { findLog } from '../../utils'
+import { time } from '@nomicfoundation/hardhat-network-helpers'
 
 const { AddressZero, HashZero } = ethers.constants
 
@@ -466,6 +467,55 @@ describe('TokenUpkeepManager Unit Tests', function () {
 
       expect(storedToken).to.equal(token)
       expect(storedPrice).to.equal(price)
+    })
+
+    it('should store token price with fetch interval independent of the prices contract', async () => {
+      // register token upkeep
+      const registerTx =
+        await tokenUpkeepManager.performUpkeep(registerPerformData)
+      const registerReceipt = await registerTx.wait()
+
+      // get token upkeep address
+      const registerLog = findLog(
+        registerReceipt,
+        tokenUpkeepManager.interface.getEventTopic('TokenUpkeepRegistered'),
+      )
+      const [tokenUpkeepAddress] =
+        tokenUpkeepManager.interface.parseLog(registerLog).args
+
+      // impersonate token upkeep
+      await network.provider.request({
+        method: 'hardhat_impersonateAccount',
+        params: [tokenUpkeepAddress],
+      })
+      const impersonatedSigner = ethers.provider.getSigner(tokenUpkeepAddress)
+      await network.provider.send('hardhat_setBalance', [
+        tokenUpkeepAddress,
+        '0xffffffffffffffff',
+      ])
+
+      // check that upkeep is not finished
+      const currentTime = await time.latest()
+      const lastRun = Math.floor(currentTime / fetchInterval) * fetchInterval
+      expect(await tokenUpkeepManager.finishedUpkeeps(lastRun)).to.equal(0)
+
+      // update fetch interval in prices mock
+      const newFetchInterval = 2 * fetchInterval
+      await pricesMock.setTimeWindow(newFetchInterval)
+
+      // store price via token upkeep
+      const token = tokenList[0]
+      const price = ethers.utils.parseEther('1')
+      const storeTx = await tokenUpkeepManager
+        .connect(impersonatedSigner)
+        .storePriceAndCleanup(token, price, fetchInterval, true)
+
+      await expect(storeTx)
+        .to.emit(tokenUpkeepManager, 'FetchedTokenPrice')
+        .withArgs(token, price)
+
+      // check that the current fetch interval is used for the finished upkeep
+      expect(await tokenUpkeepManager.finishedUpkeeps(lastRun)).to.equal(1)
     })
 
     it('should clean up the token list at the last token', async () => {
