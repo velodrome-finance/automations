@@ -52,8 +52,9 @@ contract TokenUpkeepManagerMock {
         uint256 _fetchInterval,
         bool _isLastIndex
     ) external returns (bool success) {
-        if (PricesMock(pricesOracle).latest(_token, block.timestamp) == 0) {
-            PricesMock(pricesOracle).storePrice(_token, _price);
+        if (PricesMock(pricesOracle).latest(_token, block.timestamp, _fetchInterval) == 0) {
+            uint256 timestamp = (block.timestamp / _fetchInterval) * _fetchInterval;
+            PricesMock(pricesOracle).storePrice(_token, _price, timestamp);
             success = true;
             emit FetchedTokenPrice(_token, _price);
         }

@@ -514,6 +514,11 @@ describe('TokenUpkeepManager Unit Tests', function () {
         .to.emit(tokenUpkeepManager, 'FetchedTokenPrice')
         .withArgs(token, price)
 
+      // check that the price was stored with current fetch interval
+      expect(
+        await pricesMock.latest(token, currentTime, fetchInterval),
+      ).to.equal(price)
+
       // check that the current fetch interval is used for the finished upkeep
       expect(await tokenUpkeepManager.finishedUpkeeps(lastRun)).to.equal(1)
     })
