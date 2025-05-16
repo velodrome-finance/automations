@@ -121,3 +121,5 @@ npx hardhat run scripts/prices/register_log_upkeep.ts --network <network>
 **Note:** Make sure the account running the script has enough LINK to pay for the initial upkeep registration determined by the `LOG_UPKEEP_FUND_AMOUNT` and `LOG_UPKEEP_GAS_LIMIT` environment variables.
 
 3. Transfer LINK tokens to the `TokenUpkeepManager` contract for new token upkeep registrations. The amount of LINK required is determined by the `NEW_UPKEEP_FUND_AMOUNT` environment variable.
+
+4. Add `TokenUpkeepManager` as a keeper to the `Prices` contract, so it can call the `storePrice` function. This is done by calling the `addKeeper` function on the `Prices` contract with the address of the `TokenUpkeepManager` contract as an argument.
