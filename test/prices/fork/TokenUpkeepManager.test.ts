@@ -33,12 +33,12 @@ export const KEEPER_REGISTRY_ADDRESS =
 export const LINK_TOKEN_ADDRESS = '0x350a791Bfc2C21F9Ed5d10980Dad2e2638ffa7f6'
 export const VOTER_ADDRESS = '0x41C914ee0c7E1A5edCD0295623e6dC557B5aBf3C'
 export const PRICES_ORACLE_ADDRESS =
-  '0x1447721108462075aEd82f835d06FBb57E3d2f6D'
+  '0xF5129e7A277A9B897c5cA80346a828b8e8879872'
 export const PRICES_ORACLE_OWNER_ADDRESS =
-  '0x667EddE578BA64B5d9DeeaF3DB6d46506460a7A7'
+  '0xd42C7914cF8dc24a1075E29C283C581bd1b0d3D3'
 export const USDC_TOKEN_ADDRESS = '0x0b2c639c533813f4aa9d7837caf62653d097ff85'
 export const VELO_TOKEN_ADDRESS = '0x9560e827aF36c94D2Ac33a39bCE1Fe78631088Db'
-export const VELO_TOKEN_PRICE = '71523'
+export const VELO_TOKEN_PRICE = '64520'
 export const LINK_HOLDER_ADDRESS = '0x166C794d890dD91bBe71F304ecA660E1c4892CBB'
 
 const { AddressZero, HashZero, MaxUint256 } = ethers.constants
@@ -381,6 +381,7 @@ describe('TokenUpkeepManager Script Tests', function () {
     const tokenPriceBefore = await pricesOracle.latest(
       VELO_TOKEN_ADDRESS,
       blockTimestamp,
+      timeWindow,
     )
     expect(tokenPriceBefore).to.equal(0)
 
@@ -417,6 +418,7 @@ describe('TokenUpkeepManager Script Tests', function () {
     const tokenPriceAfter = await pricesOracle.latest(
       VELO_TOKEN_ADDRESS,
       blockTimestamp,
+      timeWindow,
     )
     expect(tokenPriceAfter).to.equal(VELO_TOKEN_PRICE)
   })
