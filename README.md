@@ -91,13 +91,13 @@ npx hardhat run scripts/<version>/register_monitor_upkeep.ts --network <network>
 1. Deploy and configure `GaugeUpkeepManager` contract by running:
 
 ```bash
-npx hardhat run scripts/<version>/deploy_upkeep_manager.ts --network <network>
+npx hardhat run scripts/emissions/<version>/deploy_upkeep_manager.ts --network <network>
 ```
 
 2. Register log trigger upkeeps for the deployed `GaugeUpkeepManager` contract and set the trusted forwarders:
 
 ```bash
-npx hardhat run scripts/<version>/register_log_upkeeps.ts --network <network>
+npx hardhat run scripts/emissions/<version>/register_log_upkeeps.ts --network <network>
 ```
 
 **Note:** Make sure the account running the script has enough LINK to pay for the initial funding of each upkeep registration determined by the `LOG_UPKEEP_FUND_AMOUNT` and `LOG_UPKEEP_GAS_LIMIT` environment variables.
