@@ -7,7 +7,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {IAutomationRegistryConsumer} from "@chainlink/contracts/src/v0.8/automation/interfaces/IAutomationRegistryConsumer.sol";
+import {IAutomationRegistryMaster2_3} from "@chainlink/contracts/src/v0.8/automation/interfaces/v2_3/IAutomationRegistryMaster2_3.sol";
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
 import {IUpkeepBalanceMonitor} from "./interfaces/IUpkeepBalanceMonitor.sol";
 
@@ -16,7 +16,7 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, AccessControl, 
     using EnumerableSet for EnumerableSet.UintSet;
 
     /// @inheritdoc IUpkeepBalanceMonitor
-    address public immutable override keeperRegistry;
+    address payable public immutable override keeperRegistry;
     /// @inheritdoc IUpkeepBalanceMonitor
     address public immutable override linkToken;
     /// @inheritdoc IUpkeepBalanceMonitor
@@ -33,7 +33,7 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, AccessControl, 
         _;
     }
 
-    constructor(address _linkToken, address _keeperRegistry, Config memory config) {
+    constructor(address _linkToken, address payable _keeperRegistry, Config memory config) {
         linkToken = _linkToken;
         keeperRegistry = _keeperRegistry;
         setConfig(config);
@@ -57,8 +57,8 @@ contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, AccessControl, 
             uint256 currentIndex = (startIndex + i) % _watchList.length();
             uint256 upkeepId = _watchList.at(currentIndex);
 
-            uint96 upkeepBalance = IAutomationRegistryConsumer(keeperRegistry).getBalance(upkeepId);
-            uint96 minBalance = IAutomationRegistryConsumer(keeperRegistry).getMinBalance(upkeepId);
+            uint96 upkeepBalance = IAutomationRegistryMaster2_3(keeperRegistry).getBalance(upkeepId);
+            uint96 minBalance = IAutomationRegistryMaster2_3(keeperRegistry).getMinBalance(upkeepId);
             uint96 topUpThreshold = (minBalance * config.minPercentage) / 100;
             uint96 targetBalance = (minBalance * config.targetPercentage) / 100;
 
