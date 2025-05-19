@@ -5,7 +5,7 @@
     "test:unit": "npx hardhat test test/unit/*.test.ts test/**/unit/*.test.ts test/**/unit/**/*.test.ts",
     "test:fork": "FORK_ENABLED=true FORK_CHAIN=optimism BLOCK_NUMBER=128856225 npx hardhat test test/emissions/fork/v2_1/GaugeUpkeepManagerV2_1.test.ts",
     "test:fork:v2_3": "FORK_ENABLED=true FORK_CHAIN=base BLOCK_NUMBER=27557816 npx hardhat test test/emissions/fork/v2_3/GaugeUpkeepManagerV2_3.test.ts",
-    "test:fork:prices": "FORK_ENABLED=true FORK_CHAIN=optimism BLOCK_NUMBER=135726466 npx hardhat test test/prices/fork/TokenUpkeepManager.test.ts",
+    "test:fork:prices": "FORK_ENABLED=true FORK_CHAIN=optimism BLOCK_NUMBER=135890825 npx hardhat test test/prices/fork/TokenUpkeepManager.test.ts",
     "prettier:check": "prettier '**/*' --check",
     "prettier:write": "prettier '**/*' --write"
   },

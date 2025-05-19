@@ -8,16 +8,16 @@ contract PricesMock {
 
     event Price(address indexed token, uint256 price);
 
-    function latest(address _token, uint256 _timestamp) external view returns (uint256) {
-        return prices[_token][(_timestamp / 1 hours) * 1 hours];
+    function latest(address _token, uint256 _timestamp, uint256 _timeWindow) external view returns (uint256) {
+        return prices[_token][(_timestamp / _timeWindow) * _timeWindow];
     }
 
     function fetchPrice(address _token) external view returns (uint256) {
         return 1;
     }
 
-    function storePrice(address _token, uint256 _price) external {
-        prices[_token][(block.timestamp / 1 hours) * 1 hours] = _price;
+    function storePrice(address _token, uint256 _price, uint256 _timestamp) external {
+        prices[_token][_timestamp] = _price;
         emit Price(_token, _price);
     }
 
