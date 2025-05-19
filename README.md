@@ -128,4 +128,6 @@ npx hardhat run scripts/prices/register_log_upkeep.ts --network <network>
 npx hardhat run scripts/prices/register_tokens.ts --network <network>
 ```
 
+**Note:** The script reads the token addresses stored in `logs/tokens.json` file.
+
 5. Add `TokenUpkeepManager` as a keeper to the `Prices` contract, so it can call the `storePrice` function. This is done by calling the `addKeeper` function on the `Prices` contract with the address of the `TokenUpkeepManager` contract as an argument.
