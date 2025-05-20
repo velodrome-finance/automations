@@ -6,7 +6,7 @@ import {
   stopImpersonatingAccount,
   mine,
 } from '@nomicfoundation/hardhat-network-helpers'
-import { findLog } from '../../utils'
+import { findLog } from '../../../utils'
 import { BigNumber } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import {
@@ -16,9 +16,9 @@ import {
   IERC20,
   IPrices,
   UpkeepBalanceMonitor,
-  TokenUpkeepManager,
-} from '../../../typechain-types'
-import { UPKEEP_CANCELLATION_DELAY, MAX_UINT32 } from '../../constants'
+  TokenUpkeepManagerV2_1,
+} from '../../../../typechain-types'
+import { UPKEEP_CANCELLATION_DELAY, MAX_UINT32 } from '../../../constants'
 
 enum PerformAction {
   RegisterToken = 0,
@@ -108,9 +108,9 @@ async function registerLogTriggerUpkeep(
 
 let snapshotId: any
 
-describe('TokenUpkeepManager Script Tests', function () {
+describe('TokenUpkeepManagerV2_1 Script Tests', function () {
   let accounts: SignerWithAddress[]
-  let tokenUpkeepManager: TokenUpkeepManager
+  let tokenUpkeepManager: TokenUpkeepManagerV2_1
   let upkeepBalanceMonitor: UpkeepBalanceMonitor
   let pricesOracle: IPrices
   let voter: Voter
@@ -159,8 +159,9 @@ describe('TokenUpkeepManager Script Tests', function () {
       },
     )
     // setup token upkeep manager
-    const tokenUpkeepManagerFactory =
-      await ethers.getContractFactory('TokenUpkeepManager')
+    const tokenUpkeepManagerFactory = await ethers.getContractFactory(
+      'TokenUpkeepManagerV2_1',
+    )
     tokenUpkeepManager = await tokenUpkeepManagerFactory.deploy(
       linkToken.address,
       keeperRegistry.address,

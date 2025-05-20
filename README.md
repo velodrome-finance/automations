@@ -109,13 +109,13 @@ npx hardhat run scripts/emissions/<version>/register_log_upkeeps.ts --network <n
 1. Deploy and configure `TokenUpkeepManager` contract by running:
 
 ```bash
-npx hardhat run scripts/prices/deploy_upkeep_manager.ts --network <network>
+npx hardhat run scripts/prices/<version>/deploy_upkeep_manager.ts --network <network>
 ```
 
 2. Register log trigger upkeep for the deployed `TokenUpkeepManager` contract and set the trusted forwarder:
 
 ```bash
-npx hardhat run scripts/prices/register_log_upkeep.ts --network <network>
+npx hardhat run scripts/prices/<version>/register_log_upkeep.ts --network <network>
 ```
 
 **Note:** Make sure the account running the script has enough LINK to pay for the initial upkeep registration determined by the `LOG_UPKEEP_FUND_AMOUNT` and `LOG_UPKEEP_GAS_LIMIT` environment variables.

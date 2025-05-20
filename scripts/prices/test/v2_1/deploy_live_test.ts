@@ -6,7 +6,7 @@
 import { ethers, run } from 'hardhat'
 import * as assert from 'assert'
 import * as dotenv from 'dotenv'
-import { registerLogTriggerUpkeep } from '../../utils'
+import { registerLogTriggerUpkeep } from '../../../utils'
 
 // Load environment variables
 dotenv.config()
