@@ -2,7 +2,7 @@
 pragma solidity 0.8.6;
 
 import {ITokenUpkeep} from "./interfaces/ITokenUpkeep.sol";
-import {ITokenUpkeepManager} from "./interfaces/ITokenUpkeepManager.sol";
+import {ITokenUpkeepManager} from "./interfaces/common/ITokenUpkeepManager.sol";
 
 contract TokenUpkeep is ITokenUpkeep {
     /// @inheritdoc ITokenUpkeep

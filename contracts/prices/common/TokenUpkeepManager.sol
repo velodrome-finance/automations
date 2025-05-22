@@ -5,25 +5,19 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import {StableEnumerableSet} from "./libraries/StableEnumerableSet.sol";
+import {StableEnumerableSet} from "../libraries/StableEnumerableSet.sol";
 import {Log} from "@chainlink/contracts/src/v0.8/automation/interfaces/ILogAutomation.sol";
-import {IVoter} from "../../vendor/velodrome-contracts/contracts/interfaces/IVoter.sol";
-import {IKeeperRegistryMaster} from "@chainlink/contracts/src/v0.8/automation/interfaces/v2_1/IKeeperRegistryMaster.sol";
-import {IAutomationRegistrarV2_1} from "../interfaces/v2_1/IAutomationRegistrarV2_1.sol";
-import {IUpkeepBalanceMonitor} from "../interfaces/IUpkeepBalanceMonitor.sol";
-import {IPrices} from "./interfaces/IPrices.sol";
-import {TokenUpkeep} from "./TokenUpkeep.sol";
-import {ITokenUpkeepManager} from "./interfaces/ITokenUpkeepManager.sol";
+import {IVoter} from "../../../vendor/velodrome-contracts/contracts/interfaces/IVoter.sol";
+import {IPrices} from "../interfaces/IPrices.sol";
+import {ITokenUpkeepManager} from "../interfaces/common/ITokenUpkeepManager.sol";
 
-contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
+abstract contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     using SafeERC20 for IERC20;
     using StableEnumerableSet for StableEnumerableSet.AddressSet;
     using EnumerableSet for EnumerableSet.UintSet;
 
     /// @inheritdoc ITokenUpkeepManager
     address public immutable override linkToken;
-    /// @inheritdoc ITokenUpkeepManager
-    address public immutable override keeperRegistry;
     /// @inheritdoc ITokenUpkeepManager
     address public immutable override automationRegistrar;
     /// @inheritdoc ITokenUpkeepManager
@@ -50,18 +44,17 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     uint256[] public override upkeepIds;
 
     StableEnumerableSet.AddressSet internal _tokenList;
-    EnumerableSet.UintSet private _cancelledUpkeepIds;
+    EnumerableSet.UintSet internal _cancelledUpkeepIds;
 
-    uint256 private constant TOKENS_PER_UPKEEP = 100;
-    uint256 private constant UPKEEP_CANCEL_BUFFER = 20;
-    uint8 private constant CONDITIONAL_TRIGGER_TYPE = 0;
-    string private constant UPKEEP_NAME = "Token upkeep";
+    uint256 internal constant TOKENS_PER_UPKEEP = 100;
+    uint256 internal constant UPKEEP_CANCEL_BUFFER = 20;
+    uint8 internal constant CONDITIONAL_TRIGGER_TYPE = 0;
+    string internal constant UPKEEP_NAME = "Token upkeep";
 
     bytes32 private constant WHITELIST_TOKEN_EVENT = 0x44948130cf88523dbc150908a47dd6332c33a01a3869d7f2fa78e51d5a5f9c57;
 
     constructor(
         address _linkToken,
-        address _keeperRegistry,
         address _automationRegistrar,
         address _voter,
         address _pricesOracle,
@@ -70,7 +63,6 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         uint32 _newUpkeepGasLimit
     ) {
         linkToken = _linkToken;
-        keeperRegistry = _keeperRegistry;
         automationRegistrar = _automationRegistrar;
         voter = _voter;
         pricesOracle = _pricesOracle;
@@ -337,51 +329,11 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         emit TokenDeregistered(_token);
     }
 
-    function _registerTokenUpkeep() internal {
-        uint256 startIndex = _getNextUpkeepStartIndex(upkeepIds.length);
-        uint256 endIndex = startIndex + TOKENS_PER_UPKEEP;
-        address _tokenUpkeep = address(new TokenUpkeep(startIndex, endIndex));
-        isTokenUpkeep[_tokenUpkeep] = true;
-        IAutomationRegistrarV2_1.RegistrationParams memory params = IAutomationRegistrarV2_1.RegistrationParams({
-            name: UPKEEP_NAME,
-            encryptedEmail: "",
-            upkeepContract: _tokenUpkeep,
-            gasLimit: newUpkeepGasLimit,
-            adminAddress: address(this),
-            triggerType: CONDITIONAL_TRIGGER_TYPE,
-            checkData: "",
-            triggerConfig: "",
-            offchainConfig: "",
-            amount: newUpkeepFundAmount
-        });
-        uint256 upkeepId = _registerUpkeep(params);
-        upkeepIds.push(upkeepId);
-        tokenUpkeep[upkeepId] = _tokenUpkeep;
-        address forwarder = IKeeperRegistryMaster(keeperRegistry).getForwarder(upkeepId);
-        TokenUpkeep(_tokenUpkeep).setTrustedForwarder(forwarder);
-        IUpkeepBalanceMonitor(upkeepBalanceMonitor).addToWatchList(upkeepId);
-        emit TokenUpkeepRegistered(_tokenUpkeep, upkeepId, startIndex, endIndex);
-    }
+    function _registerTokenUpkeep() internal virtual;
 
-    function _registerUpkeep(IAutomationRegistrarV2_1.RegistrationParams memory _params) internal returns (uint256) {
-        IERC20(linkToken).safeIncreaseAllowance(automationRegistrar, _params.amount);
-        uint256 upkeepID = IAutomationRegistrarV2_1(automationRegistrar).registerUpkeep(_params);
-        if (upkeepID != 0) {
-            return upkeepID;
-        } else {
-            revert AutoApproveDisabled();
-        }
-    }
+    function _cancelTokenUpkeep(uint256 _upkeepId) internal virtual;
 
-    function _cancelTokenUpkeep(uint256 _upkeepId) internal {
-        upkeepIds.pop();
-        delete isTokenUpkeep[tokenUpkeep[_upkeepId]];
-        delete tokenUpkeep[_upkeepId];
-        _cancelledUpkeepIds.add(_upkeepId);
-        IUpkeepBalanceMonitor(upkeepBalanceMonitor).removeFromWatchList(_upkeepId);
-        IKeeperRegistryMaster(keeperRegistry).cancelUpkeep(_upkeepId);
-        emit TokenUpkeepCancelled(_upkeepId);
-    }
+    function _withdrawUpkeep(uint256 _upkeepId) internal virtual;
 
     function _finishUpkeepAndCleanup(uint256 _lastRun) internal {
         finishedUpkeeps[_lastRun]++;
@@ -393,12 +345,6 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     function _cleanupTokenList() internal {
         _tokenList.cleanup();
         emit TokenListCleaned();
-    }
-
-    function _withdrawUpkeep(uint256 _upkeepId) internal {
-        _cancelledUpkeepIds.remove(_upkeepId);
-        IKeeperRegistryMaster(keeperRegistry).withdrawFunds(_upkeepId, address(this));
-        emit TokenUpkeepWithdrawn(_upkeepId);
     }
 
     function _getNextUpkeepStartIndex(uint256 _upkeepCount) internal pure returns (uint256) {

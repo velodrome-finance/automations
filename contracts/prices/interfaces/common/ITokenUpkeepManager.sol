@@ -36,9 +36,6 @@ interface ITokenUpkeepManager {
     /// @notice LINK token address
     function linkToken() external view returns (address);
 
-    /// @notice Keeper registry address
-    function keeperRegistry() external view returns (address);
-
     /// @notice Automation registrar address
     function automationRegistrar() external view returns (address);
 
