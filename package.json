@@ -2,10 +2,13 @@
   "name": "@velodrome-finance/automations",
   "scripts": {
     "compile": "npx hardhat compile",
-    "test:unit": "npx hardhat test test/unit/*.test.ts test/unit/**/*.test.ts",
-    "test:fork": "pnpm run test:fork:v2_1 && pnpm run test:fork:v2_3",
-    "test:fork:v2_1": "FORK_ENABLED=true FORK_CHAIN=optimism BLOCK_NUMBER=128856225 npx hardhat test test/fork/v2_1/**.test.ts",
-    "test:fork:v2_3": "FORK_ENABLED=true FORK_CHAIN=base BLOCK_NUMBER=27557816 npx hardhat test test/fork/v2_3/**.test.ts",
+    "test:unit": "npx hardhat test test/unit/**/*.test.ts test/**/unit/*.test.ts test/**/unit/**/*.test.ts",
+    "test:fork": "pnpm run test:fork:emissions:v2_1 && pnpm run test:fork:emissions:v2_3 && pnpm run test:fork:monitor:v2_1 && pnpm run test:fork:monitor:v2_3 && pnpm run test:fork:prices",
+    "test:fork:emissions:v2_1": "FORK_ENABLED=true FORK_CHAIN=optimism BLOCK_NUMBER=128856225 npx hardhat test test/emissions/fork/v2_1/GaugeUpkeepManagerV2_1.test.ts",
+    "test:fork:emissions:v2_3": "FORK_ENABLED=true FORK_CHAIN=base BLOCK_NUMBER=27557816 npx hardhat test test/emissions/fork/v2_3/GaugeUpkeepManagerV2_3.test.ts",
+    "test:fork:monitor:v2_1": "FORK_ENABLED=true FORK_CHAIN=optimism BLOCK_NUMBER=128856225 npx hardhat test test/fork/v2_1/UpkeepBalanceMonitorV2_1.test.ts",
+    "test:fork:monitor:v2_3": "FORK_ENABLED=true FORK_CHAIN=base BLOCK_NUMBER=27557816 npx hardhat test test/fork/v2_3/UpkeepBalanceMonitorV2_3.test.ts",
+    "test:fork:prices": "FORK_ENABLED=true FORK_CHAIN=optimism BLOCK_NUMBER=135890825 npx hardhat test test/prices/fork/TokenUpkeepManager.test.ts",
     "prettier:check": "prettier '**/*' --check",
     "prettier:write": "prettier '**/*' --write"
   },
