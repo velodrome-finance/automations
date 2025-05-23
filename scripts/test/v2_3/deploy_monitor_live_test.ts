@@ -106,7 +106,6 @@ async function main() {
     'GaugeUpkeepManagerV2_3',
   )
   const underfundedUpkeepAmount = ethers.utils.parseEther('0.1')
-  const maxGasLimit = 5_000_000
   const excludedGaugeFactories: string[] = []
   const gaugeUpkeepManager = await gaugeUpkeepManagerFactory.deploy(
     LINK_TOKEN_ADDRESS!,
@@ -115,7 +114,7 @@ async function main() {
     upkeepBalanceMonitor.address,
     voterMock.address,
     underfundedUpkeepAmount,
-    maxGasLimit,
+    NEW_UPKEEP_GAS_LIMIT!,
     BATCH_SIZE!,
     excludedGaugeFactories,
   )
