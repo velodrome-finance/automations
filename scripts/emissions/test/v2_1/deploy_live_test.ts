@@ -82,7 +82,7 @@ async function main() {
 
   // Deploy UpkeepBalanceMonitor contract
   const UpkeepBalanceMonitor = await ethers.getContractFactory(
-    'UpkeepBalanceMonitor',
+    'UpkeepBalanceMonitorV2_1',
   )
   const upkeepBalanceMonitor = await UpkeepBalanceMonitor.deploy(
     LINK_TOKEN_ADDRESS!,

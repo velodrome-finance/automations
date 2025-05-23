@@ -8,7 +8,7 @@ import {
   TokenUpkeepManager,
   KeeperRegistryMock,
   AutomationRegistrarMock,
-  UpkeepBalanceMonitor,
+  UpkeepBalanceMonitorV2_1,
   PricesMock,
   VoterMock,
 } from '../../../typechain-types'
@@ -23,7 +23,7 @@ enum PerformAction {
 
 describe('TokenUpkeepManager Unit Tests', function () {
   let tokenUpkeepManager: TokenUpkeepManager
-  let upkeepBalanceMonitor: UpkeepBalanceMonitor
+  let upkeepBalanceMonitor: UpkeepBalanceMonitorV2_1
   let linkToken: IERC20
   let keeperRegistryMock: KeeperRegistryMock
   let automationRegistrarMock: AutomationRegistrarMock
@@ -64,7 +64,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
 
     // deploy upkeep balance monitor
     const upkeepBalanceMonitorFactory = await ethers.getContractFactory(
-      'UpkeepBalanceMonitor',
+      'UpkeepBalanceMonitorV2_1',
     )
     upkeepBalanceMonitor = await upkeepBalanceMonitorFactory.deploy(
       linkToken.address,

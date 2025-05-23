@@ -62,7 +62,7 @@ async function main() {
 
   // Grant watchlist manager role to TokenUpkeepManager contract
   const upkeepBalanceMonitor = await ethers.getContractAt(
-    'UpkeepBalanceMonitor',
+    'UpkeepBalanceMonitorV2_1',
     UPKEEP_BALANCE_MONITOR_ADDRESS!,
   )
   await upkeepBalanceMonitor.grantWatchlistManagerRole(

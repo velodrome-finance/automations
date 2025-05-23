@@ -9,13 +9,14 @@ import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {IAutomationRegistryConsumer} from "@chainlink/contracts/src/v0.8/automation/interfaces/IAutomationRegistryConsumer.sol";
 import {LinkTokenInterface} from "@chainlink/contracts/src/v0.8/shared/interfaces/LinkTokenInterface.sol";
-import {IUpkeepBalanceMonitor} from "./interfaces/IUpkeepBalanceMonitor.sol";
+import {IUpkeepBalanceMonitor} from "../interfaces/common/IUpkeepBalanceMonitor.sol";
+import {IUpkeepBalanceMonitorV2_1} from "../interfaces/v2_1/IUpkeepBalanceMonitorV2_1.sol";
 
-contract UpkeepBalanceMonitor is IUpkeepBalanceMonitor, Ownable, AccessControl, Pausable {
+contract UpkeepBalanceMonitorV2_1 is IUpkeepBalanceMonitorV2_1, Ownable, AccessControl, Pausable {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.UintSet;
 
-    /// @inheritdoc IUpkeepBalanceMonitor
+    /// @inheritdoc IUpkeepBalanceMonitorV2_1
     address public immutable override keeperRegistry;
     /// @inheritdoc IUpkeepBalanceMonitor
     address public immutable override linkToken;
