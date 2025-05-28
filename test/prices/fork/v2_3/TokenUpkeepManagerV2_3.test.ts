@@ -67,7 +67,7 @@ async function registerLogTriggerUpkeep(
   automationRegistrar: AutomationRegistrar2_3,
   eventSignature: string,
   voterAddress: string,
-  gaugeUpkeepManagerAddress: string,
+  tokenUpkeepManagerAddress: string,
 ) {
   const triggerConfig = ethers.utils.defaultAbiCoder.encode(
     ['address', 'uint8', 'bytes32', 'bytes32', 'bytes32', 'bytes32'],
@@ -83,9 +83,9 @@ async function registerLogTriggerUpkeep(
   const registerTx = await automationRegistrar.registerUpkeep({
     name: 'LogTriggerUpkeep',
     encryptedEmail: '0x',
-    upkeepContract: gaugeUpkeepManagerAddress,
+    upkeepContract: tokenUpkeepManagerAddress,
     gasLimit: 5_000_000,
-    adminAddress: gaugeUpkeepManagerAddress,
+    adminAddress: tokenUpkeepManagerAddress,
     triggerType: 1,
     checkData: '0x',
     triggerConfig,
