@@ -9,7 +9,7 @@ import {IAutomationRegistrarV2_3} from "../../interfaces/v2_3/IAutomationRegistr
 import {ITokenUpkeepManagerV2_3} from "../interfaces/v2_3/ITokenUpkeepManagerV2_3.sol";
 import {IUpkeepBalanceMonitor} from "../../interfaces/IUpkeepBalanceMonitor.sol";
 import {TokenUpkeepManager} from "../common/TokenUpkeepManager.sol";
-import {TokenUpkeep} from "../TokenUpkeep.sol";
+import {TokenUpkeep} from "../common/TokenUpkeep.sol";
 
 contract TokenUpkeepManagerV2_3 is TokenUpkeepManager, ITokenUpkeepManagerV2_3 {
     using SafeERC20 for IERC20;
