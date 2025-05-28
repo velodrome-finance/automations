@@ -90,7 +90,7 @@ async function main() {
 
   // Deploy TokenUpkeepManager contract
   const tokenUpkeepManagerFactory =
-    await ethers.getContractFactory('TokenUpkeepManager')
+    await ethers.getContractFactory('TokenUpkeepManagerV2_1')
   const tokenUpkeepManager = await tokenUpkeepManagerFactory.deploy(
     LINK_TOKEN_ADDRESS!,
     KEEPER_REGISTRY_ADDRESS!,
