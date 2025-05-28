@@ -47,7 +47,7 @@ abstract contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
     EnumerableSet.UintSet internal _cancelledUpkeepIds;
 
     uint256 internal constant TOKENS_PER_UPKEEP = 100;
-    uint256 internal constant UPKEEP_CANCEL_BUFFER = 20;
+    uint256 private constant UPKEEP_CANCEL_BUFFER = 20;
     uint8 internal constant CONDITIONAL_TRIGGER_TYPE = 0;
     string internal constant UPKEEP_NAME = "Token upkeep";
 
