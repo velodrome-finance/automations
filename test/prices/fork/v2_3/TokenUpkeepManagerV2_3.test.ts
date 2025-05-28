@@ -6,45 +6,44 @@ import {
   stopImpersonatingAccount,
   mine,
 } from '@nomicfoundation/hardhat-network-helpers'
-import { findLog } from '../../utils'
+import { findLog } from '../../../utils'
 import { BigNumber } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import {
   Voter,
-  AutomationRegistrar2_1,
-  IKeeperRegistryMaster,
+  AutomationRegistrar2_3,
+  IAutomationRegistryMaster2_3,
   IERC20,
   IPrices,
   UpkeepBalanceMonitor,
-  TokenUpkeepManager,
-} from '../../../typechain-types'
-import { UPKEEP_CANCELLATION_DELAY, MAX_UINT32 } from '../../constants'
+  TokenUpkeepManagerV2_3,
+} from '../../../../typechain-types'
+import { UPKEEP_CANCELLATION_DELAY, MAX_UINT32 } from '../../../constants'
 
 enum PerformAction {
   RegisterToken = 0,
   DeregisterToken = 1,
 }
 
-// Optimism Mainnet Addresses
-export const AUTOMATION_REGISTRAR_ADDRESS =
-  '0xe601C5837307f07aB39DEB0f5516602f045BF14f'
-export const KEEPER_REGISTRY_ADDRESS =
-  '0x696fB0d7D069cc0bb35a7c36115CE63E55cb9AA6'
-export const LINK_TOKEN_ADDRESS = '0x350a791Bfc2C21F9Ed5d10980Dad2e2638ffa7f6'
-export const VOTER_ADDRESS = '0x41C914ee0c7E1A5edCD0295623e6dC557B5aBf3C'
+// Base Mainnet Addresses
+const AUTOMATION_REGISTRAR_ADDRESS =
+  '0xE28Adc50c7551CFf69FCF32D45d037e5F6554264'
+const KEEPER_REGISTRY_ADDRESS = '0xf4bAb6A129164aBa9B113cB96BA4266dF49f8743'
+const LINK_TOKEN_ADDRESS = '0x88Fb150BDc53A65fe94Dea0c9BA0a6dAf8C6e196'
+const VOTER_ADDRESS = '0x16613524e02ad97eDfeF371bC883F2F5d6C480A5'
 export const PRICES_ORACLE_ADDRESS =
-  '0xF5129e7A277A9B897c5cA80346a828b8e8879872'
+  '0x6c3f69317e438dF5B3526BE084Ca844eE33f14C2'
 export const PRICES_ORACLE_OWNER_ADDRESS =
   '0xd42C7914cF8dc24a1075E29C283C581bd1b0d3D3'
-export const USDC_TOKEN_ADDRESS = '0x0b2c639c533813f4aa9d7837caf62653d097ff85'
-export const VELO_TOKEN_ADDRESS = '0x9560e827aF36c94D2Ac33a39bCE1Fe78631088Db'
-export const VELO_TOKEN_PRICE = '64520'
-export const LINK_HOLDER_ADDRESS = '0x166C794d890dD91bBe71F304ecA660E1c4892CBB'
+export const USDC_TOKEN_ADDRESS = '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913'
+export const AERO_TOKEN_ADDRESS = '0x940181a94A35A4569E4529A3CDfB74e38FD98631'
+export const AERO_TOKEN_PRICE = '628319'
+export const LINK_HOLDER_ADDRESS = '0xdf812b91d8bf6df698bfd1d8047839479ba63420'
 
 const { AddressZero, HashZero, MaxUint256 } = ethers.constants
 
 async function simulatePerformUpkeep(
-  keeperRegistry: IKeeperRegistryMaster,
+  keeperRegistry: IAutomationRegistryMaster2_3,
   upkeepId: BigNumber,
   performData: string,
 ) {
@@ -65,7 +64,7 @@ async function simulatePerformUpkeep(
 }
 
 async function registerLogTriggerUpkeep(
-  automationRegistrar: AutomationRegistrar2_1,
+  automationRegistrar: AutomationRegistrar2_3,
   eventSignature: string,
   voterAddress: string,
   tokenUpkeepManagerAddress: string,
@@ -92,6 +91,7 @@ async function registerLogTriggerUpkeep(
     triggerConfig,
     offchainConfig: '0x',
     amount: ethers.utils.parseEther('10'),
+    billingToken: LINK_TOKEN_ADDRESS,
   })
   const registerReceipt = await registerTx.wait()
 
@@ -108,13 +108,13 @@ async function registerLogTriggerUpkeep(
 
 let snapshotId: any
 
-describe('TokenUpkeepManager Script Tests', function () {
+describe('TokenUpkeepManagerV2_3 Script Tests', function () {
   let accounts: SignerWithAddress[]
-  let tokenUpkeepManager: TokenUpkeepManager
+  let tokenUpkeepManager: TokenUpkeepManagerV2_3
   let upkeepBalanceMonitor: UpkeepBalanceMonitor
   let pricesOracle: IPrices
   let voter: Voter
-  let keeperRegistry: IKeeperRegistryMaster
+  let keeperRegistry: IAutomationRegistryMaster2_3
   let linkToken: IERC20
   let whitelistTokenUpkeepId: BigNumber
   let tokenUpkeepId: BigNumber
@@ -131,12 +131,12 @@ describe('TokenUpkeepManager Script Tests', function () {
     linkToken = await ethers.getContractAt('ERC20Mintable', LINK_TOKEN_ADDRESS)
     // setup automation registrar contract
     const automationRegistrar = await ethers.getContractAt(
-      'AutomationRegistrar2_1',
+      'AutomationRegistrar2_3',
       AUTOMATION_REGISTRAR_ADDRESS,
     )
     // setup keeper registry contract
     keeperRegistry = await ethers.getContractAt(
-      'IKeeperRegistryMaster',
+      'IAutomationRegistryMaster2_3',
       KEEPER_REGISTRY_ADDRESS,
     )
     // setup voter contract
@@ -159,8 +159,9 @@ describe('TokenUpkeepManager Script Tests', function () {
       },
     )
     // setup token upkeep manager
-    const tokenUpkeepManagerFactory =
-      await ethers.getContractFactory('TokenUpkeepManager')
+    const tokenUpkeepManagerFactory = await ethers.getContractFactory(
+      'TokenUpkeepManagerV2_3',
+    )
     tokenUpkeepManager = await tokenUpkeepManagerFactory.deploy(
       linkToken.address,
       keeperRegistry.address,
@@ -245,7 +246,7 @@ describe('TokenUpkeepManager Script Tests', function () {
     await impersonateAccount(voterGovernor)
     const voterSigner = await ethers.getSigner(voterGovernor)
     const whitelistTokenTx = await voter.populateTransaction.whitelistToken(
-      VELO_TOKEN_ADDRESS,
+      AERO_TOKEN_ADDRESS,
       true,
     )
     const resultTx = await voterSigner.sendTransaction({
@@ -261,7 +262,7 @@ describe('TokenUpkeepManager Script Tests', function () {
     const { token: whitelistedToken, _bool: isWhitelisted } =
       voter.interface.parseLog(whitelistTokenLog).args
 
-    expect(whitelistedToken).to.equal(VELO_TOKEN_ADDRESS)
+    expect(whitelistedToken).to.equal(AERO_TOKEN_ADDRESS)
     expect(isWhitelisted).to.be.true
 
     // checkLog should return correct perform data on WhitelistToken event
@@ -370,7 +371,7 @@ describe('TokenUpkeepManager Script Tests', function () {
 
     const expectedPerformData = ethers.utils.defaultAbiCoder.encode(
       ['uint256', 'uint256', 'address', 'uint256'],
-      [0, timeWindow, VELO_TOKEN_ADDRESS, VELO_TOKEN_PRICE],
+      [0, timeWindow, AERO_TOKEN_ADDRESS, AERO_TOKEN_PRICE],
     )
 
     expect(upkeepNeeded).to.be.true
@@ -379,7 +380,7 @@ describe('TokenUpkeepManager Script Tests', function () {
     // check that prices oracle is not updated yet
     const blockTimestamp = await time.latest()
     const tokenPriceBefore = await pricesOracle.latest(
-      VELO_TOKEN_ADDRESS,
+      AERO_TOKEN_ADDRESS,
       blockTimestamp,
       timeWindow,
     )
@@ -411,16 +412,16 @@ describe('TokenUpkeepManager Script Tests', function () {
     const { token, price } =
       tokenUpkeepManager.interface.parseLog(tokenPriceUpdatedLog).args
 
-    expect(token).to.equal(VELO_TOKEN_ADDRESS)
-    expect(price).to.equal(VELO_TOKEN_PRICE)
+    expect(token).to.equal(AERO_TOKEN_ADDRESS)
+    expect(price).to.equal(AERO_TOKEN_PRICE)
 
     // check prices oracle is updated
     const tokenPriceAfter = await pricesOracle.latest(
-      VELO_TOKEN_ADDRESS,
+      AERO_TOKEN_ADDRESS,
       blockTimestamp,
       timeWindow,
     )
-    expect(tokenPriceAfter).to.equal(VELO_TOKEN_PRICE)
+    expect(tokenPriceAfter).to.equal(AERO_TOKEN_PRICE)
   })
 
   it('Token upkeep deregistration flow', async () => {
@@ -429,7 +430,7 @@ describe('TokenUpkeepManager Script Tests', function () {
     await impersonateAccount(voterGovernor)
     const voterSigner = await ethers.getSigner(voterGovernor)
     const removeTokenTx = await voter.populateTransaction.whitelistToken(
-      VELO_TOKEN_ADDRESS,
+      AERO_TOKEN_ADDRESS,
       false,
     )
     const resultTx = await voterSigner.sendTransaction({
@@ -445,7 +446,7 @@ describe('TokenUpkeepManager Script Tests', function () {
     const { token: removedToken, _bool: isWhitelisted } =
       voter.interface.parseLog(removeTokenLog).args
 
-    expect(removedToken).to.equal(VELO_TOKEN_ADDRESS)
+    expect(removedToken).to.equal(AERO_TOKEN_ADDRESS)
     expect(isWhitelisted).to.be.false
 
     // checkLog should return correct perform data on WhitelistToken event

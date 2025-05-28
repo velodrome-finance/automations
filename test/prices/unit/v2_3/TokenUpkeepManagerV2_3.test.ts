@@ -5,14 +5,14 @@ import { time } from '@nomicfoundation/hardhat-network-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import {
   IERC20,
-  TokenUpkeepManager,
+  TokenUpkeepManagerV2_3,
   KeeperRegistryMock,
-  AutomationRegistrarMock,
+  AutomationRegistrarMockV2_3,
   UpkeepBalanceMonitor,
   PricesMock,
   VoterMock,
-} from '../../../typechain-types'
-import { findLog } from '../../utils'
+} from '../../../../typechain-types'
+import { findLog } from '../../../utils'
 
 const { AddressZero, HashZero } = ethers.constants
 
@@ -21,12 +21,12 @@ enum PerformAction {
   DeregisterToken = 1,
 }
 
-describe('TokenUpkeepManager Unit Tests', function () {
-  let tokenUpkeepManager: TokenUpkeepManager
+describe('TokenUpkeepManagerV2_3 Unit Tests', function () {
+  let tokenUpkeepManager: TokenUpkeepManagerV2_3
   let upkeepBalanceMonitor: UpkeepBalanceMonitor
   let linkToken: IERC20
   let keeperRegistryMock: KeeperRegistryMock
-  let automationRegistrarMock: AutomationRegistrarMock
+  let automationRegistrarMock: AutomationRegistrarMockV2_3
   let voterMock: VoterMock
   let pricesMock: PricesMock
   let tokenList: string[]
@@ -52,7 +52,7 @@ describe('TokenUpkeepManager Unit Tests', function () {
 
     // deploy automation registrar mock
     const automationRegistrarMockFactory = await ethers.getContractFactory(
-      'AutomationRegistrarMock',
+      'AutomationRegistrarMockV2_3',
     )
     automationRegistrarMock = await automationRegistrarMockFactory.deploy()
 
@@ -91,8 +91,9 @@ describe('TokenUpkeepManager Unit Tests', function () {
     pricesMock = await pricesMockFactory.deploy()
 
     // deploy token upkeep manager
-    const tokenUpkeepManagerFactory =
-      await ethers.getContractFactory('TokenUpkeepManager')
+    const tokenUpkeepManagerFactory = await ethers.getContractFactory(
+      'TokenUpkeepManagerV2_3',
+    )
     tokenUpkeepManager = await tokenUpkeepManagerFactory.deploy(
       linkToken.address,
       keeperRegistryMock.address,

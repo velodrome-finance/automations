@@ -6,7 +6,7 @@
 import { ethers } from 'hardhat'
 import * as assert from 'assert'
 import * as dotenv from 'dotenv'
-import { registerLogTriggerUpkeep } from '../utils'
+import { registerLogTriggerUpkeepV2_3 } from '../../utils'
 
 // Load environment variables
 dotenv.config()
@@ -60,19 +60,19 @@ async function main() {
 
   // Get AutomationRegistrar contract
   const automationRegistrar = await ethers.getContractAt(
-    'AutomationRegistrar2_1',
+    'AutomationRegistrar2_3',
     AUTOMATION_REGISTRAR_ADDRESS!,
   )
 
   // Get KeeperRegistry contract
   const keeperRegistry = await ethers.getContractAt(
-    'IKeeperRegistryMaster',
+    'IAutomationRegistryMaster2_3',
     KEEPER_REGISTRY_ADDRESS!,
   )
 
   // Get TokenUpkeepManager contract
   const tokenUpkeepManager = await ethers.getContractAt(
-    'TokenUpkeepManager',
+    'TokenUpkeepManagerV2_3',
     TOKEN_UPKEEP_MANAGER_ADDRESS!,
   )
 
@@ -100,7 +100,7 @@ async function main() {
   )
 
   // Register whitelist token log upkeep
-  const whitelistTokenUpkeepId = await registerLogTriggerUpkeep(
+  const whitelistTokenUpkeepId = await registerLogTriggerUpkeepV2_3(
     automationRegistrar,
     voter.address,
     voter.interface.getEventTopic('WhitelistToken'),
@@ -109,6 +109,7 @@ async function main() {
     'Whitelist Token Log Upkeep',
     LOG_UPKEEP_FUND_AMOUNT!,
     LOG_UPKEEP_GAS_LIMIT!,
+    LINK_TOKEN_ADDRESS!,
   )
   console.log(
     'Registered whitelist token log upkeep',

@@ -6,7 +6,7 @@
 import { ethers, run } from 'hardhat'
 import * as assert from 'assert'
 import * as dotenv from 'dotenv'
-import { registerLogTriggerUpkeep } from '../../utils'
+import { registerLogTriggerUpkeepV2_3 } from '../../../utils'
 
 // Load environment variables
 dotenv.config()
@@ -89,8 +89,9 @@ async function main() {
   console.log('UpkeepBalanceMonitor deployed to:', upkeepBalanceMonitor.address)
 
   // Deploy TokenUpkeepManager contract
-  const tokenUpkeepManagerFactory =
-    await ethers.getContractFactory('TokenUpkeepManager')
+  const tokenUpkeepManagerFactory = await ethers.getContractFactory(
+    'TokenUpkeepManagerV2_3',
+  )
   const tokenUpkeepManager = await tokenUpkeepManagerFactory.deploy(
     LINK_TOKEN_ADDRESS!,
     KEEPER_REGISTRY_ADDRESS!,
@@ -127,13 +128,13 @@ async function main() {
 
   // Get AutomationRegistrar contract
   const automationRegistrar = await ethers.getContractAt(
-    'AutomationRegistrar2_1',
+    'AutomationRegistrar2_3',
     AUTOMATION_REGISTRAR_ADDRESS!,
   )
 
   // Get KeeperRegistry contract
   const keeperRegistry = await ethers.getContractAt(
-    'IKeeperRegistryMaster',
+    'IAutomationRegistryMaster2_3',
     KEEPER_REGISTRY_ADDRESS!,
   )
 
@@ -151,8 +152,11 @@ async function main() {
     totalLinkRequired.toString(),
   )
 
+  // Sleep for 10 seconds
+  await new Promise((resolve) => setTimeout(resolve, 10000))
+
   // Register whitelist token log upkeep
-  const tokenLogUpkeepId = await registerLogTriggerUpkeep(
+  const tokenLogUpkeepId = await registerLogTriggerUpkeepV2_3(
     automationRegistrar,
     voterMock.address,
     voterMock.interface.getEventTopic('WhitelistToken'),
@@ -161,11 +165,15 @@ async function main() {
     'Whitelist Token Log Upkeep',
     LOG_UPKEEP_FUND_AMOUNT!,
     LOG_UPKEEP_GAS_LIMIT!,
+    LINK_TOKEN_ADDRESS!,
   )
   console.log(
     'Registered whitelist token log upkeep',
     tokenLogUpkeepId.toString(),
   )
+
+  // Sleep for 10 seconds
+  await new Promise((resolve) => setTimeout(resolve, 10000))
 
   // Get trusted forwarder address for token upkeep manager
   const forwarder = await keeperRegistry.getForwarder(tokenLogUpkeepId)
@@ -177,13 +185,21 @@ async function main() {
   // ----------------
   console.log('Registering fake tokens...')
 
+  // Sleep for 10 seconds
+  await new Promise((resolve) => setTimeout(resolve, 10000))
+
   // Register fake tokens with TokenUpkeepManager contract
-  const fakeTokens = Array.from(
-    { length: 25 },
-    () => ethers.Wallet.createRandom().address,
-  )
-  await tokenUpkeepManager.registerTokens(fakeTokens)
-  console.log('Registered fake tokens with TokenUpkeepManager', fakeTokens)
+  for (let i = 0; i < 3; i++) {
+    const fakeTokens = Array.from(
+      { length: 10 },
+      () => ethers.Wallet.createRandom().address,
+    )
+    await tokenUpkeepManager.registerTokens(fakeTokens)
+    console.log('Registered fake tokens with TokenUpkeepManager', fakeTokens)
+
+    // Sleep for 10 seconds
+    await new Promise((resolve) => setTimeout(resolve, 10000))
+  }
 
   // ----------------
   // Trigger log upkeeps
