@@ -24,6 +24,10 @@ This repository contains the scripts designed to automate the Velodrome ecosyste
 
 - **UpkeepBalanceMonitor**: This is a utility contract that watches the balances of all active gauge upkeeps and triggers top-up transactions when the balance falls below a certain threshold.
 
+## Demo
+
+A demo of the environment setup, deployment process, and consuming the outputted data via events, is available [here](https://www.loom.com/share/8c05e5a43b8f4fbf8318ed9b9004394a?sid=8a7626c4-9b37-4732-aa6c-4ccd4ea19701).
+
 ## Installation
 
 This repository uses [Hardhat](https://hardhat.org/) as the development environment.
