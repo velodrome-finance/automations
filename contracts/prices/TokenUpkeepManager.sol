@@ -10,7 +10,7 @@ import {Log} from "@chainlink/contracts/src/v0.8/automation/interfaces/ILogAutom
 import {IVoter} from "../../vendor/velodrome-contracts/contracts/interfaces/IVoter.sol";
 import {IKeeperRegistryMaster} from "@chainlink/contracts/src/v0.8/automation/interfaces/v2_1/IKeeperRegistryMaster.sol";
 import {IAutomationRegistrarV2_1} from "../interfaces/v2_1/IAutomationRegistrarV2_1.sol";
-import {IUpkeepBalanceMonitor} from "../interfaces/IUpkeepBalanceMonitor.sol";
+import {IUpkeepBalanceMonitorV2_1} from "../interfaces/v2_1/IUpkeepBalanceMonitorV2_1.sol";
 import {IPrices} from "./interfaces/IPrices.sol";
 import {TokenUpkeep} from "./TokenUpkeep.sol";
 import {ITokenUpkeepManager} from "./interfaces/ITokenUpkeepManager.sol";
@@ -359,7 +359,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         tokenUpkeep[upkeepId] = _tokenUpkeep;
         address forwarder = IKeeperRegistryMaster(keeperRegistry).getForwarder(upkeepId);
         TokenUpkeep(_tokenUpkeep).setTrustedForwarder(forwarder);
-        IUpkeepBalanceMonitor(upkeepBalanceMonitor).addToWatchList(upkeepId);
+        IUpkeepBalanceMonitorV2_1(upkeepBalanceMonitor).addToWatchList(upkeepId);
         emit TokenUpkeepRegistered(_tokenUpkeep, upkeepId, startIndex, endIndex);
     }
 
@@ -378,7 +378,7 @@ contract TokenUpkeepManager is ITokenUpkeepManager, Ownable {
         delete isTokenUpkeep[tokenUpkeep[_upkeepId]];
         delete tokenUpkeep[_upkeepId];
         _cancelledUpkeepIds.add(_upkeepId);
-        IUpkeepBalanceMonitor(upkeepBalanceMonitor).removeFromWatchList(_upkeepId);
+        IUpkeepBalanceMonitorV2_1(upkeepBalanceMonitor).removeFromWatchList(_upkeepId);
         IKeeperRegistryMaster(keeperRegistry).cancelUpkeep(_upkeepId);
         emit TokenUpkeepCancelled(_upkeepId);
     }

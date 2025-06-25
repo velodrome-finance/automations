@@ -29,9 +29,6 @@ interface IUpkeepBalanceMonitor {
     error AddressZeroNotAllowed();
     error ZeroIdNotAllowed();
 
-    /// @notice Keeper registry address
-    function keeperRegistry() external view returns (address);
-
     /// @notice LINK token address
     function linkToken() external view returns (address);
 

@@ -15,7 +15,7 @@ import {
   IKeeperRegistryMaster,
   IERC20,
   IPrices,
-  UpkeepBalanceMonitor,
+  UpkeepBalanceMonitorV2_1,
   TokenUpkeepManager,
 } from '../../../typechain-types'
 import { UPKEEP_CANCELLATION_DELAY, MAX_UINT32 } from '../../constants'
@@ -111,7 +111,7 @@ let snapshotId: any
 describe('TokenUpkeepManager Script Tests', function () {
   let accounts: SignerWithAddress[]
   let tokenUpkeepManager: TokenUpkeepManager
-  let upkeepBalanceMonitor: UpkeepBalanceMonitor
+  let upkeepBalanceMonitor: UpkeepBalanceMonitorV2_1
   let pricesOracle: IPrices
   let voter: Voter
   let keeperRegistry: IKeeperRegistryMaster
@@ -145,7 +145,7 @@ describe('TokenUpkeepManager Script Tests', function () {
     pricesOracle = await ethers.getContractAt('IPrices', PRICES_ORACLE_ADDRESS)
     // deploy upkeep balance monitor
     const upkeepBalanceMonitorFactory = await ethers.getContractFactory(
-      'UpkeepBalanceMonitor',
+      'UpkeepBalanceMonitorV2_1',
     )
     upkeepBalanceMonitor = await upkeepBalanceMonitorFactory.deploy(
       linkToken.address,
