@@ -267,17 +267,12 @@ describe('GaugeUpkeep Unit Tests', function () {
         await voterMock.setFailingGauge(gauge, true)
       }
 
-      await expect(gaugeUpkeep.performUpkeep(HashZero))
-        .to.emit(gaugeUpkeep, 'DistributeFailed')
-        .withArgs(gaugeList[0], startIndex)
-        .to.emit(gaugeUpkeep, 'DistributeFailed')
-        .withArgs(gaugeList[1], startIndex + 1)
-        .to.emit(gaugeUpkeep, 'DistributeFailed')
-        .withArgs(gaugeList[2], startIndex + 2)
-        .to.emit(gaugeUpkeep, 'DistributeFailed')
-        .withArgs(gaugeList[3], startIndex + 3)
-        .to.emit(gaugeUpkeep, 'DistributeFailed')
-        .withArgs(gaugeList[4], startIndex + (batchSize - 1))
+      const tx = await expect(gaugeUpkeep.performUpkeep(HashZero))
+      for (let i = 0; i < batchSize; i++) {
+        await tx.to
+          .emit(gaugeUpkeep, 'DistributeFailed')
+          .withArgs(gaugeList[i], startIndex + i)
+      }
 
       await expect(gaugeUpkeep.performUpkeep(HashZero))
         .to.emit(gaugeUpkeep, 'GaugeUpkeepPerformed')
@@ -285,20 +280,23 @@ describe('GaugeUpkeep Unit Tests', function () {
     })
 
     it('should continue upkeep after batch partially fails', async function () {
-      await voterMock.setFailingGauge(gaugeList[0], true)
-      await voterMock.setFailingGauge(gaugeList[3], true)
+      /// @dev Mock failed distributes
+      const failedIndexes = [0, 3]
+      for (const failedIndex of failedIndexes) {
+        await voterMock.setFailingGauge(gaugeList[failedIndex], true)
+      }
 
-      await expect(gaugeUpkeep.performUpkeep(HashZero))
-        .to.emit(gaugeUpkeep, 'DistributeFailed')
-        .withArgs(gaugeList[0], startIndex)
-        .to.emit(voterMock, 'Distributed')
-        .withArgs(gaugeList[1])
-        .to.emit(voterMock, 'Distributed')
-        .withArgs(gaugeList[2])
-        .to.emit(gaugeUpkeep, 'DistributeFailed')
-        .withArgs(gaugeList[3], startIndex + 3)
-        .to.emit(voterMock, 'Distributed')
-        .withArgs(gaugeList[4])
+      /// @dev Ensure gauges on non-failing indexes received distributes
+      const tx = await expect(gaugeUpkeep.performUpkeep(HashZero))
+      for (let i = 0; i < batchSize; i++) {
+        if (!failedIndexes.includes(i)) {
+          await tx.to.emit(voterMock, 'Distributed').withArgs(gaugeList[i])
+        } else {
+          await tx.to
+            .emit(gaugeUpkeep, 'DistributeFailed')
+            .withArgs(gaugeList[i], startIndex + i)
+        }
+      }
 
       await expect(gaugeUpkeep.performUpkeep(HashZero))
         .to.emit(gaugeUpkeep, 'GaugeUpkeepPerformed')
