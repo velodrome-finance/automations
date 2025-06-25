@@ -66,7 +66,7 @@ contract GaugeUpkeep is IGaugeUpkeep {
             singleGauge[0] = gauges[i];
 
             try IVoter(voter).distribute(singleGauge) {} catch {
-                emit BatchDistributeFailed(_startIndex + i, _startIndex + i + 1);
+                emit DistributeFailed({gauge: singleGauge[0], index: _startIndex + i});
             }
         }
     }
