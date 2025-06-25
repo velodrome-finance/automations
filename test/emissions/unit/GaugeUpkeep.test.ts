@@ -262,12 +262,41 @@ describe('GaugeUpkeep Unit Tests', function () {
       expect(performDataAfter).to.equal('0x')
     })
 
-    it('should continue upkeep after batch fails', async function () {
-      await voterMock.setFailingGauge(gaugeList[0], true)
+    it('should continue upkeep after entire batch fails', async function () {
+      for (const gauge of gaugeList.slice(0, gaugeList.length / 2)) {
+        await voterMock.setFailingGauge(gauge, true)
+      }
+
+      const tx = await expect(gaugeUpkeep.performUpkeep(HashZero))
+      for (let i = 0; i < batchSize; i++) {
+        await tx.to
+          .emit(gaugeUpkeep, 'DistributeFailed')
+          .withArgs(gaugeList[i], startIndex + i)
+      }
 
       await expect(gaugeUpkeep.performUpkeep(HashZero))
-        .to.emit(gaugeUpkeep, 'BatchDistributeFailed')
-        .withArgs(startIndex, batchSize)
+        .to.emit(gaugeUpkeep, 'GaugeUpkeepPerformed')
+        .withArgs(batchSize, batchSize * 2)
+    })
+
+    it('should continue upkeep after batch partially fails', async function () {
+      /// @dev Mock failed distributes
+      const failedIndexes = [0, 3]
+      for (const failedIndex of failedIndexes) {
+        await voterMock.setFailingGauge(gaugeList[failedIndex], true)
+      }
+
+      /// @dev Ensure gauges on non-failing indexes received distributes
+      const tx = await expect(gaugeUpkeep.performUpkeep(HashZero))
+      for (let i = 0; i < batchSize; i++) {
+        if (!failedIndexes.includes(i)) {
+          await tx.to.emit(voterMock, 'Distributed').withArgs(gaugeList[i])
+        } else {
+          await tx.to
+            .emit(gaugeUpkeep, 'DistributeFailed')
+            .withArgs(gaugeList[i], startIndex + i)
+        }
+      }
 
       await expect(gaugeUpkeep.performUpkeep(HashZero))
         .to.emit(gaugeUpkeep, 'GaugeUpkeepPerformed')
