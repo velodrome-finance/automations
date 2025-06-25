@@ -262,12 +262,43 @@ describe('GaugeUpkeep Unit Tests', function () {
       expect(performDataAfter).to.equal('0x')
     })
 
-    it('should continue upkeep after batch fails', async function () {
-      await voterMock.setFailingGauge(gaugeList[0], true)
+    it('should continue upkeep after entire batch fails', async function () {
+      for (const gauge of gaugeList.slice(0, gaugeList.length / 2)) {
+        await voterMock.setFailingGauge(gauge, true)
+      }
 
       await expect(gaugeUpkeep.performUpkeep(HashZero))
         .to.emit(gaugeUpkeep, 'BatchDistributeFailed')
-        .withArgs(startIndex, batchSize)
+        .withArgs(startIndex, startIndex + 1)
+        .to.emit(gaugeUpkeep, 'BatchDistributeFailed')
+        .withArgs(startIndex + 1, startIndex + 2)
+        .to.emit(gaugeUpkeep, 'BatchDistributeFailed')
+        .withArgs(startIndex + 2, startIndex + 3)
+        .to.emit(gaugeUpkeep, 'BatchDistributeFailed')
+        .withArgs(startIndex + 3, startIndex + 4)
+        .to.emit(gaugeUpkeep, 'BatchDistributeFailed')
+        .withArgs(startIndex + 4, startIndex + batchSize)
+
+      await expect(gaugeUpkeep.performUpkeep(HashZero))
+        .to.emit(gaugeUpkeep, 'GaugeUpkeepPerformed')
+        .withArgs(batchSize, batchSize * 2)
+    })
+
+    it('should continue upkeep after batch partially fails', async function () {
+      await voterMock.setFailingGauge(gaugeList[0], true)
+      await voterMock.setFailingGauge(gaugeList[3], true)
+
+      await expect(gaugeUpkeep.performUpkeep(HashZero))
+        .to.emit(gaugeUpkeep, 'BatchDistributeFailed')
+        .withArgs(startIndex, startIndex + 1)
+        .to.emit(voterMock, 'Distributed')
+        .withArgs(gaugeList[1])
+        .to.emit(voterMock, 'Distributed')
+        .withArgs(gaugeList[2])
+        .to.emit(gaugeUpkeep, 'BatchDistributeFailed')
+        .withArgs(startIndex + 3, startIndex + 4)
+        .to.emit(voterMock, 'Distributed')
+        .withArgs(gaugeList[4])
 
       await expect(gaugeUpkeep.performUpkeep(HashZero))
         .to.emit(gaugeUpkeep, 'GaugeUpkeepPerformed')
