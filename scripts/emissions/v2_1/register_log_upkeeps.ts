@@ -82,7 +82,7 @@ async function main() {
 
   // Get UpkeepBalanceMonitor contract
   const upkeepBalanceMonitor = await ethers.getContractAt(
-    'UpkeepBalanceMonitor',
+    'UpkeepBalanceMonitorV2_1',
     UPKEEP_BALANCE_MONITOR_ADDRESS!,
   )
 

@@ -4,10 +4,9 @@
 // When running the script with `npx hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
 import { ethers, run } from 'hardhat'
-import { BigNumber } from 'ethers'
 import * as assert from 'assert'
 import * as dotenv from 'dotenv'
-import { registerLogTriggerUpkeepV2_3 } from '../../../utils'
+import { registerCustomLogicUpkeepV2_3 } from '../../utils'
 
 // Load environment variables
 dotenv.config()
@@ -15,8 +14,6 @@ dotenv.config()
 const AUTOMATION_REGISTRAR_ADDRESS = process.env.AUTOMATION_REGISTRAR_ADDRESS
 const KEEPER_REGISTRY_ADDRESS = process.env.KEEPER_REGISTRY_ADDRESS
 const LINK_TOKEN_ADDRESS = process.env.LINK_TOKEN_ADDRESS
-const EXCLUDED_GAUGE_FACTORIES = process.env.EXCLUDED_GAUGE_FACTORIES
-const NEW_UPKEEP_FUND_AMOUNT = process.env.NEW_UPKEEP_FUND_AMOUNT
 const NEW_UPKEEP_GAS_LIMIT = process.env.NEW_UPKEEP_GAS_LIMIT
 const BATCH_SIZE = process.env.BATCH_SIZE
 const MAX_BATCH_SIZE = process.env.MAX_BATCH_SIZE
@@ -24,8 +21,10 @@ const MIN_PERCENTAGE = process.env.MIN_PERCENTAGE
 const TARGET_PERCENTAGE = process.env.TARGET_PERCENTAGE
 const MAX_TOP_UP_AMOUNT = process.env.MAX_TOP_UP_AMOUNT
 const MAX_ITERATIONS = process.env.MAX_ITERATIONS
-const LOG_UPKEEP_FUND_AMOUNT = process.env.LOG_UPKEEP_FUND_AMOUNT
-const LOG_UPKEEP_GAS_LIMIT = process.env.LOG_UPKEEP_GAS_LIMIT
+const BALANCE_MONITOR_UPKEEP_FUND_AMOUNT =
+  process.env.BALANCE_MONITOR_UPKEEP_FUND_AMOUNT
+const BALANCE_MONITOR_UPKEEP_GAS_LIMIT =
+  process.env.BALANCE_MONITOR_UPKEEP_GAS_LIMIT
 
 assert.ok(
   AUTOMATION_REGISTRAR_ADDRESS,
@@ -33,8 +32,6 @@ assert.ok(
 )
 assert.ok(KEEPER_REGISTRY_ADDRESS, 'KEEPER_REGISTRY_ADDRESS is required')
 assert.ok(LINK_TOKEN_ADDRESS, 'LINK_TOKEN_ADDRESS is required')
-assert.ok(EXCLUDED_GAUGE_FACTORIES, 'EXCLUDED_GAUGE_FACTORIES is required')
-assert.ok(NEW_UPKEEP_FUND_AMOUNT, 'NEW_UPKEEP_FUND_AMOUNT is required')
 assert.ok(NEW_UPKEEP_GAS_LIMIT, 'NEW_UPKEEP_GAS_LIMIT is required')
 assert.ok(BATCH_SIZE, 'BATCH_SIZE is required')
 assert.ok(MAX_BATCH_SIZE, 'MAX_BATCH_SIZE is required')
@@ -42,8 +39,14 @@ assert.ok(MIN_PERCENTAGE, 'MIN_PERCENTAGE is required')
 assert.ok(TARGET_PERCENTAGE, 'TARGET_PERCENTAGE is required')
 assert.ok(MAX_TOP_UP_AMOUNT, 'MAX_TOP_UP_AMOUNT is required')
 assert.ok(MAX_ITERATIONS, 'MAX_ITERATIONS is required')
-assert.ok(LOG_UPKEEP_FUND_AMOUNT, 'LOG_UPKEEP_FUND_AMOUNT is required')
-assert.ok(LOG_UPKEEP_GAS_LIMIT, 'LOG_UPKEEP_GAS_LIMIT is required')
+assert.ok(
+  BALANCE_MONITOR_UPKEEP_FUND_AMOUNT,
+  'BALANCE_MONITOR_UPKEEP_FUND_AMOUNT is required',
+)
+assert.ok(
+  BALANCE_MONITOR_UPKEEP_GAS_LIMIT,
+  'BALANCE_MONITOR_UPKEEP_GAS_LIMIT is required',
+)
 
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
@@ -102,16 +105,18 @@ async function main() {
   const gaugeUpkeepManagerFactory = await ethers.getContractFactory(
     'GaugeUpkeepManagerV2_3',
   )
+  const underfundedUpkeepAmount = ethers.utils.parseEther('0.1')
+  const excludedGaugeFactories: string[] = []
   const gaugeUpkeepManager = await gaugeUpkeepManagerFactory.deploy(
     LINK_TOKEN_ADDRESS!,
     KEEPER_REGISTRY_ADDRESS!,
     AUTOMATION_REGISTRAR_ADDRESS!,
     upkeepBalanceMonitor.address,
     voterMock.address,
-    NEW_UPKEEP_FUND_AMOUNT!,
+    underfundedUpkeepAmount,
     NEW_UPKEEP_GAS_LIMIT!,
     BATCH_SIZE!,
-    EXCLUDED_GAUGE_FACTORIES!.split(','),
+    excludedGaugeFactories,
   )
   await gaugeUpkeepManager.deployed()
   console.log('GaugeUpkeepManager deployed to:', gaugeUpkeepManager.address)
@@ -127,15 +132,25 @@ async function main() {
     'ERC20Mintable',
     LINK_TOKEN_ADDRESS!,
   )
-  await linkToken.transfer(gaugeUpkeepManager.address, NEW_UPKEEP_FUND_AMOUNT!)
+  await linkToken.transfer(gaugeUpkeepManager.address, underfundedUpkeepAmount)
   console.log(
-    `Transferred ${NEW_UPKEEP_FUND_AMOUNT} LINK tokens to GaugeUpkeepManager`,
+    `Transferred ${underfundedUpkeepAmount} LINK tokens to GaugeUpkeepManager`,
+  )
+
+  // Transfer LINK tokens to UpkeepBalanceMonitor contract
+  const balanceMonitorFundAmount = ethers.utils.parseEther('3')
+  await linkToken.transfer(
+    upkeepBalanceMonitor.address,
+    balanceMonitorFundAmount,
+  )
+  console.log(
+    `Transferred ${balanceMonitorFundAmount} LINK tokens to UpkeepBalanceMonitor`,
   )
 
   // ----------------------------
-  // Register log trigger upkeeps
+  // Register balance monitor upkeep
   // ----------------------------
-  console.log('Registering log upkeeps...')
+  console.log('Registering custom logic upkeep...')
 
   // Get AutomationRegistrar contract
   const automationRegistrar = await ethers.getContractAt(
@@ -149,81 +164,34 @@ async function main() {
     KEEPER_REGISTRY_ADDRESS!,
   )
 
-  // Approve LINK token for AutomationRegistrar
-  const totalLinkRequired = BigNumber.from(LOG_UPKEEP_FUND_AMOUNT!).mul(3)
-  const linkBalance = await linkToken.balanceOf(upkeepAdmin.address)
-  if (linkBalance.lt(totalLinkRequired)) {
-    throw new Error(
-      `Insufficient balance. Required: ${totalLinkRequired.toString()} LINK`,
-    )
-  }
-  await linkToken.approve(automationRegistrar.address, totalLinkRequired)
+  // Approve LINK tokens for AutomationRegistrar
+  await linkToken.approve(
+    automationRegistrar.address,
+    BALANCE_MONITOR_UPKEEP_FUND_AMOUNT!,
+  )
   console.log(
-    'Approved LINK token for AutomationRegistrar',
-    totalLinkRequired.toString(),
+    'Approved LINK tokens for AutomationRegistrar',
+    BALANCE_MONITOR_UPKEEP_FUND_AMOUNT!,
   )
 
-  // Register create gauge log upkeep
-  const createGaugeLogUpkeepId = await registerLogTriggerUpkeepV2_3(
+  const balanceMonitorUpkeepId = await registerCustomLogicUpkeepV2_3(
     automationRegistrar,
-    voterMock.address,
-    voterMock.interface.getEventTopic('GaugeCreated'),
-    gaugeUpkeepManager.address,
+    'Balance Monitor Upkeep',
+    upkeepBalanceMonitor.address,
     upkeepAdmin.address,
-    'Create Gauge Log Upkeep',
-    LOG_UPKEEP_FUND_AMOUNT!,
-    LOG_UPKEEP_GAS_LIMIT!,
-    LINK_TOKEN_ADDRESS!,
+    BALANCE_MONITOR_UPKEEP_FUND_AMOUNT!,
+    BALANCE_MONITOR_UPKEEP_GAS_LIMIT!,
+    linkToken.address,
   )
   console.log(
-    'Registered create gauge log upkeep',
-    createGaugeLogUpkeepId.toString(),
+    'Registered balance monitor upkeep:',
+    balanceMonitorUpkeepId.toString(),
   )
 
-  // Register kill gauge log upkeep
-  const killGaugeLogUpkeepId = await registerLogTriggerUpkeepV2_3(
-    automationRegistrar,
-    voterMock.address,
-    voterMock.interface.getEventTopic('GaugeKilled'),
-    gaugeUpkeepManager.address,
-    upkeepAdmin.address,
-    'Kill Gauge Log Upkeep',
-    LOG_UPKEEP_FUND_AMOUNT!,
-    LOG_UPKEEP_GAS_LIMIT!,
-    LINK_TOKEN_ADDRESS!,
-  )
-  console.log(
-    'Registered kill gauge log upkeep',
-    killGaugeLogUpkeepId.toString(),
-  )
-
-  // Register revive gauge log upkeep
-  const reviveGaugeLogUpkeepId = await registerLogTriggerUpkeepV2_3(
-    automationRegistrar,
-    voterMock.address,
-    voterMock.interface.getEventTopic('GaugeRevived'),
-    gaugeUpkeepManager.address,
-    upkeepAdmin.address,
-    'Revive Gauge Log Upkeep',
-    LOG_UPKEEP_FUND_AMOUNT!,
-    LOG_UPKEEP_GAS_LIMIT!,
-    LINK_TOKEN_ADDRESS!,
-  )
-  console.log(
-    'Registered revive gauge log upkeep',
-    reviveGaugeLogUpkeepId.toString(),
-  )
-
-  // Get trusted forwarder addresses for all upkeeps and set them in gauge upkeep manager
-  const forwarders = await Promise.all([
-    keeperRegistry.getForwarder(createGaugeLogUpkeepId),
-    keeperRegistry.getForwarder(killGaugeLogUpkeepId),
-    keeperRegistry.getForwarder(reviveGaugeLogUpkeepId),
-  ])
-  for (const forwarder of forwarders) {
-    await gaugeUpkeepManager.setTrustedForwarder(forwarder, true)
-  }
-  console.log('Set trusted forwarders for all upkeeps')
+  // Get trusted forwarder and set it to the balance monitor
+  const forwarder = await keeperRegistry.getForwarder(balanceMonitorUpkeepId)
+  await upkeepBalanceMonitor.setTrustedForwarder(forwarder)
+  console.log('Set trusted forwarder to UpkeepBalanceMonitor')
 
   // ----------------
   // Register fake gauges
@@ -238,30 +206,8 @@ async function main() {
   await gaugeUpkeepManager.registerGauges(fakeGauges)
   console.log('Registered fake gauges with GaugeUpkeepManager', fakeGauges)
 
-  // ----------------
-  // Trigger upkeeps
-  // ----------------
-  console.log('Triggering upkeeps...')
-
-  const fakeGauge = ethers.Wallet.createRandom().address
-
-  // Trigger create gauge log upkeep
-  await voterMock.createGauge(fakeGauge)
-  console.log('Triggered create gauge log upkeep with fake gauge', fakeGauge)
-
-  // Sleep for 10 seconds
-  await new Promise((resolve) => setTimeout(resolve, 10000))
-
-  // Trigger kill gauge log upkeep
-  await voterMock.killGauge(fakeGauge)
-  console.log('Triggered kill gauge log upkeep with fake gauge', fakeGauge)
-
-  // Sleep for 10 seconds
-  await new Promise((resolve) => setTimeout(resolve, 10000))
-
-  // Trigger revive gauge log upkeep
-  await voterMock.reviveGauge(fakeGauge)
-  console.log('Triggered revive gauge log upkeep with fake gauge', fakeGauge)
+  const gaugeUpkeepId = await gaugeUpkeepManager.upkeepIds(0)
+  console.log('Gauge upkeep ID:', gaugeUpkeepId.toString())
 }
 
 // We recommend this pattern to be able to use async/await everywhere

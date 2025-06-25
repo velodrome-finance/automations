@@ -24,6 +24,10 @@ This repository contains the scripts designed to automate the Velodrome ecosyste
 
 - **UpkeepBalanceMonitor**: This is a utility contract that watches the balances of all active gauge upkeeps and triggers top-up transactions when the balance falls below a certain threshold.
 
+## Demo
+
+A demo of the environment setup, deployment process, and consuming the outputted data via events, is available [here](https://www.loom.com/share/8c05e5a43b8f4fbf8318ed9b9004394a?sid=8a7626c4-9b37-4732-aa6c-4ccd4ea19701).
+
 ## Installation
 
 This repository uses [Hardhat](https://hardhat.org/) as the development environment.
@@ -62,7 +66,6 @@ pnpm run test:unit
 
 ```bash
 pnpm run test:fork
-pnpm run test:fork:v2_3
 ```
 
 ## Deployment
@@ -72,8 +75,10 @@ pnpm run test:fork:v2_3
 1. Deploy the `UpkeepBalanceMonitor` contract by running:
 
 ```bash
-npx hardhat run scripts/deploy_balance_monitor.ts --network <network>
+npx hardhat run scripts/<version>/deploy_balance_monitor.ts --network <network>
 ```
+
+**Note:** Currently supported Chainlink Automation versions are `v2_1` and `v2_3`.
 
 2. Register custom logic trigger for the deployed `UpkeepBalanceMonitor` contract and set the trusted forwarders:
 
@@ -81,7 +86,6 @@ npx hardhat run scripts/deploy_balance_monitor.ts --network <network>
 npx hardhat run scripts/<version>/register_monitor_upkeep.ts --network <network>
 ```
 
-**Note:** Currently supported Chainlink Automation versions are `v2_1` and `v2_3`.  
 **Note:** The account running the script must have enough LINK to pay for the initial upkeep registration funding determined by the `BALANCE_MONITOR_UPKEEP_FUND_AMOUNT` and `BALANCE_MONITOR_UPKEEP_GAS_LIMIT` environment variables.
 
 3. Transfer LINK tokens to the `UpkeepBalanceMonitor` contract which will be used to top-up the gauge upkeeps.

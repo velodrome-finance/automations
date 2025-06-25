@@ -6,7 +6,7 @@
 import { ethers } from 'hardhat'
 import * as assert from 'assert'
 import * as dotenv from 'dotenv'
-import { verifyContract } from './utils'
+import { verifyContract } from '../utils'
 
 // Load environment variables
 dotenv.config()
@@ -37,7 +37,7 @@ async function main() {
 
   // Deploy UpkeepBalanceMonitor contract
   const UpkeepBalanceMonitor = await ethers.getContractFactory(
-    'UpkeepBalanceMonitor',
+    'UpkeepBalanceMonitorV2_1',
   )
   const upkeepBalanceMonitor = await UpkeepBalanceMonitor.deploy(
     LINK_TOKEN_ADDRESS!,
