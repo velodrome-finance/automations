@@ -60,8 +60,9 @@ contract GaugeUpkeep is IGaugeUpkeep {
     function _distributeBatch(uint256 _startIndex, uint256 _endIndex) internal {
         address[] memory gauges = IGaugeUpkeepManager(gaugeUpkeepManager).gaugeList(_startIndex, _endIndex);
         
-        for (uint256 i = 0; i < gauges.length; i++) {
-            address[] memory singleGauge = new address[](1);
+        uint256 length = gauges.length;
+        address[] memory singleGauge = new address[](1);
+        for (uint256 i = 0; i < length; i++) {
             singleGauge[0] = gauges[i];
 
             try IVoter(voter).distribute(singleGauge) {} catch {
