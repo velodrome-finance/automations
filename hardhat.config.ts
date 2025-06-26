@@ -77,6 +77,9 @@ const config: HardhatUserConfig = {
       },
     ],
   },
+  mocha: {
+    timeout: 200000,
+  },
 }
 
 if (process.env.FORK_ENABLED === 'true') {

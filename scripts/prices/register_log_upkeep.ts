@@ -6,25 +6,26 @@
 import { ethers } from 'hardhat'
 import * as assert from 'assert'
 import * as dotenv from 'dotenv'
-import { registerCustomLogicUpkeep } from '../utils'
+import { registerLogTriggerUpkeep } from '../utils'
 
 // Load environment variables
 dotenv.config()
 
-const UPKEEP_BALANCE_MONITOR_ADDRESS =
-  process.env.UPKEEP_BALANCE_MONITOR_ADDRESS
+const TOKEN_UPKEEP_MANAGER_ADDRESS = process.env.TOKEN_UPKEEP_MANAGER_ADDRESS
+const VOTER_ADDRESS = process.env.VOTER_ADDRESS
 const KEEPER_REGISTRY_ADDRESS = process.env.KEEPER_REGISTRY_ADDRESS
 const AUTOMATION_REGISTRAR_ADDRESS = process.env.AUTOMATION_REGISTRAR_ADDRESS
 const LINK_TOKEN_ADDRESS = process.env.LINK_TOKEN_ADDRESS
-const BALANCE_MONITOR_UPKEEP_FUND_AMOUNT =
-  process.env.BALANCE_MONITOR_UPKEEP_FUND_AMOUNT
-const BALANCE_MONITOR_UPKEEP_GAS_LIMIT =
-  process.env.BALANCE_MONITOR_UPKEEP_GAS_LIMIT
+const UPKEEP_BALANCE_MONITOR_ADDRESS =
+  process.env.UPKEEP_BALANCE_MONITOR_ADDRESS
+const LOG_UPKEEP_FUND_AMOUNT = process.env.LOG_UPKEEP_FUND_AMOUNT
+const LOG_UPKEEP_GAS_LIMIT = process.env.LOG_UPKEEP_GAS_LIMIT
 
 assert.ok(
-  UPKEEP_BALANCE_MONITOR_ADDRESS,
-  'UPKEEP_BALANCE_MONITOR_ADDRESS is required',
+  TOKEN_UPKEEP_MANAGER_ADDRESS,
+  'TOKEN_UPKEEP_MANAGER_ADDRESS is required',
 )
+assert.ok(VOTER_ADDRESS, 'VOTER_ADDRESS is required')
 assert.ok(KEEPER_REGISTRY_ADDRESS, 'KEEPER_REGISTRY_ADDRESS is required')
 assert.ok(
   AUTOMATION_REGISTRAR_ADDRESS,
@@ -32,13 +33,11 @@ assert.ok(
 )
 assert.ok(LINK_TOKEN_ADDRESS, 'LINK_TOKEN_ADDRESS is required')
 assert.ok(
-  BALANCE_MONITOR_UPKEEP_FUND_AMOUNT,
-  'BALANCE_MONITOR_UPKEEP_FUND_AMOUNT is required',
+  UPKEEP_BALANCE_MONITOR_ADDRESS,
+  'UPKEEP_BALANCE_MONITOR_ADDRESS is required',
 )
-assert.ok(
-  BALANCE_MONITOR_UPKEEP_GAS_LIMIT,
-  'BALANCE_MONITOR_UPKEEP_GAS_LIMIT is required',
-)
+assert.ok(LOG_UPKEEP_FUND_AMOUNT, 'LOG_UPKEEP_FUND_AMOUNT is required')
+assert.ok(LOG_UPKEEP_GAS_LIMIT, 'LOG_UPKEEP_GAS_LIMIT is required')
 
 async function main() {
   // Hardhat always runs the compile task when running scripts with its command
@@ -48,7 +47,7 @@ async function main() {
   // manually to make sure everything is compiled
   // await hre.run('compile');
 
-  console.log('Registering balance monitor upkeep...')
+  console.log('Registering log upkeep...')
 
   // Get admin account
   const [upkeepAdmin] = await ethers.getSigners()
@@ -71,6 +70,15 @@ async function main() {
     KEEPER_REGISTRY_ADDRESS!,
   )
 
+  // Get TokenUpkeepManager contract
+  const tokenUpkeepManager = await ethers.getContractAt(
+    'TokenUpkeepManager',
+    TOKEN_UPKEEP_MANAGER_ADDRESS!,
+  )
+
+  // Get Voter contract
+  const voter = await ethers.getContractAt('Voter', VOTER_ADDRESS!)
+
   // Get UpkeepBalanceMonitor contract
   const upkeepBalanceMonitor = await ethers.getContractAt(
     'UpkeepBalanceMonitorV2_1',
@@ -78,33 +86,43 @@ async function main() {
   )
 
   // Approve LINK token for AutomationRegistrar
+  const totalLinkRequired = LOG_UPKEEP_FUND_AMOUNT!
   const linkBalance = await linkToken.balanceOf(upkeepAdmin.address)
-  if (linkBalance.lt(BALANCE_MONITOR_UPKEEP_FUND_AMOUNT!)) {
+  if (linkBalance.lt(totalLinkRequired)) {
     throw new Error(
-      `Insufficient balance. Required: ${BALANCE_MONITOR_UPKEEP_FUND_AMOUNT} LINK`,
+      `Insufficient balance. Required: ${totalLinkRequired.toString()} LINK`,
     )
   }
-  await linkToken.approve(
-    automationRegistrar.address,
-    BALANCE_MONITOR_UPKEEP_FUND_AMOUNT!,
+  await linkToken.approve(automationRegistrar.address, totalLinkRequired)
+  console.log(
+    'Approved LINK token for AutomationRegistrar',
+    totalLinkRequired.toString(),
   )
-  console.log('Approved LINK token for AutomationRegistrar')
 
-  // Register custom logic upkeep
-  const upkeepId = await registerCustomLogicUpkeep(
+  // Register whitelist token log upkeep
+  const whitelistTokenUpkeepId = await registerLogTriggerUpkeep(
     automationRegistrar,
-    'Balance Monitor Upkeep',
-    upkeepBalanceMonitor.address,
+    voter.address,
+    voter.interface.getEventTopic('WhitelistToken'),
+    tokenUpkeepManager.address,
     upkeepAdmin.address,
-    BALANCE_MONITOR_UPKEEP_FUND_AMOUNT!,
-    BALANCE_MONITOR_UPKEEP_GAS_LIMIT!,
+    'Whitelist Token Log Upkeep',
+    LOG_UPKEEP_FUND_AMOUNT!,
+    LOG_UPKEEP_GAS_LIMIT!,
   )
-  console.log('Registered balance monitor upkeep', upkeepId.toString())
+  console.log(
+    'Registered whitelist token log upkeep',
+    whitelistTokenUpkeepId.toString(),
+  )
 
-  // Get trusted forwarder address of the upkeep and set it in balance monitor
-  const forwarder = await keeperRegistry.getForwarder(upkeepId)
-  await upkeepBalanceMonitor.setTrustedForwarder(forwarder)
-  console.log('Set trusted forwarder for balance monitor upkeep')
+  // Get trusted forwarder address and set it to token upkeep manager
+  const forwarder = await keeperRegistry.getForwarder(whitelistTokenUpkeepId)
+  await tokenUpkeepManager.setTrustedForwarder(forwarder)
+  console.log('Set trusted forwarder for TokenUpkeepManager')
+
+  // Add upkeep to upkeep balance monitor
+  await upkeepBalanceMonitor.addToWatchList(whitelistTokenUpkeepId)
+  console.log('Added TokenUpkeepManager to upkeep balance monitor')
 }
 
 // We recommend this pattern to be able to use async/await everywhere
