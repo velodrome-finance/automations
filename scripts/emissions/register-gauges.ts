@@ -36,7 +36,7 @@ async function registerGauges(
     console.log(`Registering gauges ${i} to ${i + batchSize}`, batch)
     const tx = await gaugeUpkeepManager.registerGauges(batch)
     console.log('Transaction hash:', tx.hash)
-    const receipt = await tx.wait()
+    const receipt = await tx.wait(10)
     const upkeepRegisteredEvents = receipt.events?.filter(
       (event) =>
         event.topics[0] ===

@@ -63,6 +63,7 @@ async function main() {
     BATCH_SIZE!,
     excludedGaugeFactories,
   )
+  await gaugeUpkeepManager.deployTransaction.wait(10)
   await gaugeUpkeepManager.deployed()
   console.log('GaugeUpkeepManager deployed to:', gaugeUpkeepManager.address)
 
@@ -71,9 +72,10 @@ async function main() {
     'UpkeepBalanceMonitorV2_3',
     UPKEEP_BALANCE_MONITOR_ADDRESS!,
   )
-  await upkeepBalanceMonitor.grantWatchlistManagerRole(
+  const tx = await upkeepBalanceMonitor.grantWatchlistManagerRole(
     gaugeUpkeepManager.address,
   )
+  await tx.wait(10)
   console.log('GaugeUpkeepManager granted watchlist manager role')
 
   // Verify GaugeUpkeepManager contract

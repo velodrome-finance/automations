@@ -63,8 +63,8 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: {
-      optimisticEthereum: process.env.OP_ETHERSCAN_API_KEY || '',
-      base: process.env.BASE_ETHERSCAN_API_KEY || '',
+      optimisticEthereum: process.env.ETHERSCAN_API_KEY || '',
+      base: process.env.ETHERSCAN_API_KEY || '',
     },
     customChains: [
       {
