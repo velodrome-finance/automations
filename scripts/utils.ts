@@ -99,7 +99,7 @@ async function registerUpkeep(
   },
 ) {
   const registerTx = await automationRegistrar.registerUpkeep(upkeepParams)
-  const registerReceipt = await registerTx.wait()
+  const registerReceipt = await registerTx.wait(10)
 
   const registrationApprovedLog = findLog(
     registerReceipt,
