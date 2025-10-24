@@ -8,25 +8,25 @@ import * as path from 'path'
 import { ethers } from 'hardhat'
 import * as assert from 'assert'
 import * as dotenv from 'dotenv'
-import { IGaugeUpkeepManager } from '../../typechain-types'
+import { IRedistributeUpkeepManager } from '../../typechain-types'
 
 // Load environment variables
 dotenv.config()
 
-const GAUGE_UPKEEP_MANAGER_ADDRESS = process.env.GAUGE_UPKEEP_MANAGER_ADDRESS
+const REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS = process.env.REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS
 
 assert.ok(
-  GAUGE_UPKEEP_MANAGER_ADDRESS,
-  'GAUGE_UPKEEP_MANAGER_ADDRESS is required',
+  REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS,
+  'REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS is required',
 )
 
 async function registerGauges(
-  gaugeUpkeepManager: IGaugeUpkeepManager,
+  redistributeUpkeepManager: IRedistributeUpkeepManager,
   gauges: string[],
   batchSize = 25,
 ) {
-  const gaugeCount = await gaugeUpkeepManager.gaugeCount()
-  const gaugeList = await gaugeUpkeepManager.gaugeList(0, gaugeCount)
+  const gaugeCount = await redistributeUpkeepManager.gaugeCount()
+  const gaugeList = await redistributeUpkeepManager.gaugeList(0, gaugeCount)
   const gaugesToRegister: string[] = gauges.filter(
     (gauge) => !gaugeList.includes(gauge),
   )
@@ -34,17 +34,17 @@ async function registerGauges(
   for (let i = 0; i < gaugesToRegister.length; i += batchSize) {
     const batch = gaugesToRegister.slice(i, i + batchSize)
     console.log(`Registering gauges ${i} to ${i + batchSize}`, batch)
-    const tx = await gaugeUpkeepManager.registerGauges(batch)
+    const tx = await redistributeUpkeepManager.registerGauges(batch)
     console.log('Transaction hash:', tx.hash)
     const receipt = await tx.wait(10)
     const upkeepRegisteredEvents = receipt.events?.filter(
       (event) =>
         event.topics[0] ===
-        gaugeUpkeepManager.interface.getEventTopic('GaugeUpkeepRegistered'),
+        redistributeUpkeepManager.interface.getEventTopic('RedistributeUpkeepRegistered'),
     )
     const newUpkeepIds =
       upkeepRegisteredEvents?.map((event) =>
-        gaugeUpkeepManager.interface.parseLog(event).args.upkeepId.toString(),
+        redistributeUpkeepManager.interface.parseLog(event).args.upkeepId.toString(),
       ) || []
     console.log('New upkeep IDs:', newUpkeepIds)
     upkeepIds.push(...newUpkeepIds)
@@ -87,16 +87,16 @@ async function main() {
   // manually to make sure everything is compiled
   // await hre.run('compile');
 
-  const gaugeUpkeepManager: IGaugeUpkeepManager = await ethers.getContractAt(
-    'IGaugeUpkeepManager',
-    GAUGE_UPKEEP_MANAGER_ADDRESS!,
+  const redistributeUpkeepManager: IRedistributeUpkeepManager = await ethers.getContractAt(
+    'IRedistributeUpkeepManager',
+    REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS!,
   )
   const gauges = readGauges()
   if (gauges.length === 0) {
     throw new Error('No gauges found')
   }
   console.log('Registering gauges...')
-  const upkeepIds: string[] = await registerGauges(gaugeUpkeepManager, gauges)
+  const upkeepIds: string[] = await registerGauges(redistributeUpkeepManager, gauges)
   logUpkeeps(upkeepIds)
 }
 

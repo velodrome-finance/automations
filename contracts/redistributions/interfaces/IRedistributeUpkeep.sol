@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-interface IGaugeUpkeep {
-    event GaugeUpkeepPerformed(uint256 indexed currentIndex, uint256 indexed endIndex);
+interface IRedistributeUpkeep {
+    event RedistributeUpkeepPerformed(uint256 indexed currentIndex, uint256 indexed endIndex);
     event DistributeFailed(address indexed gauge, uint256 indexed index);
 
     error UpkeepNotNeeded();
@@ -10,8 +10,8 @@ interface IGaugeUpkeep {
     /// @notice Voter address
     function voter() external view returns (address);
 
-    /// @notice GaugeUpkeepManager address
-    function gaugeUpkeepManager() external view returns (address);
+    /// @notice RedistributeUpkeepManager address
+    function redistributeUpkeepManager() external view returns (address);
 
     /// @notice Start index (inclusive) to iterate over the list of gauges
     function startIndex() external view returns (uint256);

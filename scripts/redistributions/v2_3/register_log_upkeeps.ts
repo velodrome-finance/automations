@@ -12,7 +12,7 @@ import { registerLogTriggerUpkeepV2_3 } from '../../utils'
 // Load environment variables
 dotenv.config()
 
-const GAUGE_UPKEEP_MANAGER_ADDRESS = process.env.GAUGE_UPKEEP_MANAGER_ADDRESS
+const REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS = process.env.REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS
 const VOTER_ADDRESS = process.env.VOTER_ADDRESS
 const KEEPER_REGISTRY_ADDRESS = process.env.KEEPER_REGISTRY_ADDRESS
 const AUTOMATION_REGISTRAR_ADDRESS = process.env.AUTOMATION_REGISTRAR_ADDRESS
@@ -23,8 +23,8 @@ const LOG_UPKEEP_FUND_AMOUNT = process.env.LOG_UPKEEP_FUND_AMOUNT
 const LOG_UPKEEP_GAS_LIMIT = process.env.LOG_UPKEEP_GAS_LIMIT
 
 assert.ok(
-  GAUGE_UPKEEP_MANAGER_ADDRESS,
-  'GAUGE_UPKEEP_MANAGER_ADDRESS is required',
+  REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS,
+  'REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS is required',
 )
 assert.ok(VOTER_ADDRESS, 'VOTER_ADDRESS is required')
 assert.ok(KEEPER_REGISTRY_ADDRESS, 'KEEPER_REGISTRY_ADDRESS is required')
@@ -71,10 +71,10 @@ async function main() {
     KEEPER_REGISTRY_ADDRESS!,
   )
 
-  // Get GaugeUpkeepManager contract
-  const gaugeUpkeepManager = await ethers.getContractAt(
-    'GaugeUpkeepManagerV2_3',
-    GAUGE_UPKEEP_MANAGER_ADDRESS!,
+  // Get RedistributeUpkeepManager contract
+  const redistributeUpkeepManager = await ethers.getContractAt(
+    'RedistributeUpkeepManagerV2_3',
+    REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS!,
   )
 
   // Get Voter contract
@@ -109,7 +109,7 @@ async function main() {
     automationRegistrar,
     voter.address,
     voter.interface.getEventTopic('GaugeCreated'),
-    gaugeUpkeepManager.address,
+    redistributeUpkeepManager.address,
     upkeepAdmin.address,
     'Create Gauge Log Upkeep',
     LOG_UPKEEP_FUND_AMOUNT!,
@@ -126,7 +126,7 @@ async function main() {
     automationRegistrar,
     voter.address,
     voter.interface.getEventTopic('GaugeKilled'),
-    gaugeUpkeepManager.address,
+    redistributeUpkeepManager.address,
     upkeepAdmin.address,
     'Kill Gauge Log Upkeep',
     LOG_UPKEEP_FUND_AMOUNT!,
@@ -143,7 +143,7 @@ async function main() {
     automationRegistrar,
     voter.address,
     voter.interface.getEventTopic('GaugeRevived'),
-    gaugeUpkeepManager.address,
+    redistributeUpkeepManager.address,
     upkeepAdmin.address,
     'Revive Gauge Log Upkeep',
     LOG_UPKEEP_FUND_AMOUNT!,
@@ -155,14 +155,14 @@ async function main() {
     reviveGaugeLogUpkeepId.toString(),
   )
 
-  // Get trusted forwarder addresses for all upkeeps and set them in gauge upkeep manager
+  // Get trusted forwarder addresses for all upkeeps and set them in redistribute upkeep manager
   const forwarders = await Promise.all([
     keeperRegistry.getForwarder(createGaugeLogUpkeepId),
     keeperRegistry.getForwarder(killGaugeLogUpkeepId),
     keeperRegistry.getForwarder(reviveGaugeLogUpkeepId),
   ])
   for (const forwarder of forwarders) {
-    await gaugeUpkeepManager.setTrustedForwarder(forwarder, true)
+    await redistributeUpkeepManager.setTrustedForwarder(forwarder, true)
   }
   console.log('Set trusted forwarders for all upkeeps')
 

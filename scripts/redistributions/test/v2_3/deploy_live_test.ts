@@ -98,11 +98,11 @@ async function main() {
   await upkeepBalanceMonitor.deployed()
   console.log('UpkeepBalanceMonitor deployed to:', upkeepBalanceMonitor.address)
 
-  // Deploy GaugeUpkeepManager contract
-  const gaugeUpkeepManagerFactory = await ethers.getContractFactory(
-    'GaugeUpkeepManagerV2_3',
+  // Deploy RedistributeUpkeepManager contract
+  const redistributeUpkeepManagerFactory = await ethers.getContractFactory(
+    'RedistributeUpkeepManagerV2_3',
   )
-  const gaugeUpkeepManager = await gaugeUpkeepManagerFactory.deploy(
+  const redistributeUpkeepManager = await redistributeUpkeepManagerFactory.deploy(
     LINK_TOKEN_ADDRESS!,
     KEEPER_REGISTRY_ADDRESS!,
     AUTOMATION_REGISTRAR_ADDRESS!,
@@ -113,23 +113,23 @@ async function main() {
     BATCH_SIZE!,
     EXCLUDED_GAUGE_FACTORIES!.split(','),
   )
-  await gaugeUpkeepManager.deployed()
-  console.log('GaugeUpkeepManager deployed to:', gaugeUpkeepManager.address)
+  await redistributeUpkeepManager.deployed()
+  console.log('RedistributeUpkeepManager deployed to:', redistributeUpkeepManager.address)
 
-  // Grant watchlist manager role to GaugeUpkeepManager contract
+  // Grant watchlist manager role to RedistributeUpkeepManager contract
   await upkeepBalanceMonitor.grantWatchlistManagerRole(
-    gaugeUpkeepManager.address,
+    redistributeUpkeepManager.address,
   )
-  console.log('GaugeUpkeepManager granted watchlist manager role')
+  console.log('RedistributeUpkeepManager granted watchlist manager role')
 
-  // Transfer LINK tokens to GaugeUpkeepManager contract
+  // Transfer LINK tokens to RedistributeUpkeepManager contract
   const linkToken = await ethers.getContractAt(
     'ERC20Mintable',
     LINK_TOKEN_ADDRESS!,
   )
-  await linkToken.transfer(gaugeUpkeepManager.address, NEW_UPKEEP_FUND_AMOUNT!)
+  await linkToken.transfer(redistributeUpkeepManager.address, NEW_UPKEEP_FUND_AMOUNT!)
   console.log(
-    `Transferred ${NEW_UPKEEP_FUND_AMOUNT} LINK tokens to GaugeUpkeepManager`,
+    `Transferred ${NEW_UPKEEP_FUND_AMOUNT} LINK tokens to RedistributeUpkeepManager`,
   )
 
   // ----------------------------
@@ -168,7 +168,7 @@ async function main() {
     automationRegistrar,
     voterMock.address,
     voterMock.interface.getEventTopic('GaugeCreated'),
-    gaugeUpkeepManager.address,
+    redistributeUpkeepManager.address,
     upkeepAdmin.address,
     'Create Gauge Log Upkeep',
     LOG_UPKEEP_FUND_AMOUNT!,
@@ -185,7 +185,7 @@ async function main() {
     automationRegistrar,
     voterMock.address,
     voterMock.interface.getEventTopic('GaugeKilled'),
-    gaugeUpkeepManager.address,
+    redistributeUpkeepManager.address,
     upkeepAdmin.address,
     'Kill Gauge Log Upkeep',
     LOG_UPKEEP_FUND_AMOUNT!,
@@ -202,7 +202,7 @@ async function main() {
     automationRegistrar,
     voterMock.address,
     voterMock.interface.getEventTopic('GaugeRevived'),
-    gaugeUpkeepManager.address,
+    redistributeUpkeepManager.address,
     upkeepAdmin.address,
     'Revive Gauge Log Upkeep',
     LOG_UPKEEP_FUND_AMOUNT!,
@@ -214,14 +214,14 @@ async function main() {
     reviveGaugeLogUpkeepId.toString(),
   )
 
-  // Get trusted forwarder addresses for all upkeeps and set them in gauge upkeep manager
+  // Get trusted forwarder addresses for all upkeeps and set them in redistribute upkeep manager
   const forwarders = await Promise.all([
     keeperRegistry.getForwarder(createGaugeLogUpkeepId),
     keeperRegistry.getForwarder(killGaugeLogUpkeepId),
     keeperRegistry.getForwarder(reviveGaugeLogUpkeepId),
   ])
   for (const forwarder of forwarders) {
-    await gaugeUpkeepManager.setTrustedForwarder(forwarder, true)
+    await redistributeUpkeepManager.setTrustedForwarder(forwarder, true)
   }
   console.log('Set trusted forwarders for all upkeeps')
 
@@ -230,13 +230,13 @@ async function main() {
   // ----------------
   console.log('Registering fake gauges...')
 
-  // Register fake gauges with GaugeUpkeepManager contract
+  // Register fake gauges with RedistributeUpkeepManager contract
   const fakeGauges = Array.from(
     { length: 25 },
     () => ethers.Wallet.createRandom().address,
   )
-  await gaugeUpkeepManager.registerGauges(fakeGauges)
-  console.log('Registered fake gauges with GaugeUpkeepManager', fakeGauges)
+  await redistributeUpkeepManager.registerGauges(fakeGauges)
+  console.log('Registered fake gauges with RedistributeUpkeepManager', fakeGauges)
 
   // ----------------
   // Trigger upkeeps

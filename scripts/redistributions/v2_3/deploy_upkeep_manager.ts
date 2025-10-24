@@ -45,14 +45,14 @@ async function main() {
   // manually to make sure everything is compiled
   // await hre.run('compile');
 
-  // Deploy GaugeUpkeepManager contract
-  const gaugeUpkeepManagerFactory = await ethers.getContractFactory(
-    'GaugeUpkeepManagerV2_3',
+  // Deploy RedistributeUpkeepManager contract
+  const redistributeUpkeepManagerFactory = await ethers.getContractFactory(
+    'RedistributeUpkeepManagerV2_3',
   )
   const excludedGaugeFactories = EXCLUDED_GAUGE_FACTORIES
     ? EXCLUDED_GAUGE_FACTORIES.split(',')
     : []
-  const gaugeUpkeepManager = await gaugeUpkeepManagerFactory.deploy(
+  const redistributeUpkeepManager = await redistributeUpkeepManagerFactory.deploy(
     LINK_TOKEN_ADDRESS!,
     KEEPER_REGISTRY_ADDRESS!,
     AUTOMATION_REGISTRAR_ADDRESS!,
@@ -63,23 +63,23 @@ async function main() {
     BATCH_SIZE!,
     excludedGaugeFactories,
   )
-  await gaugeUpkeepManager.deployTransaction.wait(10)
-  await gaugeUpkeepManager.deployed()
-  console.log('GaugeUpkeepManager deployed to:', gaugeUpkeepManager.address)
+  await redistributeUpkeepManager.deployTransaction.wait(10)
+  await redistributeUpkeepManager.deployed()
+  console.log('RedistributeUpkeepManager deployed to:', redistributeUpkeepManager.address)
 
-  // Grant watchlist manager role to GaugeUpkeepManager contract
+  // Grant watchlist manager role to RedistributeUpkeepManager contract
   const upkeepBalanceMonitor = await ethers.getContractAt(
     'UpkeepBalanceMonitorV2_3',
     UPKEEP_BALANCE_MONITOR_ADDRESS!,
   )
   const tx = await upkeepBalanceMonitor.grantWatchlistManagerRole(
-    gaugeUpkeepManager.address,
+    redistributeUpkeepManager.address,
   )
   await tx.wait(10)
-  console.log('GaugeUpkeepManager granted watchlist manager role')
+  console.log('RedistributeUpkeepManager granted watchlist manager role')
 
-  // Verify GaugeUpkeepManager contract
-  await verifyContract(gaugeUpkeepManager.address, [
+  // Verify RedistributeUpkeepManager contract
+  await verifyContract(redistributeUpkeepManager.address, [
     LINK_TOKEN_ADDRESS!,
     KEEPER_REGISTRY_ADDRESS!,
     AUTOMATION_REGISTRAR_ADDRESS!,

@@ -3,7 +3,7 @@ pragma solidity 0.8.6;
 
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-contract GaugeUpkeepManagerMock {
+contract RedistributeUpkeepManagerMock {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     uint8 public batchSize = 5;

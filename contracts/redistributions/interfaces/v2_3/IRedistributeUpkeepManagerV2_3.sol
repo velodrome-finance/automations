@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import {IGaugeUpkeepManager} from "../common/IGaugeUpkeepManager.sol";
+import {IRedistributeUpkeepManager} from "../common/IRedistributeUpkeepManager.sol";
 
-interface IGaugeUpkeepManagerV2_3 is IGaugeUpkeepManager {
+interface IRedistributeUpkeepManagerV2_3 is IRedistributeUpkeepManager {
     /// @notice Keeper registry address
     function keeperRegistry() external view returns (address payable);
 }

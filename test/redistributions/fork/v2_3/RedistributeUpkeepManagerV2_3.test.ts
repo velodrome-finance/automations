@@ -11,7 +11,7 @@ import { BigNumber } from 'ethers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import {
   Voter,
-  GaugeUpkeepManagerV2_3,
+  RedistributeUpkeepManagerV2_3,
   AutomationRegistrar2_3,
   IAutomationRegistryMaster2_3,
   IERC20,
@@ -63,7 +63,7 @@ async function registerLogTriggerUpkeep(
   automationRegistrar: AutomationRegistrar2_3,
   eventSignature: string,
   voterAddress: string,
-  gaugeUpkeepManagerAddress: string,
+  redistributeUpkeepManagerAddress: string,
 ) {
   const triggerConfig = ethers.utils.defaultAbiCoder.encode(
     ['address', 'uint8', 'bytes32', 'bytes32', 'bytes32', 'bytes32'],
@@ -79,9 +79,9 @@ async function registerLogTriggerUpkeep(
   const registerTx = await automationRegistrar.registerUpkeep({
     name: 'LogTriggerUpkeep',
     encryptedEmail: '0x',
-    upkeepContract: gaugeUpkeepManagerAddress,
+    upkeepContract: redistributeUpkeepManagerAddress,
     gasLimit: 5_000_000,
-    adminAddress: gaugeUpkeepManagerAddress,
+    adminAddress: redistributeUpkeepManagerAddress,
     triggerType: 1,
     checkData: '0x',
     triggerConfig,
@@ -104,18 +104,18 @@ async function registerLogTriggerUpkeep(
 
 let snapshotId: any
 
-describe('GaugeUpkeepManagerV2_3 Script Tests', function () {
+describe('RedistributeUpkeepManagerV2_3 Script Tests', function () {
   let accounts: SignerWithAddress[]
-  let gaugeUpkeepManager: GaugeUpkeepManagerV2_3
+  let redistributeUpkeepManager: RedistributeUpkeepManagerV2_3
   let voter: Voter
   let keeperRegistry: IAutomationRegistryMaster2_3
   let linkToken: IERC20
   let createGaugeLogUpkeepId: BigNumber
   let killGaugeLogUpkeepId: BigNumber
   let reviveGaugeLogUpkeepId: BigNumber
-  let gaugeUpkeepId: BigNumber
+  let redistributeUpkeepId: BigNumber
   let gaugeAddress: string
-  let gaugeUpkeepAddress: string
+  let redistributeUpkeepAddress: string
 
   const batchSize = 5
   const newUpkeepGasLimit = 1e6
@@ -154,11 +154,11 @@ describe('GaugeUpkeepManagerV2_3 Script Tests', function () {
         maxIterations: 10,
       },
     )
-    // setup gauge upkeep manager
-    const gaugeUpkeepManagerFactory = await ethers.getContractFactory(
-      'GaugeUpkeepManagerV2_3',
+    // setup redistribute upkeep manager
+    const redistributeUpkeepManagerFactory = await ethers.getContractFactory(
+      'RedistributeUpkeepManagerV2_3',
     )
-    gaugeUpkeepManager = await gaugeUpkeepManagerFactory.deploy(
+    redistributeUpkeepManager = await redistributeUpkeepManagerFactory.deploy(
       linkToken.address,
       keeperRegistry.address,
       automationRegistrar.address,
@@ -169,9 +169,9 @@ describe('GaugeUpkeepManagerV2_3 Script Tests', function () {
       batchSize,
       EXCLUDED_GAUGE_FACTORIES,
     )
-    // set gauge upkeep manager as watch list manager in balance monitor
+    // set redistribute upkeep manager as watch list manager in balance monitor
     await upkeepBalanceMonitor.grantWatchlistManagerRole(
-      gaugeUpkeepManager.address,
+      redistributeUpkeepManager.address,
     )
     // transfer link tokens to deployer
     await impersonateAccount(LINK_HOLDER_ADDRESS)
@@ -185,9 +185,9 @@ describe('GaugeUpkeepManagerV2_3 Script Tests', function () {
       from: LINK_HOLDER_ADDRESS,
     })
     await stopImpersonatingAccount(LINK_HOLDER_ADDRESS)
-    // transfer link tokens to gauge upkeep manager
+    // transfer link tokens to redistribute upkeep manager
     await linkToken.transfer(
-      gaugeUpkeepManager.address,
+      redistributeUpkeepManager.address,
       ethers.utils.parseEther('50'),
     )
     // transfer link tokens to upkeep balance monitor
@@ -222,28 +222,28 @@ describe('GaugeUpkeepManagerV2_3 Script Tests', function () {
       automationRegistrar,
       voter.interface.getEventTopic('GaugeCreated'),
       voter.address,
-      gaugeUpkeepManager.address,
+      redistributeUpkeepManager.address,
     )
     killGaugeLogUpkeepId = await registerLogTriggerUpkeep(
       automationRegistrar,
       voter.interface.getEventTopic('GaugeKilled'),
       voter.address,
-      gaugeUpkeepManager.address,
+      redistributeUpkeepManager.address,
     )
     reviveGaugeLogUpkeepId = await registerLogTriggerUpkeep(
       automationRegistrar,
       voter.interface.getEventTopic('GaugeRevived'),
       voter.address,
-      gaugeUpkeepManager.address,
+      redistributeUpkeepManager.address,
     )
-    // get tursted forwarder addresses of all upkeeps and set them in gauge upkeep manager
+    // get trusted forwarder addresses of all upkeeps and set them in redistribute upkeep manager
     const forwarders = await Promise.all([
       keeperRegistry.getForwarder(createGaugeLogUpkeepId),
       keeperRegistry.getForwarder(killGaugeLogUpkeepId),
       keeperRegistry.getForwarder(reviveGaugeLogUpkeepId),
     ])
     for (const forwarder of forwarders) {
-      await gaugeUpkeepManager.setTrustedForwarder(forwarder, true)
+      await redistributeUpkeepManager.setTrustedForwarder(forwarder, true)
     }
   })
 
@@ -252,7 +252,7 @@ describe('GaugeUpkeepManagerV2_3 Script Tests', function () {
     await network.provider.send('evm_revert', [snapshotId])
   })
 
-  it('Gauge upkeep registration flow', async () => {
+  it('Redistribute upkeep registration flow', async () => {
     // create gauge via voter
     const voterGovernor = await voter.governor()
     await accounts[0].sendTransaction({
@@ -290,7 +290,7 @@ describe('GaugeUpkeepManagerV2_3 Script Tests', function () {
       topics: gaugeCreatedLog.topics,
       data: gaugeCreatedLog.data,
     }
-    const checkLogResult = await gaugeUpkeepManager.callStatic.checkLog(
+    const checkLogResult = await redistributeUpkeepManager.callStatic.checkLog(
       triggerLog,
       HashZero,
     )
@@ -313,78 +313,78 @@ describe('GaugeUpkeepManagerV2_3 Script Tests', function () {
     // check if gauge is registered
     const gaugeRegisteredLog = findLog(
       performReceipt,
-      gaugeUpkeepManager.interface.getEventTopic('GaugeRegistered'),
+      redistributeUpkeepManager.interface.getEventTopic('GaugeRegistered'),
     )
     const { gauge: registeredGauge } =
-      gaugeUpkeepManager.interface.parseLog(gaugeRegisteredLog).args
+      redistributeUpkeepManager.interface.parseLog(gaugeRegisteredLog).args
 
     expect(registeredGauge).to.equal(gaugeAddress)
-    expect(await gaugeUpkeepManager.gaugeList(0, 1)).to.include(gaugeAddress)
+    expect(await redistributeUpkeepManager.gaugeList(0, 1)).to.include(gaugeAddress)
 
-    // check if gauge upkeep is registered
-    const gaugeUpkeepCreatedLog = findLog(
+    // check if redistribute upkeep is registered
+    const redistributeUpkeepCreatedLog = findLog(
       performReceipt,
-      gaugeUpkeepManager.interface.getEventTopic('GaugeUpkeepRegistered'),
+      redistributeUpkeepManager.interface.getEventTopic('RedistributeUpkeepRegistered'),
     )
-    const { gaugeUpkeep, upkeepId } = gaugeUpkeepManager.interface.parseLog(
-      gaugeUpkeepCreatedLog,
+    const { redistributeUpkeep, upkeepId } = redistributeUpkeepManager.interface.parseLog(
+      redistributeUpkeepCreatedLog,
     ).args
 
-    expect(gaugeUpkeep).to.be.properAddress
-    expect(await gaugeUpkeepManager.upkeepIds(0)).to.equal(upkeepId)
+    expect(redistributeUpkeep).to.be.properAddress
+    expect(await redistributeUpkeepManager.upkeepIds(0)).to.equal(upkeepId)
 
-    // set gauge upkeep address and id
-    gaugeUpkeepAddress = gaugeUpkeep
-    gaugeUpkeepId = upkeepId
+    // set redistribute upkeep address and id
+    redistributeUpkeepAddress = redistributeUpkeep
+    redistributeUpkeepId = upkeepId
   })
 
-  it('Gauge upkeep execution flow', async () => {
-    // attach to gauge upkeep contract
-    const gaugeUpkeep = await ethers.getContractAt(
-      'GaugeUpkeep',
-      gaugeUpkeepAddress,
+  it('Redistribute upkeep execution flow', async () => {
+    // attach to redistribute upkeep contract
+    const redistributeUpkeep = await ethers.getContractAt(
+      'RedistributeUpkeep',
+      redistributeUpkeepAddress,
     )
 
     // get latest block timestamp
     const latestBlockTimestamp = await time.latest()
     const latestDate = new Date(latestBlockTimestamp * 1000)
 
-    // gauge upkeep should not be needed before epoch time
+    // redistribute upkeep should not be needed before epoch time
     const beforeEpochFlip = getNextEpochUTC(latestDate).getTime() / 1000 - 100
     await time.increaseTo(beforeEpochFlip)
 
-    const [gaugeUpkeepNeeded, gaugeUpkeepPerformData] =
-      await gaugeUpkeep.callStatic.checkUpkeep(HashZero)
+    const [redistributeUpkeepNeeded, redistributeUpkeepPerformData] =
+      await redistributeUpkeep.callStatic.checkUpkeep(HashZero)
 
-    expect(gaugeUpkeepNeeded).to.be.false
-    expect(gaugeUpkeepPerformData).to.equal('0x')
+    expect(redistributeUpkeepNeeded).to.be.false
+    expect(redistributeUpkeepPerformData).to.equal('0x')
 
-    // gauge upkeep should be needed after epoch time
+    // redistribute upkeep should be needed after epoch time
     const afterEpochFlip = getNextEpochUTC(latestDate).getTime() / 1000
     await time.increaseTo(afterEpochFlip)
 
-    const [gaugeUpkeepNeededAfter, gaugeUpkeepPerformDataAfter] =
-      await gaugeUpkeep.callStatic.checkUpkeep(HashZero)
+    const [redistributeUpkeepNeededAfter, redistributeUpkeepPerformDataAfter] =
+      await redistributeUpkeep.callStatic.checkUpkeep(HashZero)
 
-    expect(gaugeUpkeepNeededAfter).to.be.true
-    expect(gaugeUpkeepPerformDataAfter).to.equal('0x')
+    expect(redistributeUpkeepNeededAfter).to.be.true
+    expect(redistributeUpkeepPerformDataAfter).to.equal('0x')
 
-    // perform gauge upkeep via KeeperRegistry
+    // perform redistribute upkeep via KeeperRegistry
     const { receipt: performReceipt } = await simulatePerformUpkeep(
       keeperRegistry,
-      gaugeUpkeepId,
-      gaugeUpkeepPerformDataAfter,
+      redistributeUpkeepId,
+      redistributeUpkeepPerformDataAfter,
     )
 
-    // check if gauge upkeep is successfully executed
+    // check if redistribute upkeep is successfully executed
     const upkeepPerformedLog = findLog(
       performReceipt,
-      gaugeUpkeep.interface.getEventTopic('GaugeUpkeepPerformed'),
+      redistributeUpkeep.interface.getEventTopic('RedistributeUpkeepPerformed'),
     )
     expect(upkeepPerformedLog).to.exist
   })
 
-  it('Gauge upkeep cancellation flow', async () => {
+  it('Redistribute upkeep cancellation flow', async () => {
     // impersonate voter emergency council and kill gauge
     const voterEmergencyCouncil = await voter.emergencyCouncil()
     await accounts[0].sendTransaction({
@@ -421,7 +421,7 @@ describe('GaugeUpkeepManagerV2_3 Script Tests', function () {
       topics: gaugeKilledLog.topics,
       data: gaugeKilledLog.data,
     }
-    const checkLogResult = await gaugeUpkeepManager.callStatic.checkLog(
+    const checkLogResult = await redistributeUpkeepManager.callStatic.checkLog(
       triggerLog,
       HashZero,
     )
@@ -434,8 +434,8 @@ describe('GaugeUpkeepManagerV2_3 Script Tests', function () {
       ),
     )
 
-    // check if gauge upkeep is active
-    const upkeepDetailsBefore = await keeperRegistry.getUpkeep(gaugeUpkeepId)
+    // check if redistribute upkeep is active
+    const upkeepDetailsBefore = await keeperRegistry.getUpkeep(redistributeUpkeepId)
     expect(upkeepDetailsBefore.maxValidBlocknumber).to.equal(MAX_UINT32)
 
     // call performUpkeep with cancel perform data via KeeperRegistry
@@ -448,65 +448,65 @@ describe('GaugeUpkeepManagerV2_3 Script Tests', function () {
     // check if gauge is removed
     const gaugeDeregisteredLog = findLog(
       performReceipt,
-      gaugeUpkeepManager.interface.getEventTopic('GaugeDeregistered'),
+      redistributeUpkeepManager.interface.getEventTopic('GaugeDeregistered'),
     )
     const { gauge: deregisteredGauge } =
-      gaugeUpkeepManager.interface.parseLog(gaugeDeregisteredLog).args
+      redistributeUpkeepManager.interface.parseLog(gaugeDeregisteredLog).args
 
     expect(deregisteredGauge).to.equal(gaugeAddress)
-    expect(await gaugeUpkeepManager.gaugeList(0, 1)).to.not.include(
+    expect(await redistributeUpkeepManager.gaugeList(0, 1)).to.not.include(
       gaugeAddress,
     )
 
-    // check if gauge upkeep is cancelled
-    const gaugeUpkeepCancelledLog = findLog(
+    // check if redistribute upkeep is cancelled
+    const redistributeUpkeepCancelledLog = findLog(
       performReceipt,
-      gaugeUpkeepManager.interface.getEventTopic('GaugeUpkeepCancelled'),
+      redistributeUpkeepManager.interface.getEventTopic('RedistributeUpkeepCancelled'),
     )
     const { upkeepId: cancelledUpkeepId } =
-      gaugeUpkeepManager.interface.parseLog(gaugeUpkeepCancelledLog).args
-    const upkeepDetailsAfter = await keeperRegistry.getUpkeep(gaugeUpkeepId)
+      redistributeUpkeepManager.interface.parseLog(redistributeUpkeepCancelledLog).args
+    const upkeepDetailsAfter = await keeperRegistry.getUpkeep(redistributeUpkeepId)
 
-    expect(cancelledUpkeepId).to.equal(gaugeUpkeepId)
+    expect(cancelledUpkeepId).to.equal(redistributeUpkeepId)
     expect(upkeepDetailsAfter.maxValidBlocknumber).to.not.equal(MAX_UINT32)
 
     // check if upkeep is included in cancelledUpkeeps set
-    expect(await gaugeUpkeepManager.cancelledUpkeeps(0, 1)).to.deep.include(
+    expect(await redistributeUpkeepManager.cancelledUpkeeps(0, 1)).to.deep.include(
       cancelledUpkeepId,
     )
   })
 
-  it('Gauge upkeep withdrawal flow', async () => {
+  it('Redistribute upkeep withdrawal flow', async () => {
     // wait for cancellation delay after upkeep is cancelled so that it can be withdrawn
     await mine(UPKEEP_CANCELLATION_DELAY)
 
-    const gaugeUpkeepManagerBalanceBefore = await linkToken.balanceOf(
-      gaugeUpkeepManager.address,
+    const redistributeUpkeepManagerBalanceBefore = await linkToken.balanceOf(
+      redistributeUpkeepManager.address,
     )
-    const upkeepDetailsBefore = await keeperRegistry.getUpkeep(gaugeUpkeepId)
+    const upkeepDetailsBefore = await keeperRegistry.getUpkeep(redistributeUpkeepId)
 
-    // withdraw upkeep balance via GaugeUpkeepManager
-    const withdrawTx = await gaugeUpkeepManager.withdrawCancelledUpkeeps(0, 1)
+    // withdraw upkeep balance via RedistributeUpkeepManager
+    const withdrawTx = await redistributeUpkeepManager.withdrawCancelledUpkeeps(0, 1)
     const withdrawReceipt = await withdrawTx.wait()
 
-    // check if gauge upkeep is withdrawn
-    const gaugeUpkeepWithdrawnLog = findLog(
+    // check if redistribute upkeep is withdrawn
+    const redistributeUpkeepWithdrawnLog = findLog(
       withdrawReceipt,
-      gaugeUpkeepManager.interface.getEventTopic('GaugeUpkeepWithdrawn'),
+      redistributeUpkeepManager.interface.getEventTopic('RedistributeUpkeepWithdrawn'),
     )
     const { upkeepId: withdrawnUpkeepId } =
-      gaugeUpkeepManager.interface.parseLog(gaugeUpkeepWithdrawnLog).args
-    const gaugeUpkeepManagerBalanceAfter = await linkToken.balanceOf(
-      gaugeUpkeepManager.address,
+      redistributeUpkeepManager.interface.parseLog(redistributeUpkeepWithdrawnLog).args
+    const redistributeUpkeepManagerBalanceAfter = await linkToken.balanceOf(
+      redistributeUpkeepManager.address,
     )
 
-    expect(withdrawnUpkeepId).to.equal(gaugeUpkeepId)
-    expect(gaugeUpkeepManagerBalanceAfter).to.equal(
-      gaugeUpkeepManagerBalanceBefore.add(upkeepDetailsBefore.balance),
+    expect(withdrawnUpkeepId).to.equal(redistributeUpkeepId)
+    expect(redistributeUpkeepManagerBalanceAfter).to.equal(
+      redistributeUpkeepManagerBalanceBefore.add(upkeepDetailsBefore.balance),
     )
   })
 
-  it('Gauge upkeep revival flow', async () => {
+  it('Redistribute upkeep revival flow', async () => {
     // impersonate voter emergency council and revive gauge
     const voterEmergencyCouncil = await voter.emergencyCouncil()
     await accounts[0].sendTransaction({
@@ -545,7 +545,7 @@ describe('GaugeUpkeepManagerV2_3 Script Tests', function () {
       topics: gaugeRevivedLog.topics,
       data: gaugeRevivedLog.data,
     }
-    const checkLogResult = await gaugeUpkeepManager.callStatic.checkLog(
+    const checkLogResult = await redistributeUpkeepManager.callStatic.checkLog(
       triggerLog,
       HashZero,
     )
@@ -568,36 +568,36 @@ describe('GaugeUpkeepManagerV2_3 Script Tests', function () {
     // check if gauge is registered again
     const gaugeRegisteredLog = findLog(
       performReceipt,
-      gaugeUpkeepManager.interface.getEventTopic('GaugeRegistered'),
+      redistributeUpkeepManager.interface.getEventTopic('GaugeRegistered'),
     )
     const { gauge: registeredGauge } =
-      gaugeUpkeepManager.interface.parseLog(gaugeRegisteredLog).args
+      redistributeUpkeepManager.interface.parseLog(gaugeRegisteredLog).args
 
     expect(registeredGauge).to.equal(gaugeAddress)
-    expect(await gaugeUpkeepManager.gaugeList(0, 1)).to.include(gaugeAddress)
+    expect(await redistributeUpkeepManager.gaugeList(0, 1)).to.include(gaugeAddress)
 
-    // check if gauge upkeep is registered again
-    const gaugeUpkeepCreatedLog = findLog(
+    // check if redistribute upkeep is registered again
+    const redistributeUpkeepCreatedLog = findLog(
       performReceipt,
-      gaugeUpkeepManager.interface.getEventTopic('GaugeUpkeepRegistered'),
+      redistributeUpkeepManager.interface.getEventTopic('RedistributeUpkeepRegistered'),
     )
-    const { gaugeUpkeep, upkeepId } = gaugeUpkeepManager.interface.parseLog(
-      gaugeUpkeepCreatedLog,
+    const { redistributeUpkeep, upkeepId } = redistributeUpkeepManager.interface.parseLog(
+      redistributeUpkeepCreatedLog,
     ).args
 
-    expect(gaugeUpkeep).to.be.properAddress
-    expect(await gaugeUpkeepManager.upkeepIds(0)).to.equal(upkeepId)
+    expect(redistributeUpkeep).to.be.properAddress
+    expect(await redistributeUpkeepManager.upkeepIds(0)).to.equal(upkeepId)
   })
 
   it('Withdraw contract LINK balance', async () => {
     const ownerBalanceBefore = await linkToken.balanceOf(accounts[0].address)
     const contractBalanceBefore = await linkToken.balanceOf(
-      gaugeUpkeepManager.address,
+      redistributeUpkeepManager.address,
     )
-    await gaugeUpkeepManager.withdrawLinkBalance()
+    await redistributeUpkeepManager.withdrawLinkBalance()
     const ownerBalanceAfter = await linkToken.balanceOf(accounts[0].address)
     const contractBalanceAfter = await linkToken.balanceOf(
-      gaugeUpkeepManager.address,
+      redistributeUpkeepManager.address,
     )
 
     expect(contractBalanceAfter).to.equal(0)

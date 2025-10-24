@@ -2,43 +2,43 @@
 pragma solidity 0.8.6;
 
 import {IVoter} from "../../vendor/velodrome-contracts/contracts/interfaces/IVoter.sol";
-import {IGaugeUpkeepManager} from "./interfaces/common/IGaugeUpkeepManager.sol";
-import {IGaugeUpkeep} from "./interfaces/IGaugeUpkeep.sol";
+import {IRedistributeUpkeepManager} from "./interfaces/common/IRedistributeUpkeepManager.sol";
+import {IRedistributeUpkeep} from "./interfaces/IRedistributeUpkeep.sol";
 
-contract GaugeUpkeep is IGaugeUpkeep {
-    /// @inheritdoc IGaugeUpkeep
+contract RedistributeUpkeep is IRedistributeUpkeep {
+    /// @inheritdoc IRedistributeUpkeep
     address public immutable override voter;
-    /// @inheritdoc IGaugeUpkeep
-    address public immutable override gaugeUpkeepManager;
-    /// @inheritdoc IGaugeUpkeep
+    /// @inheritdoc IRedistributeUpkeep
+    address public immutable override redistributeUpkeepManager;
+    /// @inheritdoc IRedistributeUpkeep
     uint256 public immutable override startIndex;
-    /// @inheritdoc IGaugeUpkeep
+    /// @inheritdoc IRedistributeUpkeep
     uint256 public immutable override endIndex;
 
-    /// @inheritdoc IGaugeUpkeep
+    /// @inheritdoc IRedistributeUpkeep
     uint256 public override currentIndex;
-    /// @inheritdoc IGaugeUpkeep
+    /// @inheritdoc IRedistributeUpkeep
     uint256 public override lastEpochFlip;
 
     uint256 private constant WEEK = 7 days;
 
     constructor(address _voter, uint256 _startIndex, uint256 _endIndex) {
         voter = _voter;
-        gaugeUpkeepManager = msg.sender;
+        redistributeUpkeepManager = msg.sender;
         startIndex = _startIndex;
         endIndex = _endIndex;
         currentIndex = _startIndex;
         lastEpochFlip = _lastEpochFlip();
     }
 
-    /// @inheritdoc IGaugeUpkeep
+    /// @inheritdoc IRedistributeUpkeep
     function performUpkeep(bytes calldata) external override {
         uint256 _currentIndex = currentIndex;
         uint256 _endIndex = _adjustedEndIndex();
 
         if (!_checkUpkeep(_currentIndex, _endIndex)) revert UpkeepNotNeeded();
 
-        uint256 nextIndex = _currentIndex + IGaugeUpkeepManager(gaugeUpkeepManager).batchSize();
+        uint256 nextIndex = _currentIndex + IRedistributeUpkeepManager(redistributeUpkeepManager).batchSize();
         nextIndex = nextIndex > _endIndex ? _endIndex : nextIndex;
 
         _distributeBatch(_currentIndex, nextIndex);
@@ -49,16 +49,16 @@ contract GaugeUpkeep is IGaugeUpkeep {
             currentIndex = startIndex;
             lastEpochFlip = _lastEpochFlip();
         }
-        emit GaugeUpkeepPerformed(_currentIndex, nextIndex);
+        emit RedistributeUpkeepPerformed(_currentIndex, nextIndex);
     }
 
-    /// @inheritdoc IGaugeUpkeep
+    /// @inheritdoc IRedistributeUpkeep
     function checkUpkeep(bytes calldata) external view override returns (bool _upkeepNeeded, bytes memory) {
         _upkeepNeeded = _checkUpkeep(currentIndex, _adjustedEndIndex());
     }
 
     function _distributeBatch(uint256 _startIndex, uint256 _endIndex) internal {
-        address[] memory gauges = IGaugeUpkeepManager(gaugeUpkeepManager).gaugeList(_startIndex, _endIndex);
+        address[] memory gauges = IRedistributeUpkeepManager(redistributeUpkeepManager).gaugeList(_startIndex, _endIndex);
 
         uint256 length = gauges.length;
         address[] memory singleGauge = new address[](1);
@@ -80,7 +80,7 @@ contract GaugeUpkeep is IGaugeUpkeep {
     }
 
     function _adjustedEndIndex() internal view returns (uint256) {
-        uint256 gaugeCount = IGaugeUpkeepManager(gaugeUpkeepManager).gaugeCount();
+        uint256 gaugeCount = IRedistributeUpkeepManager(redistributeUpkeepManager).gaugeCount();
         return gaugeCount < endIndex ? gaugeCount : endIndex;
     }
 }

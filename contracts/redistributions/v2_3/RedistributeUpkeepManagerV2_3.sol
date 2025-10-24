@@ -6,16 +6,16 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {IAutomationRegistryMaster2_3} from "@chainlink/contracts/src/v0.8/automation/interfaces/v2_3/IAutomationRegistryMaster2_3.sol";
 import {IAutomationRegistrarV2_3} from "../../interfaces/v2_3/IAutomationRegistrarV2_3.sol";
-import {IGaugeUpkeepManagerV2_3} from "../interfaces/v2_3/IGaugeUpkeepManagerV2_3.sol";
+import {IRedistributeUpkeepManagerV2_3} from "../interfaces/v2_3/IRedistributeUpkeepManagerV2_3.sol";
 import {IUpkeepBalanceMonitorV2_3} from "../../interfaces/v2_3/IUpkeepBalanceMonitorV2_3.sol";
-import {GaugeUpkeepManager} from "../common/GaugeUpkeepManager.sol";
-import {GaugeUpkeep} from "../GaugeUpkeep.sol";
+import {RedistributeUpkeepManager} from "../common/RedistributeUpkeepManager.sol";
+import {RedistributeUpkeep} from "../RedistributeUpkeep.sol";
 
-contract GaugeUpkeepManagerV2_3 is GaugeUpkeepManager, IGaugeUpkeepManagerV2_3 {
+contract RedistributeUpkeepManagerV2_3 is RedistributeUpkeepManager, IRedistributeUpkeepManagerV2_3 {
     using SafeERC20 for IERC20;
     using EnumerableSet for EnumerableSet.UintSet;
 
-    /// @inheritdoc IGaugeUpkeepManagerV2_3
+    /// @inheritdoc IRedistributeUpkeepManagerV2_3
     address payable public immutable override keeperRegistry;
 
     constructor(
@@ -29,7 +29,7 @@ contract GaugeUpkeepManagerV2_3 is GaugeUpkeepManager, IGaugeUpkeepManagerV2_3 {
         uint8 _batchSize,
         address[] memory _excludedGaugeFactories
     )
-        GaugeUpkeepManager(
+        RedistributeUpkeepManager(
             _linkToken,
             _automationRegistrar,
             _upkeepBalanceMonitor,
@@ -43,14 +43,14 @@ contract GaugeUpkeepManagerV2_3 is GaugeUpkeepManager, IGaugeUpkeepManagerV2_3 {
         keeperRegistry = _keeperRegistry;
     }
 
-    function _registerGaugeUpkeep() internal override {
+    function _registerRedistributeUpkeep() internal override {
         uint256 startIndex = _getNextUpkeepStartIndex(upkeepIds.length);
         uint256 endIndex = startIndex + GAUGES_PER_UPKEEP;
-        address gaugeUpkeep = address(new GaugeUpkeep(voter, startIndex, endIndex));
+        address redistributeUpkeep = address(new RedistributeUpkeep(voter, startIndex, endIndex));
         IAutomationRegistrarV2_3.RegistrationParams memory params = IAutomationRegistrarV2_3.RegistrationParams({
             name: UPKEEP_NAME,
             encryptedEmail: "",
-            upkeepContract: gaugeUpkeep,
+            upkeepContract: redistributeUpkeep,
             gasLimit: newUpkeepGasLimit,
             adminAddress: address(this),
             triggerType: CONDITIONAL_TRIGGER_TYPE,
@@ -63,7 +63,7 @@ contract GaugeUpkeepManagerV2_3 is GaugeUpkeepManager, IGaugeUpkeepManagerV2_3 {
         uint256 upkeepId = _registerUpkeep(params);
         upkeepIds.push(upkeepId);
         IUpkeepBalanceMonitorV2_3(upkeepBalanceMonitor).addToWatchList(upkeepId);
-        emit GaugeUpkeepRegistered(gaugeUpkeep, upkeepId, startIndex, endIndex);
+        emit RedistributeUpkeepRegistered(redistributeUpkeep, upkeepId, startIndex, endIndex);
     }
 
     function _registerUpkeep(IAutomationRegistrarV2_3.RegistrationParams memory _params) internal returns (uint256) {
@@ -76,17 +76,17 @@ contract GaugeUpkeepManagerV2_3 is GaugeUpkeepManager, IGaugeUpkeepManagerV2_3 {
         }
     }
 
-    function _cancelGaugeUpkeep(uint256 _upkeepId) internal override {
+    function _cancelRedistributeUpkeep(uint256 _upkeepId) internal override {
         upkeepIds.pop();
         _cancelledUpkeepIds.add(_upkeepId);
         IUpkeepBalanceMonitorV2_3(upkeepBalanceMonitor).removeFromWatchList(_upkeepId);
         IAutomationRegistryMaster2_3(keeperRegistry).cancelUpkeep(_upkeepId);
-        emit GaugeUpkeepCancelled(_upkeepId);
+        emit RedistributeUpkeepCancelled(_upkeepId);
     }
 
     function _withdrawUpkeep(uint256 _upkeepId) internal override {
         _cancelledUpkeepIds.remove(_upkeepId);
         IAutomationRegistryMaster2_3(keeperRegistry).withdrawFunds(_upkeepId, address(this));
-        emit GaugeUpkeepWithdrawn(_upkeepId);
+        emit RedistributeUpkeepWithdrawn(_upkeepId);
     }
 }

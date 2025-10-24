@@ -6,18 +6,18 @@
 import { ethers } from 'hardhat'
 import * as assert from 'assert'
 import * as dotenv from 'dotenv'
-import { IGaugeUpkeepManager } from '../../typechain-types'
+import { IRedistributeUpkeepManager } from '../../typechain-types'
 
 // Load environment variables
 dotenv.config()
 
-const GAUGE_UPKEEP_MANAGER_ADDRESS = process.env.GAUGE_UPKEEP_MANAGER_ADDRESS
+const REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS = process.env.REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS
 const PERFORM_UPKEEP_ACTION = process.env.PERFORM_UPKEEP_ACTION
 const PERFORM_UPKEEP_GAUGE_ADDRESS = process.env.PERFORM_UPKEEP_GAUGE_ADDRESS
 
 assert.ok(
-  GAUGE_UPKEEP_MANAGER_ADDRESS,
-  'GAUGE_UPKEEP_MANAGER_ADDRESS is required',
+  REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS,
+  'REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS is required',
 )
 assert.ok(PERFORM_UPKEEP_ACTION, 'PERFORM_UPKEEP_ACTION is required')
 assert.ok(
@@ -31,7 +31,7 @@ enum PerformAction {
 }
 
 async function performUpkeep(
-  gaugeUpkeepManager: IGaugeUpkeepManager,
+  redistributeUpkeepManager: IRedistributeUpkeepManager,
   performAction: PerformAction,
   gaugeAddress: string,
 ) {
@@ -40,7 +40,7 @@ async function performUpkeep(
     ['uint8', 'address'],
     [performAction, gaugeAddress],
   )
-  return gaugeUpkeepManager.performUpkeep(performData)
+  return redistributeUpkeepManager.performUpkeep(performData)
 }
 
 async function main() {
@@ -51,12 +51,12 @@ async function main() {
   // manually to make sure everything is compiled
   // await hre.run('compile');
 
-  const gaugeUpkeepManager: IGaugeUpkeepManager = await ethers.getContractAt(
-    'IGaugeUpkeepManager',
-    GAUGE_UPKEEP_MANAGER_ADDRESS!,
+  const redistributeUpkeepManager: IRedistributeUpkeepManager = await ethers.getContractAt(
+    'IRedistributeUpkeepManager',
+    REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS!,
   )
 
-  console.log('Performing GaugeUpkeepManager upkeep...')
+  console.log('Performing RedistributeUpkeepManager upkeep...')
   console.log('Performing action:', PERFORM_UPKEEP_ACTION!)
   console.log('Performing gauge address:', PERFORM_UPKEEP_GAUGE_ADDRESS!)
 
@@ -68,7 +68,7 @@ async function main() {
   }
 
   const tx = await performUpkeep(
-    gaugeUpkeepManager,
+    redistributeUpkeepManager,
     performAction,
     PERFORM_UPKEEP_GAUGE_ADDRESS!,
   )

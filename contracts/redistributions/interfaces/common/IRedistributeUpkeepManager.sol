@@ -3,17 +3,17 @@ pragma solidity 0.8.6;
 
 import {Log} from "@chainlink/contracts/src/v0.8/automation/interfaces/ILogAutomation.sol";
 
-interface IGaugeUpkeepManager {
+interface IRedistributeUpkeepManager {
     event GaugeRegistered(address indexed gauge);
     event GaugeDeregistered(address indexed gauge);
-    event GaugeUpkeepRegistered(
-        address indexed gaugeUpkeep,
+    event RedistributeUpkeepRegistered(
+        address indexed redistributeUpkeep,
         uint256 indexed upkeepId,
         uint256 indexed startIndex,
         uint256 endIndex
     );
-    event GaugeUpkeepCancelled(uint256 indexed upkeepId);
-    event GaugeUpkeepWithdrawn(uint256 indexed upkeepId);
+    event RedistributeUpkeepCancelled(uint256 indexed upkeepId);
+    event RedistributeUpkeepWithdrawn(uint256 indexed upkeepId);
     event BatchSizeSet(uint8 batchSize);
     event NewUpkeepGasLimitSet(uint32 newUpkeepGasLimit);
     event NewUpkeepFundAmountSet(uint96 newUpkeepFundAmount);
@@ -30,8 +30,8 @@ interface IGaugeUpkeepManager {
     error NotGauge(address gauge);
     error GaugeNotAlive(address gauge);
     error GaugeNotAllowed(address gauge);
-    error GaugeUpkeepExists(address gauge);
-    error GaugeUpkeepNotFound(address gauge);
+    error RedistributeUpkeepExists(address gauge);
+    error RedistributeUpkeepNotFound(address gauge);
     error InvalidBatchSize();
     error InvalidIndex();
 
@@ -100,11 +100,11 @@ interface IGaugeUpkeepManager {
     /// @notice Transfer contract LINK balance to owner
     function withdrawLinkBalance() external;
 
-    /// @notice Update the gas limit for new gauge upkeeps
+    /// @notice Update the gas limit for new redistribute upkeeps
     /// @param _newUpkeepGasLimit New upkeep gas limit
     function setNewUpkeepGasLimit(uint32 _newUpkeepGasLimit) external;
 
-    /// @notice Update the LINK amount to transfer to new gauge upkeeps
+    /// @notice Update the LINK amount to transfer to new redistribute upkeeps
     /// @param _newUpkeepFundAmount New upkeep fund amount
     function setNewUpkeepFundAmount(uint96 _newUpkeepFundAmount) external;
 
@@ -146,8 +146,8 @@ interface IGaugeUpkeepManager {
     /// @return Number of gauges
     function gaugeCount() external view returns (uint256);
 
-    /// @notice Gets the number of registered gauge upkeeps
-    /// @return Number of gauge upkeeps
+    /// @notice Gets the number of registered redistribute upkeeps
+    /// @return Number of redistribute upkeeps
     function upkeepCount() external view returns (uint256);
 
     /// @notice Gets a range of cancelled upkeeps pending withdrawal
