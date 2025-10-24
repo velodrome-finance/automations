@@ -13,7 +13,8 @@ import { IRedistributeUpkeepManager } from '../../typechain-types'
 // Load environment variables
 dotenv.config()
 
-const REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS = process.env.REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS
+const REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS =
+  process.env.REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS
 
 assert.ok(
   REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS,
@@ -40,11 +41,15 @@ async function registerGauges(
     const upkeepRegisteredEvents = receipt.events?.filter(
       (event) =>
         event.topics[0] ===
-        redistributeUpkeepManager.interface.getEventTopic('RedistributeUpkeepRegistered'),
+        redistributeUpkeepManager.interface.getEventTopic(
+          'RedistributeUpkeepRegistered',
+        ),
     )
     const newUpkeepIds =
       upkeepRegisteredEvents?.map((event) =>
-        redistributeUpkeepManager.interface.parseLog(event).args.upkeepId.toString(),
+        redistributeUpkeepManager.interface
+          .parseLog(event)
+          .args.upkeepId.toString(),
       ) || []
     console.log('New upkeep IDs:', newUpkeepIds)
     upkeepIds.push(...newUpkeepIds)
@@ -87,16 +92,20 @@ async function main() {
   // manually to make sure everything is compiled
   // await hre.run('compile');
 
-  const redistributeUpkeepManager: IRedistributeUpkeepManager = await ethers.getContractAt(
-    'IRedistributeUpkeepManager',
-    REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS!,
-  )
+  const redistributeUpkeepManager: IRedistributeUpkeepManager =
+    await ethers.getContractAt(
+      'IRedistributeUpkeepManager',
+      REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS!,
+    )
   const gauges = readGauges()
   if (gauges.length === 0) {
     throw new Error('No gauges found')
   }
   console.log('Registering gauges...')
-  const upkeepIds: string[] = await registerGauges(redistributeUpkeepManager, gauges)
+  const upkeepIds: string[] = await registerGauges(
+    redistributeUpkeepManager,
+    gauges,
+  )
   logUpkeeps(upkeepIds)
 }
 

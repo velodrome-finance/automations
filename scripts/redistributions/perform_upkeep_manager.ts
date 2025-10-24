@@ -11,7 +11,8 @@ import { IRedistributeUpkeepManager } from '../../typechain-types'
 // Load environment variables
 dotenv.config()
 
-const REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS = process.env.REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS
+const REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS =
+  process.env.REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS
 const PERFORM_UPKEEP_ACTION = process.env.PERFORM_UPKEEP_ACTION
 const PERFORM_UPKEEP_GAUGE_ADDRESS = process.env.PERFORM_UPKEEP_GAUGE_ADDRESS
 
@@ -51,10 +52,11 @@ async function main() {
   // manually to make sure everything is compiled
   // await hre.run('compile');
 
-  const redistributeUpkeepManager: IRedistributeUpkeepManager = await ethers.getContractAt(
-    'IRedistributeUpkeepManager',
-    REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS!,
-  )
+  const redistributeUpkeepManager: IRedistributeUpkeepManager =
+    await ethers.getContractAt(
+      'IRedistributeUpkeepManager',
+      REDISTRIBUTE_UPKEEP_MANAGER_ADDRESS!,
+    )
 
   console.log('Performing RedistributeUpkeepManager upkeep...')
   console.log('Performing action:', PERFORM_UPKEEP_ACTION!)

@@ -102,19 +102,23 @@ async function main() {
   const redistributeUpkeepManagerFactory = await ethers.getContractFactory(
     'RedistributeUpkeepManagerV2_3',
   )
-  const redistributeUpkeepManager = await redistributeUpkeepManagerFactory.deploy(
-    LINK_TOKEN_ADDRESS!,
-    KEEPER_REGISTRY_ADDRESS!,
-    AUTOMATION_REGISTRAR_ADDRESS!,
-    upkeepBalanceMonitor.address,
-    voterMock.address,
-    NEW_UPKEEP_FUND_AMOUNT!,
-    NEW_UPKEEP_GAS_LIMIT!,
-    BATCH_SIZE!,
-    EXCLUDED_GAUGE_FACTORIES!.split(','),
-  )
+  const redistributeUpkeepManager =
+    await redistributeUpkeepManagerFactory.deploy(
+      LINK_TOKEN_ADDRESS!,
+      KEEPER_REGISTRY_ADDRESS!,
+      AUTOMATION_REGISTRAR_ADDRESS!,
+      upkeepBalanceMonitor.address,
+      voterMock.address,
+      NEW_UPKEEP_FUND_AMOUNT!,
+      NEW_UPKEEP_GAS_LIMIT!,
+      BATCH_SIZE!,
+      EXCLUDED_GAUGE_FACTORIES!.split(','),
+    )
   await redistributeUpkeepManager.deployed()
-  console.log('RedistributeUpkeepManager deployed to:', redistributeUpkeepManager.address)
+  console.log(
+    'RedistributeUpkeepManager deployed to:',
+    redistributeUpkeepManager.address,
+  )
 
   // Grant watchlist manager role to RedistributeUpkeepManager contract
   await upkeepBalanceMonitor.grantWatchlistManagerRole(
@@ -127,7 +131,10 @@ async function main() {
     'ERC20Mintable',
     LINK_TOKEN_ADDRESS!,
   )
-  await linkToken.transfer(redistributeUpkeepManager.address, NEW_UPKEEP_FUND_AMOUNT!)
+  await linkToken.transfer(
+    redistributeUpkeepManager.address,
+    NEW_UPKEEP_FUND_AMOUNT!,
+  )
   console.log(
     `Transferred ${NEW_UPKEEP_FUND_AMOUNT} LINK tokens to RedistributeUpkeepManager`,
   )
@@ -236,7 +243,10 @@ async function main() {
     () => ethers.Wallet.createRandom().address,
   )
   await redistributeUpkeepManager.registerGauges(fakeGauges)
-  console.log('Registered fake gauges with RedistributeUpkeepManager', fakeGauges)
+  console.log(
+    'Registered fake gauges with RedistributeUpkeepManager',
+    fakeGauges,
+  )
 
   // ----------------
   // Trigger upkeeps

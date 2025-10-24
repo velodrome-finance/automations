@@ -58,7 +58,10 @@ contract RedistributeUpkeep is IRedistributeUpkeep {
     }
 
     function _distributeBatch(uint256 _startIndex, uint256 _endIndex) internal {
-        address[] memory gauges = IRedistributeUpkeepManager(redistributeUpkeepManager).gaugeList(_startIndex, _endIndex);
+        address[] memory gauges = IRedistributeUpkeepManager(redistributeUpkeepManager).gaugeList(
+            _startIndex,
+            _endIndex
+        );
 
         uint256 length = gauges.length;
         address[] memory singleGauge = new address[](1);

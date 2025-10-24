@@ -137,14 +137,18 @@ describe('RedistributeUpkeepManagerV2_3 Unit Tests', function () {
 
   describe('Deployment', function () {
     it('should deploy the contract with the correct parameters', async () => {
-      expect(await redistributeUpkeepManager.linkToken()).to.equal(linkToken.address)
+      expect(await redistributeUpkeepManager.linkToken()).to.equal(
+        linkToken.address,
+      )
       expect(await redistributeUpkeepManager.keeperRegistry()).to.equal(
         keeperRegistryMock.address,
       )
       expect(await redistributeUpkeepManager.automationRegistrar()).to.equal(
         automationRegistrarMock.address,
       )
-      expect(await redistributeUpkeepManager.voter()).to.equal(veloVoterMock.address)
+      expect(await redistributeUpkeepManager.voter()).to.equal(
+        veloVoterMock.address,
+      )
       expect(await redistributeUpkeepManager.newUpkeepFundAmount()).to.equal(
         upkeepFundAmount,
       )
@@ -178,7 +182,8 @@ describe('RedistributeUpkeepManagerV2_3 Unit Tests', function () {
     })
 
     it('should register a new gauge', async () => {
-      const tx = await redistributeUpkeepManager.performUpkeep(registerPerformData)
+      const tx =
+        await redistributeUpkeepManager.performUpkeep(registerPerformData)
 
       await expect(tx)
         .to.emit(redistributeUpkeepManager, 'GaugeRegistered')
@@ -190,9 +195,13 @@ describe('RedistributeUpkeepManagerV2_3 Unit Tests', function () {
     })
 
     it('should register a new redistribute upkeep', async () => {
-      const tx = await redistributeUpkeepManager.performUpkeep(registerPerformData)
+      const tx =
+        await redistributeUpkeepManager.performUpkeep(registerPerformData)
 
-      await expect(tx).to.emit(redistributeUpkeepManager, 'RedistributeUpkeepRegistered')
+      await expect(tx).to.emit(
+        redistributeUpkeepManager,
+        'RedistributeUpkeepRegistered',
+      )
 
       expect(await redistributeUpkeepManager.upkeepIds(0)).to.equal(1)
       expect(await redistributeUpkeepManager.upkeepCount()).to.equal(1)
@@ -233,7 +242,10 @@ describe('RedistributeUpkeepManagerV2_3 Unit Tests', function () {
         redistributeUpkeepManager
           .connect(accounts[1])
           .performUpkeep(registerPerformData),
-      ).to.be.revertedWithCustomError(redistributeUpkeepManager, 'UnauthorizedSender')
+      ).to.be.revertedWithCustomError(
+        redistributeUpkeepManager,
+        'UnauthorizedSender',
+      )
     })
 
     it('should not trigger upkeep registration for excluded gauge factories', async () => {
@@ -286,7 +298,9 @@ describe('RedistributeUpkeepManagerV2_3 Unit Tests', function () {
 
     it('should deregister a gauge', async () => {
       await redistributeUpkeepManager.performUpkeep(registerPerformData)
-      const tx = await redistributeUpkeepManager.performUpkeep(deregisterPerformData)
+      const tx = await redistributeUpkeepManager.performUpkeep(
+        deregisterPerformData,
+      )
 
       await expect(tx)
         .to.emit(redistributeUpkeepManager, 'GaugeDeregistered')
@@ -296,14 +310,16 @@ describe('RedistributeUpkeepManagerV2_3 Unit Tests', function () {
         fakeGaugeAddress,
       )
       expect(await redistributeUpkeepManager.gaugeCount()).to.equal(0)
-      expect(await redistributeUpkeepManager.cancelledUpkeeps(0, 1)).deep.include(
-        upkeepId,
-      )
+      expect(
+        await redistributeUpkeepManager.cancelledUpkeeps(0, 1),
+      ).deep.include(upkeepId)
     })
 
     it('should cancel a redistribute upkeep', async () => {
       await redistributeUpkeepManager.performUpkeep(registerPerformData)
-      const tx = await redistributeUpkeepManager.performUpkeep(deregisterPerformData)
+      const tx = await redistributeUpkeepManager.performUpkeep(
+        deregisterPerformData,
+      )
 
       await expect(tx)
         .to.emit(redistributeUpkeepManager, 'RedistributeUpkeepCancelled')
@@ -358,7 +374,10 @@ describe('RedistributeUpkeepManagerV2_3 Unit Tests', function () {
         redistributeUpkeepManager
           .connect(accounts[1])
           .performUpkeep(deregisterPerformData),
-      ).to.be.revertedWithCustomError(redistributeUpkeepManager, 'UnauthorizedSender')
+      ).to.be.revertedWithCustomError(
+        redistributeUpkeepManager,
+        'UnauthorizedSender',
+      )
     })
   })
 
@@ -369,9 +388,9 @@ describe('RedistributeUpkeepManagerV2_3 Unit Tests', function () {
       await redistributeUpkeepManager.performUpkeep(registerPerformData)
       await redistributeUpkeepManager.performUpkeep(deregisterPerformData)
 
-      expect(await redistributeUpkeepManager.cancelledUpkeeps(0, 1)).to.deep.include(
-        upkeepId,
-      )
+      expect(
+        await redistributeUpkeepManager.cancelledUpkeeps(0, 1),
+      ).to.deep.include(upkeepId)
     })
 
     it('should get cancelled upkeeps count', async () => {
@@ -415,7 +434,9 @@ describe('RedistributeUpkeepManagerV2_3 Unit Tests', function () {
       const redistributeUpkeepWithdrawnLogs = receipt.logs.filter(
         (log) =>
           log.topics[0] ===
-          redistributeUpkeepManager.interface.getEventTopic('RedistributeUpkeepWithdrawn'),
+          redistributeUpkeepManager.interface.getEventTopic(
+            'RedistributeUpkeepWithdrawn',
+          ),
       )
 
       expect(redistributeUpkeepWithdrawnLogs.length).to.equal(upkeepCount)
@@ -488,7 +509,9 @@ describe('RedistributeUpkeepManagerV2_3 Unit Tests', function () {
 
     it('should set a new upkeep fund amount', async () => {
       const newUpkeepFundAmount = ethers.utils.parseEther('0.2')
-      await redistributeUpkeepManager.setNewUpkeepFundAmount(newUpkeepFundAmount)
+      await redistributeUpkeepManager.setNewUpkeepFundAmount(
+        newUpkeepFundAmount,
+      )
 
       expect(await redistributeUpkeepManager.newUpkeepFundAmount()).to.equal(
         newUpkeepFundAmount,
@@ -505,20 +528,30 @@ describe('RedistributeUpkeepManagerV2_3 Unit Tests', function () {
     it('should revert when setting batch size to 0', async () => {
       await expect(
         redistributeUpkeepManager.setBatchSize(0),
-      ).to.be.revertedWithCustomError(redistributeUpkeepManager, 'InvalidBatchSize')
+      ).to.be.revertedWithCustomError(
+        redistributeUpkeepManager,
+        'InvalidBatchSize',
+      )
     })
 
     it('should revert when setting batch size greater than the gauges per upkeep limit', async () => {
       await expect(
         redistributeUpkeepManager.setBatchSize(gaugesPerUpkeepLimit + 1),
-      ).to.be.revertedWithCustomError(redistributeUpkeepManager, 'InvalidBatchSize')
+      ).to.be.revertedWithCustomError(
+        redistributeUpkeepManager,
+        'InvalidBatchSize',
+      )
     })
 
     it('should set a new trusted forwarder', async () => {
-      await redistributeUpkeepManager.setTrustedForwarder(accounts[1].address, true)
+      await redistributeUpkeepManager.setTrustedForwarder(
+        accounts[1].address,
+        true,
+      )
 
-      expect(await redistributeUpkeepManager.trustedForwarder(accounts[1].address)).to
-        .be.true
+      expect(
+        await redistributeUpkeepManager.trustedForwarder(accounts[1].address),
+      ).to.be.true
     })
 
     it('should set a new upkeep balance monitor', async () => {
@@ -535,13 +568,19 @@ describe('RedistributeUpkeepManagerV2_3 Unit Tests', function () {
 
     it('should set excluded factory address', async () => {
       const newFactoryAddress = ethers.Wallet.createRandom().address
-      await redistributeUpkeepManager.setExcludedGaugeFactory(newFactoryAddress, true)
+      await redistributeUpkeepManager.setExcludedGaugeFactory(
+        newFactoryAddress,
+        true,
+      )
 
       expect(
         await redistributeUpkeepManager.excludedGaugeFactory(newFactoryAddress),
       ).to.equal(true)
 
-      await redistributeUpkeepManager.setExcludedGaugeFactory(newFactoryAddress, false)
+      await redistributeUpkeepManager.setExcludedGaugeFactory(
+        newFactoryAddress,
+        false,
+      )
 
       expect(
         await redistributeUpkeepManager.excludedGaugeFactory(newFactoryAddress),
@@ -557,7 +596,10 @@ describe('RedistributeUpkeepManagerV2_3 Unit Tests', function () {
 
       const tx = await redistributeUpkeepManager.registerGauges(gaugeAddresses)
 
-      await expect(tx).to.emit(redistributeUpkeepManager, 'RedistributeUpkeepRegistered')
+      await expect(tx).to.emit(
+        redistributeUpkeepManager,
+        'RedistributeUpkeepRegistered',
+      )
       await expect(tx)
         .to.emit(redistributeUpkeepManager, 'GaugeRegistered')
         .withArgs(gaugeAddresses[0])
@@ -576,7 +618,8 @@ describe('RedistributeUpkeepManagerV2_3 Unit Tests', function () {
 
       await redistributeUpkeepManager.registerGauges(gaugeAddresses)
 
-      const tx = await redistributeUpkeepManager.deregisterGauges(gaugeAddresses)
+      const tx =
+        await redistributeUpkeepManager.deregisterGauges(gaugeAddresses)
 
       await expect(tx)
         .to.emit(redistributeUpkeepManager, 'GaugeDeregistered')

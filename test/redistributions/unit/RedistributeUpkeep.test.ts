@@ -47,10 +47,10 @@ describe('RedistributeUpkeep Unit Tests', function () {
     )
 
     // deploy redistribute upkeep manager mock
-    const redistributeUpkeepManagerMockFactory = await ethers.getContractFactory(
-      'RedistributeUpkeepManagerMock',
-    )
-    redistributeUpkeepManagerMock = await redistributeUpkeepManagerMockFactory.deploy()
+    const redistributeUpkeepManagerMockFactory =
+      await ethers.getContractFactory('RedistributeUpkeepManagerMock')
+    redistributeUpkeepManagerMock =
+      await redistributeUpkeepManagerMockFactory.deploy()
 
     // set gauge list
     gaugeList = Array.from(

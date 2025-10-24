@@ -319,16 +319,21 @@ describe('RedistributeUpkeepManagerV2_3 Script Tests', function () {
       redistributeUpkeepManager.interface.parseLog(gaugeRegisteredLog).args
 
     expect(registeredGauge).to.equal(gaugeAddress)
-    expect(await redistributeUpkeepManager.gaugeList(0, 1)).to.include(gaugeAddress)
+    expect(await redistributeUpkeepManager.gaugeList(0, 1)).to.include(
+      gaugeAddress,
+    )
 
     // check if redistribute upkeep is registered
     const redistributeUpkeepCreatedLog = findLog(
       performReceipt,
-      redistributeUpkeepManager.interface.getEventTopic('RedistributeUpkeepRegistered'),
+      redistributeUpkeepManager.interface.getEventTopic(
+        'RedistributeUpkeepRegistered',
+      ),
     )
-    const { redistributeUpkeep, upkeepId } = redistributeUpkeepManager.interface.parseLog(
-      redistributeUpkeepCreatedLog,
-    ).args
+    const { redistributeUpkeep, upkeepId } =
+      redistributeUpkeepManager.interface.parseLog(
+        redistributeUpkeepCreatedLog,
+      ).args
 
     expect(redistributeUpkeep).to.be.properAddress
     expect(await redistributeUpkeepManager.upkeepIds(0)).to.equal(upkeepId)
@@ -435,7 +440,8 @@ describe('RedistributeUpkeepManagerV2_3 Script Tests', function () {
     )
 
     // check if redistribute upkeep is active
-    const upkeepDetailsBefore = await keeperRegistry.getUpkeep(redistributeUpkeepId)
+    const upkeepDetailsBefore =
+      await keeperRegistry.getUpkeep(redistributeUpkeepId)
     expect(upkeepDetailsBefore.maxValidBlocknumber).to.equal(MAX_UINT32)
 
     // call performUpkeep with cancel perform data via KeeperRegistry
@@ -461,19 +467,24 @@ describe('RedistributeUpkeepManagerV2_3 Script Tests', function () {
     // check if redistribute upkeep is cancelled
     const redistributeUpkeepCancelledLog = findLog(
       performReceipt,
-      redistributeUpkeepManager.interface.getEventTopic('RedistributeUpkeepCancelled'),
+      redistributeUpkeepManager.interface.getEventTopic(
+        'RedistributeUpkeepCancelled',
+      ),
     )
     const { upkeepId: cancelledUpkeepId } =
-      redistributeUpkeepManager.interface.parseLog(redistributeUpkeepCancelledLog).args
-    const upkeepDetailsAfter = await keeperRegistry.getUpkeep(redistributeUpkeepId)
+      redistributeUpkeepManager.interface.parseLog(
+        redistributeUpkeepCancelledLog,
+      ).args
+    const upkeepDetailsAfter =
+      await keeperRegistry.getUpkeep(redistributeUpkeepId)
 
     expect(cancelledUpkeepId).to.equal(redistributeUpkeepId)
     expect(upkeepDetailsAfter.maxValidBlocknumber).to.not.equal(MAX_UINT32)
 
     // check if upkeep is included in cancelledUpkeeps set
-    expect(await redistributeUpkeepManager.cancelledUpkeeps(0, 1)).to.deep.include(
-      cancelledUpkeepId,
-    )
+    expect(
+      await redistributeUpkeepManager.cancelledUpkeeps(0, 1),
+    ).to.deep.include(cancelledUpkeepId)
   })
 
   it('Redistribute upkeep withdrawal flow', async () => {
@@ -483,19 +494,27 @@ describe('RedistributeUpkeepManagerV2_3 Script Tests', function () {
     const redistributeUpkeepManagerBalanceBefore = await linkToken.balanceOf(
       redistributeUpkeepManager.address,
     )
-    const upkeepDetailsBefore = await keeperRegistry.getUpkeep(redistributeUpkeepId)
+    const upkeepDetailsBefore =
+      await keeperRegistry.getUpkeep(redistributeUpkeepId)
 
     // withdraw upkeep balance via RedistributeUpkeepManager
-    const withdrawTx = await redistributeUpkeepManager.withdrawCancelledUpkeeps(0, 1)
+    const withdrawTx = await redistributeUpkeepManager.withdrawCancelledUpkeeps(
+      0,
+      1,
+    )
     const withdrawReceipt = await withdrawTx.wait()
 
     // check if redistribute upkeep is withdrawn
     const redistributeUpkeepWithdrawnLog = findLog(
       withdrawReceipt,
-      redistributeUpkeepManager.interface.getEventTopic('RedistributeUpkeepWithdrawn'),
+      redistributeUpkeepManager.interface.getEventTopic(
+        'RedistributeUpkeepWithdrawn',
+      ),
     )
     const { upkeepId: withdrawnUpkeepId } =
-      redistributeUpkeepManager.interface.parseLog(redistributeUpkeepWithdrawnLog).args
+      redistributeUpkeepManager.interface.parseLog(
+        redistributeUpkeepWithdrawnLog,
+      ).args
     const redistributeUpkeepManagerBalanceAfter = await linkToken.balanceOf(
       redistributeUpkeepManager.address,
     )
@@ -574,16 +593,21 @@ describe('RedistributeUpkeepManagerV2_3 Script Tests', function () {
       redistributeUpkeepManager.interface.parseLog(gaugeRegisteredLog).args
 
     expect(registeredGauge).to.equal(gaugeAddress)
-    expect(await redistributeUpkeepManager.gaugeList(0, 1)).to.include(gaugeAddress)
+    expect(await redistributeUpkeepManager.gaugeList(0, 1)).to.include(
+      gaugeAddress,
+    )
 
     // check if redistribute upkeep is registered again
     const redistributeUpkeepCreatedLog = findLog(
       performReceipt,
-      redistributeUpkeepManager.interface.getEventTopic('RedistributeUpkeepRegistered'),
+      redistributeUpkeepManager.interface.getEventTopic(
+        'RedistributeUpkeepRegistered',
+      ),
     )
-    const { redistributeUpkeep, upkeepId } = redistributeUpkeepManager.interface.parseLog(
-      redistributeUpkeepCreatedLog,
-    ).args
+    const { redistributeUpkeep, upkeepId } =
+      redistributeUpkeepManager.interface.parseLog(
+        redistributeUpkeepCreatedLog,
+      ).args
 
     expect(redistributeUpkeep).to.be.properAddress
     expect(await redistributeUpkeepManager.upkeepIds(0)).to.equal(upkeepId)

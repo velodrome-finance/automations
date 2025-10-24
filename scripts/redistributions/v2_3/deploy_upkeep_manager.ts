@@ -52,20 +52,24 @@ async function main() {
   const excludedGaugeFactories = EXCLUDED_GAUGE_FACTORIES
     ? EXCLUDED_GAUGE_FACTORIES.split(',')
     : []
-  const redistributeUpkeepManager = await redistributeUpkeepManagerFactory.deploy(
-    LINK_TOKEN_ADDRESS!,
-    KEEPER_REGISTRY_ADDRESS!,
-    AUTOMATION_REGISTRAR_ADDRESS!,
-    UPKEEP_BALANCE_MONITOR_ADDRESS!,
-    VOTER_ADDRESS!,
-    NEW_UPKEEP_FUND_AMOUNT!,
-    NEW_UPKEEP_GAS_LIMIT!,
-    BATCH_SIZE!,
-    excludedGaugeFactories,
-  )
+  const redistributeUpkeepManager =
+    await redistributeUpkeepManagerFactory.deploy(
+      LINK_TOKEN_ADDRESS!,
+      KEEPER_REGISTRY_ADDRESS!,
+      AUTOMATION_REGISTRAR_ADDRESS!,
+      UPKEEP_BALANCE_MONITOR_ADDRESS!,
+      VOTER_ADDRESS!,
+      NEW_UPKEEP_FUND_AMOUNT!,
+      NEW_UPKEEP_GAS_LIMIT!,
+      BATCH_SIZE!,
+      excludedGaugeFactories,
+    )
   await redistributeUpkeepManager.deployTransaction.wait(10)
   await redistributeUpkeepManager.deployed()
-  console.log('RedistributeUpkeepManager deployed to:', redistributeUpkeepManager.address)
+  console.log(
+    'RedistributeUpkeepManager deployed to:',
+    redistributeUpkeepManager.address,
+  )
 
   // Grant watchlist manager role to RedistributeUpkeepManager contract
   const upkeepBalanceMonitor = await ethers.getContractAt(
