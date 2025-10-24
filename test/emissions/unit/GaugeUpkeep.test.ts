@@ -20,6 +20,8 @@ async function increaseTimeToNextEpoch() {
   await time.increaseTo(afterEpochFlip)
 }
 
+let snapshotId: any
+
 describe('GaugeUpkeep Unit Tests', function () {
   let gaugeUpkeepFactory: GaugeUpkeep__factory
   let gaugeUpkeep: GaugeUpkeep
@@ -34,6 +36,16 @@ describe('GaugeUpkeep Unit Tests', function () {
   const gaugeCount = 10
   const epochLengthInSeconds = 604800
   const iterationsCount = gaugeCount / batchSize
+
+  before(async function () {
+    // take a snapshot at the start
+    snapshotId = await network.provider.send('evm_snapshot')
+  })
+
+  after(async function () {
+    // revert to the initial snapshot
+    await network.provider.send('evm_revert', [snapshotId])
+  })
 
   beforeEach(async function () {
     accounts = await ethers.getSigners()

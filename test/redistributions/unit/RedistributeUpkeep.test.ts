@@ -20,6 +20,8 @@ async function increaseTimeToNextEpoch() {
   await time.increaseTo(afterEpochFlip)
 }
 
+let snapshotId: any
+
 describe('RedistributeUpkeep Unit Tests', function () {
   let redistributeUpkeepFactory: RedistributeUpkeep__factory
   let redistributeUpkeep: RedistributeUpkeep
@@ -84,10 +86,20 @@ describe('RedistributeUpkeep Unit Tests', function () {
     )
   })
 
+  before(async function () {
+    // take a snapshot at the start
+    snapshotId = await network.provider.send('evm_snapshot')
+  })
+
+  after(async function () {
+    // revert to the initial snapshot
+    await network.provider.send('evm_revert', [snapshotId])
+  })
+
   describe('Before epoch flip', function () {
     before(async function () {
-      const beforeNextEpochFlip = getNextEpochUTC().getTime() / 1000 - 100
-      await time.increaseTo(beforeNextEpochFlip)
+      const beforeEpochFlip = getNextEpochUTC().getTime() / 1000 - 100
+      await time.increaseTo(beforeEpochFlip)
     })
 
     it('should not trigger upkeep', async function () {
