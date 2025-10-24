@@ -94,7 +94,10 @@ async function main() {
       `Insufficient balance. Required: ${totalLinkRequired.toString()} LINK`,
     )
   }
-  let tx = await linkToken.approve(automationRegistrar.address, totalLinkRequired)
+  let tx = await linkToken.approve(
+    automationRegistrar.address,
+    totalLinkRequired,
+  )
   await tx.wait(10)
   console.log(
     'Approved LINK token for AutomationRegistrar',
