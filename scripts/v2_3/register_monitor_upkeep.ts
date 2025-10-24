@@ -84,10 +84,11 @@ async function main() {
       `Insufficient balance. Required: ${BALANCE_MONITOR_UPKEEP_FUND_AMOUNT} LINK`,
     )
   }
-  await linkToken.approve(
+  let tx = await linkToken.approve(
     automationRegistrar.address,
     BALANCE_MONITOR_UPKEEP_FUND_AMOUNT!,
   )
+  await tx.wait(10)
   console.log('Approved LINK token for AutomationRegistrar')
 
   // Register custom logic upkeep
