@@ -3,9 +3,9 @@ import { ethers, network } from 'hardhat'
 import { time } from '@nomicfoundation/hardhat-network-helpers'
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import {
-  GaugeUpkeep,
-  GaugeUpkeep__factory,
-  GaugeUpkeepManagerMock,
+  RedistributeUpkeep,
+  RedistributeUpkeep__factory,
+  RedistributeUpkeepManagerMock,
   VoterMock,
 } from '../../../typechain-types'
 import { defaultAbiCoder } from '@ethersproject/abi'
@@ -22,11 +22,11 @@ async function increaseTimeToNextEpoch() {
 
 let snapshotId: any
 
-describe('GaugeUpkeep Unit Tests', function () {
-  let gaugeUpkeepFactory: GaugeUpkeep__factory
-  let gaugeUpkeep: GaugeUpkeep
+describe('RedistributeUpkeep Unit Tests', function () {
+  let redistributeUpkeepFactory: RedistributeUpkeep__factory
+  let redistributeUpkeep: RedistributeUpkeep
   let voterMock: VoterMock
-  let gaugeUpkeepManagerMock: GaugeUpkeepManagerMock
+  let redistributeUpkeepManagerMock: RedistributeUpkeepManagerMock
   let gaugeList: string[]
   let accounts: SignerWithAddress[]
 
@@ -36,16 +36,6 @@ describe('GaugeUpkeep Unit Tests', function () {
   const gaugeCount = 10
   const epochLengthInSeconds = 604800
   const iterationsCount = gaugeCount / batchSize
-
-  before(async function () {
-    // take a snapshot at the start
-    snapshotId = await network.provider.send('evm_snapshot')
-  })
-
-  after(async function () {
-    // revert to the initial snapshot
-    await network.provider.send('evm_revert', [snapshotId])
-  })
 
   beforeEach(async function () {
     accounts = await ethers.getSigners()
@@ -58,42 +48,52 @@ describe('GaugeUpkeep Unit Tests', function () {
       AddressZero,
     )
 
-    // deploy gauge upkeep manager mock
-    const gaugeUpkeepManagerMockFactory = await ethers.getContractFactory(
-      'GaugeUpkeepManagerMock',
-    )
-    gaugeUpkeepManagerMock = await gaugeUpkeepManagerMockFactory.deploy()
+    // deploy redistribute upkeep manager mock
+    const redistributeUpkeepManagerMockFactory =
+      await ethers.getContractFactory('RedistributeUpkeepManagerMock')
+    redistributeUpkeepManagerMock =
+      await redistributeUpkeepManagerMockFactory.deploy()
 
     // set gauge list
     gaugeList = Array.from(
       { length: gaugeCount },
       () => ethers.Wallet.createRandom().address,
     )
-    await gaugeUpkeepManagerMock.setGaugeList(gaugeList)
+    await redistributeUpkeepManagerMock.setGaugeList(gaugeList)
 
-    // impersonate gauge upkeep manager
+    // impersonate redistribute upkeep manager
     await network.provider.request({
       method: 'hardhat_impersonateAccount',
-      params: [gaugeUpkeepManagerMock.address],
+      params: [redistributeUpkeepManagerMock.address],
     })
     const impersonatedSigner = ethers.provider.getSigner(
-      gaugeUpkeepManagerMock.address,
+      redistributeUpkeepManagerMock.address,
     )
     await network.provider.send('hardhat_setBalance', [
-      gaugeUpkeepManagerMock.address,
+      redistributeUpkeepManagerMock.address,
       '0xffffffffffffffff',
     ])
 
-    // deploy gauge upkeep
-    gaugeUpkeepFactory = await ethers.getContractFactory(
-      'GaugeUpkeep',
+    // deploy redistribute upkeep
+    redistributeUpkeepFactory = await ethers.getContractFactory(
+      'RedistributeUpkeep',
       impersonatedSigner,
     )
-    gaugeUpkeep = await gaugeUpkeepFactory.deploy(
+    redistributeUpkeep = await redistributeUpkeepFactory.deploy(
       voterMock.address,
       startIndex,
       endIndex,
     )
+  })
+
+  before(async function () {
+    // take a snapshot at the start
+    snapshotId = await network.provider.send('evm_snapshot')
+  })
+
+  after(async function () {
+    // revert to the initial snapshot
+    await network.provider.send('evm_revert', [snapshotId])
   })
 
   describe('Before epoch flip', function () {
@@ -104,7 +104,7 @@ describe('GaugeUpkeep Unit Tests', function () {
 
     it('should not trigger upkeep', async function () {
       const [upkeepNeeded, performData] =
-        await gaugeUpkeep.callStatic.checkUpkeep(HashZero)
+        await redistributeUpkeep.callStatic.checkUpkeep(HashZero)
 
       expect(upkeepNeeded).to.be.false
       expect(performData).to.equal('0x')
@@ -112,8 +112,8 @@ describe('GaugeUpkeep Unit Tests', function () {
 
     it('should not perform upkeep', async function () {
       await expect(
-        gaugeUpkeep.performUpkeep(HashZero),
-      ).to.be.revertedWithCustomError(gaugeUpkeep, 'UpkeepNotNeeded')
+        redistributeUpkeep.performUpkeep(HashZero),
+      ).to.be.revertedWithCustomError(redistributeUpkeep, 'UpkeepNotNeeded')
     })
   })
 
@@ -124,7 +124,7 @@ describe('GaugeUpkeep Unit Tests', function () {
 
     it('should trigger upkeep', async function () {
       const [upkeepNeeded, performData] =
-        await gaugeUpkeep.callStatic.checkUpkeep(HashZero)
+        await redistributeUpkeep.callStatic.checkUpkeep(HashZero)
 
       expect(upkeepNeeded).to.be.true
       expect(performData).to.equal('0x')
@@ -132,24 +132,24 @@ describe('GaugeUpkeep Unit Tests', function () {
 
     it('should perform upkeep', async function () {
       for (let i = 0; i < iterationsCount; i++) {
-        await expect(gaugeUpkeep.performUpkeep(HashZero))
-          .to.emit(gaugeUpkeep, 'GaugeUpkeepPerformed')
+        await expect(redistributeUpkeep.performUpkeep(HashZero))
+          .to.emit(redistributeUpkeep, 'RedistributeUpkeepPerformed')
           .withArgs(i * batchSize, i * batchSize + batchSize)
       }
     })
 
     it('should perform upkeep on an interval', async function () {
       for (let i = 0; i < iterationsCount; i++) {
-        await expect(gaugeUpkeep.performUpkeep(HashZero))
-          .to.emit(gaugeUpkeep, 'GaugeUpkeepPerformed')
+        await expect(redistributeUpkeep.performUpkeep(HashZero))
+          .to.emit(redistributeUpkeep, 'RedistributeUpkeepPerformed')
           .withArgs(i * batchSize, i * batchSize + batchSize)
       }
 
       await time.increase(epochLengthInSeconds)
 
       for (let i = 0; i < iterationsCount; i++) {
-        await expect(gaugeUpkeep.performUpkeep(HashZero))
-          .to.emit(gaugeUpkeep, 'GaugeUpkeepPerformed')
+        await expect(redistributeUpkeep.performUpkeep(HashZero))
+          .to.emit(redistributeUpkeep, 'RedistributeUpkeepPerformed')
           .withArgs(i * batchSize, i * batchSize + batchSize)
       }
     })
@@ -157,7 +157,7 @@ describe('GaugeUpkeep Unit Tests', function () {
     it('should distribute all gauges', async function () {
       const distributedGauges: string[] = []
       for (let i = 0; i < iterationsCount; i++) {
-        const tx = await gaugeUpkeep.performUpkeep(HashZero)
+        const tx = await redistributeUpkeep.performUpkeep(HashZero)
         const receipt = await tx.wait()
         const distributeLogs = receipt.logs.filter(
           (log) =>
@@ -179,11 +179,11 @@ describe('GaugeUpkeep Unit Tests', function () {
         { length: newGaugeCount },
         () => ethers.Wallet.createRandom().address,
       )
-      await gaugeUpkeepManagerMock.removeGaugeList()
-      await gaugeUpkeepManagerMock.setGaugeList(newGaugeList)
+      await redistributeUpkeepManagerMock.removeGaugeList()
+      await redistributeUpkeepManagerMock.setGaugeList(newGaugeList)
 
       const newBatchSize = 3
-      await gaugeUpkeepManagerMock.setBatchSize(newBatchSize)
+      await redistributeUpkeepManagerMock.setBatchSize(newBatchSize)
 
       const newIterationsCount = Math.ceil(newGaugeCount / newBatchSize)
 
@@ -193,9 +193,9 @@ describe('GaugeUpkeep Unit Tests', function () {
         let endIdx = i * newBatchSize + newBatchSize
         endIdx = endIdx > newGaugeCount ? newGaugeCount : endIdx
 
-        const tx = await gaugeUpkeep.performUpkeep(HashZero)
+        const tx = await redistributeUpkeep.performUpkeep(HashZero)
         await expect(tx)
-          .to.emit(gaugeUpkeep, 'GaugeUpkeepPerformed')
+          .to.emit(redistributeUpkeep, 'RedistributeUpkeepPerformed')
           .withArgs(startIdx, endIdx)
 
         const receipt = await tx.wait()
@@ -215,38 +215,38 @@ describe('GaugeUpkeep Unit Tests', function () {
 
     it('should not perform upkeep if all gauges are distributed', async function () {
       for (let i = 0; i < iterationsCount; i++) {
-        await gaugeUpkeep.performUpkeep(HashZero)
+        await redistributeUpkeep.performUpkeep(HashZero)
       }
 
       await expect(
-        gaugeUpkeep.performUpkeep(HashZero),
-      ).to.be.revertedWithCustomError(gaugeUpkeep, 'UpkeepNotNeeded')
+        redistributeUpkeep.performUpkeep(HashZero),
+      ).to.be.revertedWithCustomError(redistributeUpkeep, 'UpkeepNotNeeded')
 
       const [upkeepNeeded, performData] =
-        await gaugeUpkeep.callStatic.checkUpkeep(HashZero)
+        await redistributeUpkeep.callStatic.checkUpkeep(HashZero)
 
       expect(upkeepNeeded).to.be.false
       expect(performData).to.equal('0x')
     })
 
     it('should not perform upkeep if the gauge list is empty', async function () {
-      await gaugeUpkeepManagerMock.removeGaugeList()
+      await redistributeUpkeepManagerMock.removeGaugeList()
 
       const [upkeepNeeded, performData] =
-        await gaugeUpkeep.callStatic.checkUpkeep(HashZero)
+        await redistributeUpkeep.callStatic.checkUpkeep(HashZero)
 
       expect(upkeepNeeded).to.be.false
       expect(performData).to.equal('0x')
 
       await expect(
-        gaugeUpkeep.performUpkeep(HashZero),
-      ).to.be.revertedWithCustomError(gaugeUpkeep, 'UpkeepNotNeeded')
+        redistributeUpkeep.performUpkeep(HashZero),
+      ).to.be.revertedWithCustomError(redistributeUpkeep, 'UpkeepNotNeeded')
     })
 
     it('should not perform upkeep if outside of the range', async function () {
       const newStartIndex = gaugeCount
       const newEndIndex = gaugeCount * 2
-      const newGaugeUpkeep = await gaugeUpkeepFactory.deploy(
+      const newRedistributeUpkeep = await redistributeUpkeepFactory.deploy(
         voterMock.address,
         newStartIndex,
         newEndIndex,
@@ -254,21 +254,21 @@ describe('GaugeUpkeep Unit Tests', function () {
       await increaseTimeToNextEpoch()
 
       const [upkeepNeeded, performData] =
-        await newGaugeUpkeep.callStatic.checkUpkeep(HashZero)
+        await newRedistributeUpkeep.callStatic.checkUpkeep(HashZero)
 
       expect(upkeepNeeded).to.be.false
       expect(performData).to.equal('0x')
 
       await expect(
-        newGaugeUpkeep.performUpkeep(HashZero),
-      ).to.be.revertedWithCustomError(gaugeUpkeep, 'UpkeepNotNeeded')
+        newRedistributeUpkeep.performUpkeep(HashZero),
+      ).to.be.revertedWithCustomError(redistributeUpkeep, 'UpkeepNotNeeded')
 
       // add one gauge in the range
       gaugeList.push(ethers.Wallet.createRandom().address)
-      await gaugeUpkeepManagerMock.setGaugeList(gaugeList)
+      await redistributeUpkeepManagerMock.setGaugeList(gaugeList)
 
       const [upkeepNeededAfter, performDataAfter] =
-        await newGaugeUpkeep.callStatic.checkUpkeep(HashZero)
+        await newRedistributeUpkeep.callStatic.checkUpkeep(HashZero)
 
       expect(upkeepNeededAfter).to.be.true
       expect(performDataAfter).to.equal('0x')
@@ -279,15 +279,15 @@ describe('GaugeUpkeep Unit Tests', function () {
         await voterMock.setFailingGauge(gauge, true)
       }
 
-      const tx = await expect(gaugeUpkeep.performUpkeep(HashZero))
+      const tx = await expect(redistributeUpkeep.performUpkeep(HashZero))
       for (let i = 0; i < batchSize; i++) {
         await tx.to
-          .emit(gaugeUpkeep, 'DistributeFailed')
+          .emit(redistributeUpkeep, 'DistributeFailed')
           .withArgs(gaugeList[i], startIndex + i)
       }
 
-      await expect(gaugeUpkeep.performUpkeep(HashZero))
-        .to.emit(gaugeUpkeep, 'GaugeUpkeepPerformed')
+      await expect(redistributeUpkeep.performUpkeep(HashZero))
+        .to.emit(redistributeUpkeep, 'RedistributeUpkeepPerformed')
         .withArgs(batchSize, batchSize * 2)
     })
 
@@ -299,19 +299,19 @@ describe('GaugeUpkeep Unit Tests', function () {
       }
 
       /// @dev Ensure gauges on non-failing indexes received distributes
-      const tx = await expect(gaugeUpkeep.performUpkeep(HashZero))
+      const tx = await expect(redistributeUpkeep.performUpkeep(HashZero))
       for (let i = 0; i < batchSize; i++) {
         if (!failedIndexes.includes(i)) {
           await tx.to.emit(voterMock, 'Distributed').withArgs(gaugeList[i])
         } else {
           await tx.to
-            .emit(gaugeUpkeep, 'DistributeFailed')
+            .emit(redistributeUpkeep, 'DistributeFailed')
             .withArgs(gaugeList[i], startIndex + i)
         }
       }
 
-      await expect(gaugeUpkeep.performUpkeep(HashZero))
-        .to.emit(gaugeUpkeep, 'GaugeUpkeepPerformed')
+      await expect(redistributeUpkeep.performUpkeep(HashZero))
+        .to.emit(redistributeUpkeep, 'RedistributeUpkeepPerformed')
         .withArgs(batchSize, batchSize * 2)
     })
   })

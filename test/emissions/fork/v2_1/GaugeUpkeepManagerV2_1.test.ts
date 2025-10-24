@@ -232,7 +232,7 @@ describe('GaugeUpkeepManagerV2_1 Script Tests', function () {
       voter.address,
       gaugeUpkeepManager.address,
     )
-    // get tursted forwarder addresses of all upkeeps and set them in gauge upkeep manager
+    // get trusted forwarder addresses of all upkeeps and set them in gauge upkeep manager
     const forwarders = await Promise.all([
       keeperRegistry.getForwarder(createGaugeLogUpkeepId),
       keeperRegistry.getForwarder(killGaugeLogUpkeepId),
