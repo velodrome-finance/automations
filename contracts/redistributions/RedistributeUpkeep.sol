@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import {IVoter} from "../../vendor/velodrome-contracts/contracts/interfaces/IVoter.sol";
 import {IRedistributeUpkeepManager} from "./interfaces/common/IRedistributeUpkeepManager.sol";
+import {ICLGaugeFactory} from "../interfaces/external/ICLGaugeFactory.sol";
+import {IRedistributor} from "../interfaces/external/IRedistributor.sol";
 import {IRedistributeUpkeep} from "./interfaces/IRedistributeUpkeep.sol";
 
 contract RedistributeUpkeep is IRedistributeUpkeep {
-    /// @inheritdoc IRedistributeUpkeep
-    address public immutable override voter;
     /// @inheritdoc IRedistributeUpkeep
     address public immutable override clGaugeFactory;
     /// @inheritdoc IRedistributeUpkeep
@@ -24,8 +23,7 @@ contract RedistributeUpkeep is IRedistributeUpkeep {
 
     uint256 private constant WEEK = 7 days;
 
-    constructor(address _voter, address _clGaugeFactory, uint256 _startIndex, uint256 _endIndex) {
-        voter = _voter;
+    constructor(address _clGaugeFactory, uint256 _startIndex, uint256 _endIndex) {
         clGaugeFactory = _clGaugeFactory;
         redistributeUpkeepManager = msg.sender;
         startIndex = _startIndex;
@@ -66,12 +64,13 @@ contract RedistributeUpkeep is IRedistributeUpkeep {
             _endIndex
         );
 
+        address redistributor = ICLGaugeFactory(clGaugeFactory).redistributor();
         uint256 length = gauges.length;
         address[] memory singleGauge = new address[](1);
         for (uint256 i = 0; i < length; i++) {
             singleGauge[0] = gauges[i];
 
-            try IVoter(voter).distribute(singleGauge) {} catch {
+            try IRedistributor(redistributor).redistribute(singleGauge) {} catch {
                 emit RedistributeFailed({gauge: singleGauge[0], index: _startIndex + i});
             }
         }

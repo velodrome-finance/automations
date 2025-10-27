@@ -6,14 +6,13 @@ import {
   RedistributeUpkeep,
   RedistributeUpkeep__factory,
   RedistributeUpkeepManagerMock,
-  VoterMock,
   CLGaugeFactoryMock,
   RedistributorMock,
 } from '../../../typechain-types'
 import { defaultAbiCoder } from '@ethersproject/abi'
 import { getNextEpochUTC } from '../../utils'
 
-const { AddressZero, HashZero } = ethers.constants
+const { HashZero } = ethers.constants
 
 async function increaseTimeToNextEpoch() {
   const latestBlockTimestamp = await time.latest()
@@ -27,7 +26,6 @@ let snapshotId: any
 describe('RedistributeUpkeep Unit Tests', function () {
   let redistributeUpkeepFactory: RedistributeUpkeep__factory
   let redistributeUpkeep: RedistributeUpkeep
-  let voterMock: VoterMock
   let redistributeUpkeepManagerMock: RedistributeUpkeepManagerMock
   let clGaugeFactoryMock: CLGaugeFactoryMock
   let redistributorMock: RedistributorMock
@@ -43,14 +41,6 @@ describe('RedistributeUpkeep Unit Tests', function () {
 
   beforeEach(async function () {
     accounts = await ethers.getSigners()
-
-    // deploy voter mock
-    const voterMockFactory = await ethers.getContractFactory('VoterMock')
-    voterMock = await voterMockFactory.deploy(
-      AddressZero,
-      AddressZero,
-      AddressZero,
-    )
 
     // deploy redistributor and cl gauge factory mocks
     const redistributorMockFactory =
@@ -95,7 +85,6 @@ describe('RedistributeUpkeep Unit Tests', function () {
       impersonatedSigner,
     )
     redistributeUpkeep = await redistributeUpkeepFactory.deploy(
-      voterMock.address,
       clGaugeFactoryMock.address,
       startIndex,
       endIndex,
@@ -198,7 +187,8 @@ describe('RedistributeUpkeep Unit Tests', function () {
         const receipt = await tx.wait()
         const distributeLogs = receipt.logs.filter(
           (log) =>
-            log.topics[0] === voterMock.interface.getEventTopic('Distributed'),
+            log.topics[0] ===
+            redistributorMock.interface.getEventTopic('Redistributed'),
         )
         distributedGauges.push(
           ...distributeLogs.map((log) =>
@@ -238,7 +228,8 @@ describe('RedistributeUpkeep Unit Tests', function () {
         const receipt = await tx.wait()
         const distributeLogs = receipt.logs.filter(
           (log) =>
-            log.topics[0] === voterMock.interface.getEventTopic('Distributed'),
+            log.topics[0] ===
+            redistributorMock.interface.getEventTopic('Redistributed'),
         )
         distributedGauges.push(
           ...distributeLogs.map((log) =>
@@ -284,7 +275,6 @@ describe('RedistributeUpkeep Unit Tests', function () {
       const newStartIndex = gaugeCount
       const newEndIndex = gaugeCount * 2
       const newRedistributeUpkeep = await redistributeUpkeepFactory.deploy(
-        voterMock.address,
         clGaugeFactoryMock.address,
         newStartIndex,
         newEndIndex,
@@ -315,7 +305,7 @@ describe('RedistributeUpkeep Unit Tests', function () {
 
     it('should continue upkeep after entire batch fails', async function () {
       for (const gauge of gaugeList.slice(0, gaugeList.length / 2)) {
-        await voterMock.setFailingGauge(gauge, true)
+        await redistributorMock.setFailingGauge(gauge, true)
       }
 
       const tx = await expect(redistributeUpkeep.performUpkeep(HashZero))
@@ -334,14 +324,16 @@ describe('RedistributeUpkeep Unit Tests', function () {
       /// @dev Mock failed distributes
       const failedIndexes = [0, 3]
       for (const failedIndex of failedIndexes) {
-        await voterMock.setFailingGauge(gaugeList[failedIndex], true)
+        await redistributorMock.setFailingGauge(gaugeList[failedIndex], true)
       }
 
       /// @dev Ensure gauges on non-failing indexes received distributes
       const tx = await expect(redistributeUpkeep.performUpkeep(HashZero))
       for (let i = 0; i < batchSize; i++) {
         if (!failedIndexes.includes(i)) {
-          await tx.to.emit(voterMock, 'Distributed').withArgs(gaugeList[i])
+          await tx.to
+            .emit(redistributorMock, 'Redistributed')
+            .withArgs(gaugeList[i])
         } else {
           await tx.to
             .emit(redistributeUpkeep, 'RedistributeFailed')

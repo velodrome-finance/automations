@@ -48,7 +48,7 @@ contract RedistributeUpkeepManagerV2_3 is RedistributeUpkeepManager, IRedistribu
     function _registerRedistributeUpkeep() internal override {
         uint256 startIndex = _getNextUpkeepStartIndex(upkeepIds.length);
         uint256 endIndex = startIndex + GAUGES_PER_UPKEEP;
-        address redistributeUpkeep = address(new RedistributeUpkeep(voter, clGaugeFactory, startIndex, endIndex));
+        address redistributeUpkeep = address(new RedistributeUpkeep(clGaugeFactory, startIndex, endIndex));
         IAutomationRegistrarV2_3.RegistrationParams memory params = IAutomationRegistrarV2_3.RegistrationParams({
             name: UPKEEP_NAME,
             encryptedEmail: "",
