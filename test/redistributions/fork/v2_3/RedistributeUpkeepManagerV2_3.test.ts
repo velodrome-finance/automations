@@ -372,9 +372,20 @@ describe('RedistributeUpkeepManagerV2_3 Script Tests', function () {
     expect(redistributeUpkeepNeeded).to.be.false
     expect(redistributeUpkeepPerformData).to.equal('0x')
 
-    // redistribute upkeep should be needed after epoch time
-    const afterEpochFlip = getNextEpochUTC(latestDate).getTime() / 1000
-    await time.increaseTo(afterEpochFlip)
+    // redistribute upkeep should not be needed during first 10 minutes after epoch flip
+    const epochFlip = getNextEpochUTC(latestDate).getTime() / 1000
+    await time.increaseTo(epochFlip)
+
+    const [
+      redistributeUpkeepNeeded10Mins,
+      redistributeUpkeepPerformData10Mins,
+    ] = await redistributeUpkeep.callStatic.checkUpkeep(HashZero)
+
+    expect(redistributeUpkeepNeeded10Mins).to.be.false
+    expect(redistributeUpkeepPerformData10Mins).to.equal('0x')
+
+    // redistribute upkeep should be needed 10 minutes after epoch time
+    await time.increaseTo(epochFlip + 600)
 
     const [redistributeUpkeepNeededAfter, redistributeUpkeepPerformDataAfter] =
       await redistributeUpkeep.callStatic.checkUpkeep(HashZero)

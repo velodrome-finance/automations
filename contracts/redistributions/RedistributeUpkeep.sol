@@ -78,7 +78,8 @@ contract RedistributeUpkeep is IRedistributeUpkeep {
     }
 
     function _checkUpkeep(uint256 _currentIndex, uint256 _endIndex) internal view returns (bool) {
-        return lastEpochFlip + WEEK <= block.timestamp && _currentIndex < _endIndex;
+        /// @dev Upkeeps can only be triggered 10 minutes after Epoch Flip
+        return lastEpochFlip + WEEK + 10 minutes <= block.timestamp && _currentIndex < _endIndex;
     }
 
     function _lastEpochFlip() internal view returns (uint256) {

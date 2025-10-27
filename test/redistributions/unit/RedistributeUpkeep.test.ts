@@ -133,9 +133,30 @@ describe('RedistributeUpkeep Unit Tests', function () {
     })
   })
 
-  describe('After epoch flip', function () {
+  describe('First 10 minutes of epoch flip', function () {
     beforeEach(async function () {
       await increaseTimeToNextEpoch()
+    })
+
+    it('should not trigger upkeep', async function () {
+      const [upkeepNeeded, performData] =
+        await redistributeUpkeep.callStatic.checkUpkeep(HashZero)
+
+      expect(upkeepNeeded).to.be.false
+      expect(performData).to.equal('0x')
+    })
+
+    it('should not perform upkeep', async function () {
+      await expect(
+        redistributeUpkeep.performUpkeep(HashZero),
+      ).to.be.revertedWithCustomError(redistributeUpkeep, 'UpkeepNotNeeded')
+    })
+  })
+
+  describe('After the first 10 minutes of epoch flip', function () {
+    beforeEach(async function () {
+      await increaseTimeToNextEpoch()
+      await time.increase(600)
     })
 
     it('should trigger upkeep', async function () {
@@ -269,6 +290,7 @@ describe('RedistributeUpkeep Unit Tests', function () {
         newEndIndex,
       )
       await increaseTimeToNextEpoch()
+      await time.increase(600)
 
       const [upkeepNeeded, performData] =
         await newRedistributeUpkeep.callStatic.checkUpkeep(HashZero)
