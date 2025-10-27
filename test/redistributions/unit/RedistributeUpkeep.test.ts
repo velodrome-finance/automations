@@ -282,7 +282,7 @@ describe('RedistributeUpkeep Unit Tests', function () {
       const tx = await expect(redistributeUpkeep.performUpkeep(HashZero))
       for (let i = 0; i < batchSize; i++) {
         await tx.to
-          .emit(redistributeUpkeep, 'DistributeFailed')
+          .emit(redistributeUpkeep, 'RedistributeFailed')
           .withArgs(gaugeList[i], startIndex + i)
       }
 
@@ -305,7 +305,7 @@ describe('RedistributeUpkeep Unit Tests', function () {
           await tx.to.emit(voterMock, 'Distributed').withArgs(gaugeList[i])
         } else {
           await tx.to
-            .emit(redistributeUpkeep, 'DistributeFailed')
+            .emit(redistributeUpkeep, 'RedistributeFailed')
             .withArgs(gaugeList[i], startIndex + i)
         }
       }

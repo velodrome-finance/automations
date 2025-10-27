@@ -69,7 +69,7 @@ contract RedistributeUpkeep is IRedistributeUpkeep {
             singleGauge[0] = gauges[i];
 
             try IVoter(voter).distribute(singleGauge) {} catch {
-                emit DistributeFailed({gauge: singleGauge[0], index: _startIndex + i});
+                emit RedistributeFailed({gauge: singleGauge[0], index: _startIndex + i});
             }
         }
     }
