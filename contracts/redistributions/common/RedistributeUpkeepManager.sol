@@ -23,6 +23,8 @@ abstract contract RedistributeUpkeepManager is IRedistributeUpkeepManager, Ownab
     /// @inheritdoc IRedistributeUpkeepManager
     address public immutable override voter;
     /// @inheritdoc IRedistributeUpkeepManager
+    address public immutable override clGaugeFactory;
+    /// @inheritdoc IRedistributeUpkeepManager
     address public immutable override factoryRegistry;
     /// @inheritdoc IRedistributeUpkeepManager
     address public override upkeepBalanceMonitor;
@@ -61,6 +63,7 @@ abstract contract RedistributeUpkeepManager is IRedistributeUpkeepManager, Ownab
         address _automationRegistrar,
         address _upkeepBalanceMonitor,
         address _voter,
+        address _clGaugeFactory,
         uint96 _newUpkeepFundAmount,
         uint32 _newUpkeepGasLimit,
         uint8 _batchSize,
@@ -70,6 +73,7 @@ abstract contract RedistributeUpkeepManager is IRedistributeUpkeepManager, Ownab
         automationRegistrar = _automationRegistrar;
         upkeepBalanceMonitor = _upkeepBalanceMonitor;
         voter = _voter;
+        clGaugeFactory = _clGaugeFactory;
         newUpkeepFundAmount = _newUpkeepFundAmount;
         newUpkeepGasLimit = _newUpkeepGasLimit;
         batchSize = _batchSize;

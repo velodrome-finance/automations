@@ -7,6 +7,8 @@ import {
   RedistributeUpkeep__factory,
   RedistributeUpkeepManagerMock,
   VoterMock,
+  CLGaugeFactoryMock,
+  RedistributorMock,
 } from '../../../typechain-types'
 import { defaultAbiCoder } from '@ethersproject/abi'
 import { getNextEpochUTC } from '../../utils'
@@ -27,6 +29,8 @@ describe('RedistributeUpkeep Unit Tests', function () {
   let redistributeUpkeep: RedistributeUpkeep
   let voterMock: VoterMock
   let redistributeUpkeepManagerMock: RedistributeUpkeepManagerMock
+  let clGaugeFactoryMock: CLGaugeFactoryMock
+  let redistributorMock: RedistributorMock
   let gaugeList: string[]
   let accounts: SignerWithAddress[]
 
@@ -46,6 +50,17 @@ describe('RedistributeUpkeep Unit Tests', function () {
       AddressZero,
       AddressZero,
       AddressZero,
+    )
+
+    // deploy redistributor and cl gauge factory mocks
+    const redistributorMockFactory =
+      await ethers.getContractFactory('RedistributorMock')
+    redistributorMock = await redistributorMockFactory.deploy()
+
+    const clGaugeFactoryMockFactory =
+      await ethers.getContractFactory('CLGaugeFactoryMock')
+    clGaugeFactoryMock = await clGaugeFactoryMockFactory.deploy(
+      redistributorMock.address,
     )
 
     // deploy redistribute upkeep manager mock
@@ -81,6 +96,7 @@ describe('RedistributeUpkeep Unit Tests', function () {
     )
     redistributeUpkeep = await redistributeUpkeepFactory.deploy(
       voterMock.address,
+      clGaugeFactoryMock.address,
       startIndex,
       endIndex,
     )
@@ -248,6 +264,7 @@ describe('RedistributeUpkeep Unit Tests', function () {
       const newEndIndex = gaugeCount * 2
       const newRedistributeUpkeep = await redistributeUpkeepFactory.deploy(
         voterMock.address,
+        clGaugeFactoryMock.address,
         newStartIndex,
         newEndIndex,
       )

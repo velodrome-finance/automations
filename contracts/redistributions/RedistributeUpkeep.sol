@@ -9,6 +9,8 @@ contract RedistributeUpkeep is IRedistributeUpkeep {
     /// @inheritdoc IRedistributeUpkeep
     address public immutable override voter;
     /// @inheritdoc IRedistributeUpkeep
+    address public immutable override clGaugeFactory;
+    /// @inheritdoc IRedistributeUpkeep
     address public immutable override redistributeUpkeepManager;
     /// @inheritdoc IRedistributeUpkeep
     uint256 public immutable override startIndex;
@@ -22,8 +24,9 @@ contract RedistributeUpkeep is IRedistributeUpkeep {
 
     uint256 private constant WEEK = 7 days;
 
-    constructor(address _voter, uint256 _startIndex, uint256 _endIndex) {
+    constructor(address _voter, address _clGaugeFactory, uint256 _startIndex, uint256 _endIndex) {
         voter = _voter;
+        clGaugeFactory = _clGaugeFactory;
         redistributeUpkeepManager = msg.sender;
         startIndex = _startIndex;
         endIndex = _endIndex;

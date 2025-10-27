@@ -28,6 +28,7 @@ const AUTOMATION_REGISTRAR_ADDRESS =
 const KEEPER_REGISTRY_ADDRESS = '0xf4bAb6A129164aBa9B113cB96BA4266dF49f8743'
 const LINK_TOKEN_ADDRESS = '0x88Fb150BDc53A65fe94Dea0c9BA0a6dAf8C6e196'
 const VOTER_ADDRESS = '0x16613524e02ad97eDfeF371bC883F2F5d6C480A5'
+const CL_GAUGE_FACTORY_ADDRESS = '0xB630227a79707D517320b6c0f885806389dFcbB3'
 const EXCLUDED_GAUGE_FACTORIES = [
   '0x42e403b73898320f23109708b0ba1Ae85838C445',
   '0xeAD23f606643E387a073D0EE8718602291ffaAeB',
@@ -164,6 +165,7 @@ describe('RedistributeUpkeepManagerV2_3 Script Tests', function () {
       automationRegistrar.address,
       upkeepBalanceMonitor.address,
       voter.address,
+      CL_GAUGE_FACTORY_ADDRESS,
       newUpkeepFundAmount,
       newUpkeepGasLimit,
       batchSize,

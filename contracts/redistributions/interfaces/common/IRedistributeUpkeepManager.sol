@@ -52,6 +52,9 @@ interface IRedistributeUpkeepManager {
     /// @notice Voter address
     function voter() external view returns (address);
 
+    /// @notice Address of the CL Gauge Factory with emission cap support
+    function clGaugeFactory() external view returns (address);
+
     /// @notice Factory registry address
     function factoryRegistry() external view returns (address);
 

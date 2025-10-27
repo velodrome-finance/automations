@@ -5,6 +5,8 @@ import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/signers'
 import {
   IERC20,
   VoterMock,
+  RedistributorMock,
+  CLGaugeFactoryMock,
   RedistributeUpkeepManagerV2_3,
   FactoryRegistryMock,
   KeeperRegistryMock,
@@ -22,6 +24,8 @@ describe('RedistributeUpkeepManagerV2_3 Unit Tests', function () {
   let keeperRegistryMock: KeeperRegistryMock
   let automationRegistrarMock: AutomationRegistrarMockV2_3
   let veloVoterMock: VoterMock
+  let redistributorMock: RedistributorMock
+  let clGaugeFactoryMock: CLGaugeFactoryMock
   let factoryRegistryMock: FactoryRegistryMock
   let fakeGaugeAddress: string
   let fakeExcludedFactoryAddress: string
@@ -67,6 +71,17 @@ describe('RedistributeUpkeepManagerV2_3 Unit Tests', function () {
       fakeRegularFactoryAddress,
     )
 
+    // deploy redistributor and cl gauge factory mocks
+    const redistributorMockFactory =
+      await ethers.getContractFactory('RedistributorMock')
+    redistributorMock = await redistributorMockFactory.deploy()
+
+    const clGaugeFactoryMockFactory =
+      await ethers.getContractFactory('CLGaugeFactoryMock')
+    clGaugeFactoryMock = await clGaugeFactoryMockFactory.deploy(
+      redistributorMock.address,
+    )
+
     // deploy automation registrar mock
     const automationRegistrarMockFactory = await ethers.getContractFactory(
       'AutomationRegistrarMockV2_3',
@@ -104,6 +119,7 @@ describe('RedistributeUpkeepManagerV2_3 Unit Tests', function () {
       automationRegistrarMock.address,
       upkeepBalanceMonitor.address,
       veloVoterMock.address,
+      clGaugeFactoryMock.address,
       upkeepFundAmount,
       upkeepGasLimit,
       batchSize,
@@ -148,6 +164,9 @@ describe('RedistributeUpkeepManagerV2_3 Unit Tests', function () {
       )
       expect(await redistributeUpkeepManager.voter()).to.equal(
         veloVoterMock.address,
+      )
+      expect(await redistributeUpkeepManager.clGaugeFactory()).to.equal(
+        clGaugeFactoryMock.address,
       )
       expect(await redistributeUpkeepManager.newUpkeepFundAmount()).to.equal(
         upkeepFundAmount,
