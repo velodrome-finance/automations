@@ -36,6 +36,10 @@ abstract contract RedistributeUpkeepManager is IRedistributeUpkeepManager, Ownab
     /// @inheritdoc IRedistributeUpkeepManager
     uint8 public override batchSize;
     /// @inheritdoc IRedistributeUpkeepManager
+    mapping(address => bool) public override isUpkeep;
+    /// @inheritdoc IRedistributeUpkeepManager
+    mapping(uint256 => address) public override upkeepIdToAddress;
+    /// @inheritdoc IRedistributeUpkeepManager
     mapping(address => bool) public override trustedForwarder;
     /// @inheritdoc IRedistributeUpkeepManager
     mapping(address => bool) public override excludedGaugeFactory;

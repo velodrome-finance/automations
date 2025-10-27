@@ -62,8 +62,10 @@ contract RedistributeUpkeepManagerV2_3 is RedistributeUpkeepManager, IRedistribu
             amount: newUpkeepFundAmount,
             billingToken: IERC20(linkToken)
         });
+        isUpkeep[redistributeUpkeep] = true;
         uint256 upkeepId = _registerUpkeep(params);
         upkeepIds.push(upkeepId);
+        upkeepIdToAddress[upkeepId] = redistributeUpkeep;
         IUpkeepBalanceMonitorV2_3(upkeepBalanceMonitor).addToWatchList(upkeepId);
         emit RedistributeUpkeepRegistered(redistributeUpkeep, upkeepId, startIndex, endIndex);
     }
@@ -81,6 +83,8 @@ contract RedistributeUpkeepManagerV2_3 is RedistributeUpkeepManager, IRedistribu
     function _cancelRedistributeUpkeep(uint256 _upkeepId) internal override {
         upkeepIds.pop();
         _cancelledUpkeepIds.add(_upkeepId);
+        delete isUpkeep[upkeepIdToAddress[_upkeepId]];
+        delete upkeepIdToAddress[_upkeepId];
         IUpkeepBalanceMonitorV2_3(upkeepBalanceMonitor).removeFromWatchList(_upkeepId);
         IAutomationRegistryMaster2_3(keeperRegistry).cancelUpkeep(_upkeepId);
         emit RedistributeUpkeepCancelled(_upkeepId);

@@ -15,7 +15,7 @@ import {
 } from '../../../../typechain-types'
 import { PerformAction } from '../../../constants'
 
-const { HashZero } = ethers.constants
+const { HashZero, AddressZero } = ethers.constants
 
 describe('RedistributeUpkeepManagerV2_3 Unit Tests', function () {
   let redistributeUpkeepManager: RedistributeUpkeepManagerV2_3
@@ -33,6 +33,7 @@ describe('RedistributeUpkeepManagerV2_3 Unit Tests', function () {
   let registerPerformData: string
   let deregisterPerformData: string
   let accounts: SignerWithAddress[]
+  let redistributeUpkeep: string
 
   const upkeepFundAmount = ethers.utils.parseEther('0.1')
   const gaugesPerUpkeepLimit = 100
@@ -222,8 +223,16 @@ describe('RedistributeUpkeepManagerV2_3 Unit Tests', function () {
         'RedistributeUpkeepRegistered',
       )
 
-      expect(await redistributeUpkeepManager.upkeepIds(0)).to.equal(1)
+      const upkeepId = 1
+      expect(await redistributeUpkeepManager.upkeepIds(0)).to.equal(upkeepId)
       expect(await redistributeUpkeepManager.upkeepCount()).to.equal(1)
+
+      redistributeUpkeep =
+        await redistributeUpkeepManager.upkeepIdToAddress(upkeepId)
+      expect(redistributeUpkeep).to.be.properAddress
+      expect(
+        await redistributeUpkeepManager.isUpkeep(redistributeUpkeep),
+      ).to.equal(true)
     })
 
     it('should not register a new upkeep until the gauges per upkeep limit is reached', async () => {
@@ -336,6 +345,15 @@ describe('RedistributeUpkeepManagerV2_3 Unit Tests', function () {
 
     it('should cancel a redistribute upkeep', async () => {
       await redistributeUpkeepManager.performUpkeep(registerPerformData)
+
+      const upkeepId = await redistributeUpkeepManager.upkeepIds(0)
+      redistributeUpkeep =
+        await redistributeUpkeepManager.upkeepIdToAddress(upkeepId)
+      expect(redistributeUpkeep).to.be.properAddress
+      expect(
+        await redistributeUpkeepManager.isUpkeep(redistributeUpkeep),
+      ).to.equal(true)
+
       const tx = await redistributeUpkeepManager.performUpkeep(
         deregisterPerformData,
       )
@@ -347,6 +365,12 @@ describe('RedistributeUpkeepManagerV2_3 Unit Tests', function () {
       await expect(redistributeUpkeepManager.upkeepIds(0)).to.be.reverted
 
       expect(await redistributeUpkeepManager.upkeepCount()).to.equal(0)
+      expect(
+        await redistributeUpkeepManager.isUpkeep(redistributeUpkeep),
+      ).to.equal(false)
+      expect(
+        await redistributeUpkeepManager.upkeepIdToAddress(upkeepId),
+      ).to.equal(AddressZero)
     })
 
     it('should not cancel upkeep before the buffer is reached', async () => {

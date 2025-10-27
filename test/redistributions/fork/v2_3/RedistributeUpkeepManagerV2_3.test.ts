@@ -339,6 +339,12 @@ describe('RedistributeUpkeepManagerV2_3 Script Tests', function () {
 
     expect(redistributeUpkeep).to.be.properAddress
     expect(await redistributeUpkeepManager.upkeepIds(0)).to.equal(upkeepId)
+    expect(
+      await redistributeUpkeepManager.isUpkeep(redistributeUpkeep),
+    ).to.equal(true)
+    expect(
+      await redistributeUpkeepManager.upkeepIdToAddress(upkeepId),
+    ).to.equal(redistributeUpkeep)
 
     // set redistribute upkeep address and id
     redistributeUpkeepAddress = redistributeUpkeep
@@ -482,6 +488,12 @@ describe('RedistributeUpkeepManagerV2_3 Script Tests', function () {
 
     expect(cancelledUpkeepId).to.equal(redistributeUpkeepId)
     expect(upkeepDetailsAfter.maxValidBlocknumber).to.not.equal(MAX_UINT32)
+    expect(
+      await redistributeUpkeepManager.isUpkeep(redistributeUpkeepAddress),
+    ).to.equal(false)
+    expect(
+      await redistributeUpkeepManager.upkeepIdToAddress(redistributeUpkeepId),
+    ).to.equal(AddressZero)
 
     // check if upkeep is included in cancelledUpkeeps set
     expect(
@@ -613,6 +625,12 @@ describe('RedistributeUpkeepManagerV2_3 Script Tests', function () {
 
     expect(redistributeUpkeep).to.be.properAddress
     expect(await redistributeUpkeepManager.upkeepIds(0)).to.equal(upkeepId)
+    expect(
+      await redistributeUpkeepManager.isUpkeep(redistributeUpkeep),
+    ).to.equal(true)
+    expect(
+      await redistributeUpkeepManager.upkeepIdToAddress(upkeepId),
+    ).to.equal(redistributeUpkeep)
   })
 
   it('Withdraw contract LINK balance', async () => {
