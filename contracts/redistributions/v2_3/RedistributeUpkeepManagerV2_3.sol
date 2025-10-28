@@ -24,6 +24,7 @@ contract RedistributeUpkeepManagerV2_3 is RedistributeUpkeepManager, IRedistribu
         address _automationRegistrar,
         address _upkeepBalanceMonitor,
         address _voter,
+        address _clGaugeFactory,
         uint96 _newUpkeepFundAmount,
         uint32 _newUpkeepGasLimit,
         uint8 _batchSize,
@@ -34,6 +35,7 @@ contract RedistributeUpkeepManagerV2_3 is RedistributeUpkeepManager, IRedistribu
             _automationRegistrar,
             _upkeepBalanceMonitor,
             _voter,
+            _clGaugeFactory,
             _newUpkeepFundAmount,
             _newUpkeepGasLimit,
             _batchSize,
@@ -46,7 +48,7 @@ contract RedistributeUpkeepManagerV2_3 is RedistributeUpkeepManager, IRedistribu
     function _registerRedistributeUpkeep() internal override {
         uint256 startIndex = _getNextUpkeepStartIndex(upkeepIds.length);
         uint256 endIndex = startIndex + GAUGES_PER_UPKEEP;
-        address redistributeUpkeep = address(new RedistributeUpkeep(voter, startIndex, endIndex));
+        address redistributeUpkeep = address(new RedistributeUpkeep(clGaugeFactory, startIndex, endIndex));
         IAutomationRegistrarV2_3.RegistrationParams memory params = IAutomationRegistrarV2_3.RegistrationParams({
             name: UPKEEP_NAME,
             encryptedEmail: "",
@@ -60,8 +62,10 @@ contract RedistributeUpkeepManagerV2_3 is RedistributeUpkeepManager, IRedistribu
             amount: newUpkeepFundAmount,
             billingToken: IERC20(linkToken)
         });
+        isUpkeep[redistributeUpkeep] = true;
         uint256 upkeepId = _registerUpkeep(params);
         upkeepIds.push(upkeepId);
+        upkeepIdToAddress[upkeepId] = redistributeUpkeep;
         IUpkeepBalanceMonitorV2_3(upkeepBalanceMonitor).addToWatchList(upkeepId);
         emit RedistributeUpkeepRegistered(redistributeUpkeep, upkeepId, startIndex, endIndex);
     }
@@ -79,6 +83,8 @@ contract RedistributeUpkeepManagerV2_3 is RedistributeUpkeepManager, IRedistribu
     function _cancelRedistributeUpkeep(uint256 _upkeepId) internal override {
         upkeepIds.pop();
         _cancelledUpkeepIds.add(_upkeepId);
+        delete isUpkeep[upkeepIdToAddress[_upkeepId]];
+        delete upkeepIdToAddress[_upkeepId];
         IUpkeepBalanceMonitorV2_3(upkeepBalanceMonitor).removeFromWatchList(_upkeepId);
         IAutomationRegistryMaster2_3(keeperRegistry).cancelUpkeep(_upkeepId);
         emit RedistributeUpkeepCancelled(_upkeepId);

@@ -14,6 +14,8 @@ import {
   RedistributeUpkeepManagerV2_3,
   AutomationRegistrar2_3,
   IAutomationRegistryMaster2_3,
+  ICLGaugeFactory,
+  IRedistributor,
   IERC20,
 } from '../../../../typechain-types'
 import {
@@ -28,13 +30,15 @@ const AUTOMATION_REGISTRAR_ADDRESS =
 const KEEPER_REGISTRY_ADDRESS = '0xf4bAb6A129164aBa9B113cB96BA4266dF49f8743'
 const LINK_TOKEN_ADDRESS = '0x88Fb150BDc53A65fe94Dea0c9BA0a6dAf8C6e196'
 const VOTER_ADDRESS = '0x16613524e02ad97eDfeF371bC883F2F5d6C480A5'
+const CL_GAUGE_FACTORY_ADDRESS = '0xB630227a79707D517320b6c0f885806389dFcbB3'
+const REDISTRIBUTOR_ADDRESS = '0x11a53f31Bf406de59fCf9613E1922bd3E283A4B4'
 const EXCLUDED_GAUGE_FACTORIES = [
   '0x42e403b73898320f23109708b0ba1Ae85838C445',
   '0xeAD23f606643E387a073D0EE8718602291ffaAeB',
 ]
 const POOL_FACTORY_ADDRESS = '0x420dd381b31aef6683db6b902084cb0ffece40da'
-const POOL_ADDRESS = '0x81ebea20ea6acb544c0511e1ed9d6835d8532ed6'
-const LINK_HOLDER_ADDRESS = '0xdf812b91d8bf6df698bfd1d8047839479ba63420'
+const POOL_ADDRESS = '0x356B43D44f1833C649b8f1A5B41071f9f54D0b0d'
+const LINK_HOLDER_ADDRESS = '0xd071e41e22A8Cb4018B672cdB9a32862Dd4c30A7'
 
 const { AddressZero, HashZero, MaxUint256 } = ethers.constants
 
@@ -108,6 +112,8 @@ describe('RedistributeUpkeepManagerV2_3 Script Tests', function () {
   let accounts: SignerWithAddress[]
   let redistributeUpkeepManager: RedistributeUpkeepManagerV2_3
   let voter: Voter
+  let clGaugeFactory: ICLGaugeFactory
+  let redistributor: IRedistributor
   let keeperRegistry: IAutomationRegistryMaster2_3
   let linkToken: IERC20
   let createGaugeLogUpkeepId: BigNumber
@@ -139,6 +145,17 @@ describe('RedistributeUpkeepManagerV2_3 Script Tests', function () {
     )
     // setup voter contract
     voter = await ethers.getContractAt('Voter', VOTER_ADDRESS)
+
+    // setup gaugefactory and redistributor contracts
+    clGaugeFactory = await ethers.getContractAt(
+      'ICLGaugeFactory',
+      CL_GAUGE_FACTORY_ADDRESS,
+    )
+    redistributor = await ethers.getContractAt(
+      'IRedistributor',
+      REDISTRIBUTOR_ADDRESS,
+    )
+
     // deploy upkeep balance monitor
     const upkeepBalanceMonitorFactory = await ethers.getContractFactory(
       'UpkeepBalanceMonitorV2_3',
@@ -164,6 +181,7 @@ describe('RedistributeUpkeepManagerV2_3 Script Tests', function () {
       automationRegistrar.address,
       upkeepBalanceMonitor.address,
       voter.address,
+      CL_GAUGE_FACTORY_ADDRESS,
       newUpkeepFundAmount,
       newUpkeepGasLimit,
       batchSize,
@@ -173,7 +191,36 @@ describe('RedistributeUpkeepManagerV2_3 Script Tests', function () {
     await upkeepBalanceMonitor.grantWatchlistManagerRole(
       redistributeUpkeepManager.address,
     )
+
+    // set redistributor and upkeepmanager in gauge factory and redistributor
+    const voterGovernor = await voter.governor()
+    await impersonateAccount(voterGovernor)
+    const governorSigner = await ethers.getSigner(voterGovernor)
+
+    const setRedistributorTx =
+      await clGaugeFactory.populateTransaction.setRedistributor(
+        redistributor.address,
+      )
+    await governorSigner.sendTransaction({
+      ...setRedistributorTx,
+      from: voterGovernor,
+    })
+
+    const setUpkeepManagerTx =
+      await redistributor.populateTransaction.setUpkeepManager(
+        redistributeUpkeepManager.address,
+      )
+    await governorSigner.sendTransaction({
+      ...setUpkeepManagerTx,
+      from: voterGovernor,
+    })
+    await stopImpersonatingAccount(voterGovernor)
+
     // transfer link tokens to deployer
+    await network.provider.send('hardhat_setBalance', [
+      LINK_HOLDER_ADDRESS,
+      '0xffffffffffffffff',
+    ])
     await impersonateAccount(LINK_HOLDER_ADDRESS)
     const linkHolderSigner = await ethers.getSigner(LINK_HOLDER_ADDRESS)
     const transferLinkTx = await linkToken.populateTransaction.transfer(
@@ -337,6 +384,12 @@ describe('RedistributeUpkeepManagerV2_3 Script Tests', function () {
 
     expect(redistributeUpkeep).to.be.properAddress
     expect(await redistributeUpkeepManager.upkeepIds(0)).to.equal(upkeepId)
+    expect(
+      await redistributeUpkeepManager.isUpkeep(redistributeUpkeep),
+    ).to.equal(true)
+    expect(
+      await redistributeUpkeepManager.upkeepIdToAddress(upkeepId),
+    ).to.equal(redistributeUpkeep)
 
     // set redistribute upkeep address and id
     redistributeUpkeepAddress = redistributeUpkeep
@@ -364,9 +417,20 @@ describe('RedistributeUpkeepManagerV2_3 Script Tests', function () {
     expect(redistributeUpkeepNeeded).to.be.false
     expect(redistributeUpkeepPerformData).to.equal('0x')
 
-    // redistribute upkeep should be needed after epoch time
-    const afterEpochFlip = getNextEpochUTC(latestDate).getTime() / 1000
-    await time.increaseTo(afterEpochFlip)
+    // redistribute upkeep should not be needed during first 10 minutes after epoch flip
+    const epochFlip = getNextEpochUTC(latestDate).getTime() / 1000
+    await time.increaseTo(epochFlip)
+
+    const [
+      redistributeUpkeepNeeded10Mins,
+      redistributeUpkeepPerformData10Mins,
+    ] = await redistributeUpkeep.callStatic.checkUpkeep(HashZero)
+
+    expect(redistributeUpkeepNeeded10Mins).to.be.false
+    expect(redistributeUpkeepPerformData10Mins).to.equal('0x')
+
+    // redistribute upkeep should be needed 10 minutes after epoch time
+    await time.increaseTo(epochFlip + 600)
 
     const [redistributeUpkeepNeededAfter, redistributeUpkeepPerformDataAfter] =
       await redistributeUpkeep.callStatic.checkUpkeep(HashZero)
@@ -480,6 +544,12 @@ describe('RedistributeUpkeepManagerV2_3 Script Tests', function () {
 
     expect(cancelledUpkeepId).to.equal(redistributeUpkeepId)
     expect(upkeepDetailsAfter.maxValidBlocknumber).to.not.equal(MAX_UINT32)
+    expect(
+      await redistributeUpkeepManager.isUpkeep(redistributeUpkeepAddress),
+    ).to.equal(false)
+    expect(
+      await redistributeUpkeepManager.upkeepIdToAddress(redistributeUpkeepId),
+    ).to.equal(AddressZero)
 
     // check if upkeep is included in cancelledUpkeeps set
     expect(
@@ -611,6 +681,12 @@ describe('RedistributeUpkeepManagerV2_3 Script Tests', function () {
 
     expect(redistributeUpkeep).to.be.properAddress
     expect(await redistributeUpkeepManager.upkeepIds(0)).to.equal(upkeepId)
+    expect(
+      await redistributeUpkeepManager.isUpkeep(redistributeUpkeep),
+    ).to.equal(true)
+    expect(
+      await redistributeUpkeepManager.upkeepIdToAddress(upkeepId),
+    ).to.equal(redistributeUpkeep)
   })
 
   it('Withdraw contract LINK balance', async () => {

@@ -7,8 +7,8 @@ interface IRedistributeUpkeep {
 
     error UpkeepNotNeeded();
 
-    /// @notice Voter address
-    function voter() external view returns (address);
+    /// @notice Address of the CL Gauge Factory with emission cap support
+    function clGaugeFactory() external view returns (address);
 
     /// @notice RedistributeUpkeepManager address
     function redistributeUpkeepManager() external view returns (address);

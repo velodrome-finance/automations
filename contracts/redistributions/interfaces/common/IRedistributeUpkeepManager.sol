@@ -52,6 +52,9 @@ interface IRedistributeUpkeepManager {
     /// @notice Voter address
     function voter() external view returns (address);
 
+    /// @notice Address of the CL Gauge Factory with emission cap support
+    function clGaugeFactory() external view returns (address);
+
     /// @notice Factory registry address
     function factoryRegistry() external view returns (address);
 
@@ -63,6 +66,16 @@ interface IRedistributeUpkeepManager {
 
     /// @notice Number of gauges processed per distribute call
     function batchSize() external view returns (uint8);
+
+    /// @notice Checks if a given address is a registered redistribute upkeep
+    /// @param _account The address to check
+    /// @return Whether the address is an authorized automation upkeep
+    function isUpkeep(address _account) external view returns (bool);
+
+    /// @notice Fetches the redistribute upkeep address for the given upkeep ID
+    /// @param _upkeepId The ID of the upkeep to fetch the address for
+    /// @return The address of the redistribute upkeep with the given ID
+    function upkeepIdToAddress(uint256 _upkeepId) external view returns (address);
 
     /// @notice Whether an address is a trusted forwarder
     /// @param _forwarder Forwarder address

@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.6;
 
-import {IVoter} from "../../vendor/velodrome-contracts/contracts/interfaces/IVoter.sol";
 import {IRedistributeUpkeepManager} from "./interfaces/common/IRedistributeUpkeepManager.sol";
+import {ICLGaugeFactory} from "../interfaces/external/ICLGaugeFactory.sol";
+import {IRedistributor} from "../interfaces/external/IRedistributor.sol";
 import {IRedistributeUpkeep} from "./interfaces/IRedistributeUpkeep.sol";
 
 contract RedistributeUpkeep is IRedistributeUpkeep {
     /// @inheritdoc IRedistributeUpkeep
-    address public immutable override voter;
+    address public immutable override clGaugeFactory;
     /// @inheritdoc IRedistributeUpkeep
     address public immutable override redistributeUpkeepManager;
     /// @inheritdoc IRedistributeUpkeep
@@ -22,8 +23,8 @@ contract RedistributeUpkeep is IRedistributeUpkeep {
 
     uint256 private constant WEEK = 7 days;
 
-    constructor(address _voter, uint256 _startIndex, uint256 _endIndex) {
-        voter = _voter;
+    constructor(address _clGaugeFactory, uint256 _startIndex, uint256 _endIndex) {
+        clGaugeFactory = _clGaugeFactory;
         redistributeUpkeepManager = msg.sender;
         startIndex = _startIndex;
         endIndex = _endIndex;
@@ -63,19 +64,21 @@ contract RedistributeUpkeep is IRedistributeUpkeep {
             _endIndex
         );
 
+        address redistributor = ICLGaugeFactory(clGaugeFactory).redistributor();
         uint256 length = gauges.length;
         address[] memory singleGauge = new address[](1);
         for (uint256 i = 0; i < length; i++) {
             singleGauge[0] = gauges[i];
 
-            try IVoter(voter).distribute(singleGauge) {} catch {
+            try IRedistributor(redistributor).redistribute(singleGauge) {} catch {
                 emit RedistributeFailed({gauge: singleGauge[0], index: _startIndex + i});
             }
         }
     }
 
     function _checkUpkeep(uint256 _currentIndex, uint256 _endIndex) internal view returns (bool) {
-        return lastEpochFlip + WEEK <= block.timestamp && _currentIndex < _endIndex;
+        /// @dev Upkeeps can only be triggered 10 minutes after Epoch Flip
+        return lastEpochFlip + WEEK + 10 minutes <= block.timestamp && _currentIndex < _endIndex;
     }
 
     function _lastEpochFlip() internal view returns (uint256) {
